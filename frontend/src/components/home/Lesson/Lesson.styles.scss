@@ -1,0 +1,12 @@
+.lesson {
+	background-color: #fff;
+	width: 400px;
+	height: 100%;
+	padding: 1rem;
+
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+}
