@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model Admin {
+  id          Int      @id @default(autoincrement())
+  name        String
+  telegram_id Int
+  created_at  DateTime @default(now())
+
+	@@map("admin")
+}
+
+model Student {
+  id         Int        @id @default(autoincrement())
+  name       String
+  class      String
+  birth_date DateTime
+	balance    Int @default(0)
+	bookUntilCancellation Boolean @default(false)
+  created_at DateTime   @default(now())
+
+  telegrams  Telegram[]
+  lessons    Lesson[]
+
+	@@map("student")
+}
+
+model Telegram {
+  id          Int      @id @default(autoincrement())
+  student_id  Int
+  telegram_id Int
+  type        TelegramType
+  created_at  DateTime @default(now())
+
+  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+	@@map("telegram")
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  student_id  Int
+  plan_id     Int
+  start_date  DateTime
+	status      LessonStatus @default(PENDING)
+  created_at  DateTime @default(now())
+
+  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  plan        Plan     @relation(fields: [plan_id], references: [id])
+
+	@@map("lesson")
+}
+
+model Plan {
+  id            Int         @id @default(autoincrement())
+  plan_type     PlanType
+  plan_currency PlanCurrency
+	plan_name     String
+  duration      Int
+	plan_price    Int
+  created_at    DateTime    @default(now())
+
+  lessons       Lesson[]
+
+	@@map("plan")
+}
+
+enum TelegramType {
+  STUDENT
+  PARENT
+}
+
+enum PlanType {
+  INDIVIDUAL
+  PAIR
+}
+
+enum PlanCurrency {
+  USD
+  EUR
+  PLN
+	BYN
+}
+
+enum LessonStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
