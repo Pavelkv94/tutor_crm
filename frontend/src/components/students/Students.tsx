@@ -8,11 +8,12 @@ import Layout from '../layout/Layout'
 import { StudentDialog } from './StudentDialog'
 import axios from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import Backdrop from '@mui/material/Backdrop'
-import CircularProgress from '@mui/material/CircularProgress'
 import TableBody from '@mui/material/TableBody'
 import dayjs from 'dayjs'
 import './Students.styles.scss'
+import Preloader from '../Preloader/Preloader'
+import { useState } from 'react'
+import { StudentInfoDialog } from './StudentInfo/StudentInfoDialog'
 
 const Students = () => {
 	const { data, isLoading, isError } = useQuery({
@@ -22,12 +23,11 @@ const Students = () => {
 		},
 	})
 
-	if (isLoading) return <Backdrop
-		sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })}
-		open={isLoading}
-	>
-		<CircularProgress color="inherit" />
-	</Backdrop>
+	const [openStudentInfoDialog, setOpenStudentInfoDialog] = useState(false);
+	const [checkedStudent, setCheckedStudent] = useState<any>(null);
+
+	if (isLoading) return <Preloader isLoading={isLoading} />
+
 	if (isError) return <div>Error</div>
 
 	return (
@@ -48,7 +48,10 @@ const Students = () => {
 								const birthDate =dayjs(student.birth_date).format("DD.MM.YYYY");
 								const isBirthdayToday = dayjs(student.birth_date).isSame(dayjs(new Date()), "day");
 
-								return <TableRow key={student.id}>
+								return <TableRow key={student.id} className={"student-row"} onClick={() => {
+									setCheckedStudent(student)
+									setOpenStudentInfoDialog(true)
+								}}>
 									<TableCell sx={{ fontWeight: "bold" }}>{isBirthdayToday ? "🎉" : ""} {student.name} {isBirthdayToday ? "🎉" : ""}</TableCell>
 									<TableCell>{student.class}</TableCell>
 									<TableCell>{birthDate}</TableCell>
@@ -60,6 +63,7 @@ const Students = () => {
 					</Table>
 				</TableContainer>
 			</Layout>
+			{checkedStudent && <StudentInfoDialog open={openStudentInfoDialog} setOpen={setOpenStudentInfoDialog} student={checkedStudent} />}
 		</div >
 	)
 }

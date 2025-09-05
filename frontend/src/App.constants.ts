@@ -10,6 +10,21 @@ export enum PlanCurrency {
 	BYN = "BYN",
 }
 
+
+export enum Severity {
+	ERROR = 'error',
+	WARNING = 'warning',
+	INFO = 'info',
+	SUCCESS = 'success',
+}
+
+export enum LessonStatus {
+	PENDING = "PENDING",
+	COMPLETED = "COMPLETED",
+	CANCELLED = "CANCELLED",
+}
+
+
 export const currencies = [{
 	label: PlanCurrency.USD,
 	flag: "🇺🇸",

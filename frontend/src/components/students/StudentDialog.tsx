@@ -54,7 +54,7 @@ export const StudentDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dia
 	};
 
 	const handleCreateStudent = () => {
-		mutate({ ...studentBody, birth_date: birthDate?.toISOString() })
+		mutate({ ...studentBody, birth_date: birthDate?.toISOString(), class: +studentBody.class })
 		setBirthDate(dayjs(new Date()))
 		setStudentBody({ name: "", class: "" })
 		handleClose()

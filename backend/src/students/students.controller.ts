@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -28,10 +28,22 @@ export class StudentsController {
   }
 
 	@HttpCode(HttpStatus.OK)
+	@Get(':id')
+	findOne(@Param('id') id: string, @Query('start_date') start_date: string, @Query('end_date') end_date: string) {
+		return this.studentsService.findOne(+id, start_date, end_date);
+	}
+
+	@HttpCode(HttpStatus.OK)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateStudentDto: UpdateStudentDto) {
     return this.studentsService.update(+id, updateStudentDto);
   }
+
+	@HttpCode(HttpStatus.OK)
+	@Get(':id/telegram-link')
+	getTelegramLink(@Param('id') id: string) {
+		return this.studentsService.getTelegramLink(+id);
+	}
 
 	@HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')

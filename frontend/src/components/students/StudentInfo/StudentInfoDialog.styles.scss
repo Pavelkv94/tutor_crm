@@ -1,0 +1,19 @@
+.student-info-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.student-info-content {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 2rem;
+
+
+	section {
+		display: flex;
+		flex-direction: column;
+		row-gap: 1rem;
+	}
+}

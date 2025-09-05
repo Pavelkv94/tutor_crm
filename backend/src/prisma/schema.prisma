@@ -28,14 +28,17 @@ model Admin {
 model Student {
   id         Int        @id @default(autoincrement())
   name       String
-  class      String
+  class      Int
   birth_date DateTime
 	balance    Int @default(0)
+	notifyAboutBirthday Boolean @default(true)
+	notifyAboutLessons Boolean @default(true)
 	bookUntilCancellation Boolean @default(false)
   created_at DateTime   @default(now())
 
   telegrams  Telegram[]
   lessons    Lesson[]
+	telegram_tokens TelegramToken[]
 
 	@@map("student")
 }
@@ -43,13 +46,37 @@ model Student {
 model Telegram {
   id          Int      @id @default(autoincrement())
   student_id  Int
-  telegram_id Int
-  type        TelegramType
+  telegram_id String @unique
+	username String?
+	first_name String?
+  type        TelegramType @default(STUDENT)
   created_at  DateTime @default(now())
 
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
 	@@map("telegram")
+}
+
+model LessonNotification {
+  id          Int      @id @default(autoincrement())
+  lesson_id     Int
+  notified_at   DateTime @default(now())
+  
+  lesson       Lesson   @relation(fields: [lesson_id], references: [id])
+
+  @@unique([lesson_id]) // чтобы не было дубликатов
+}
+
+model TelegramToken {
+	id Int @id @default(autoincrement())
+	student_id Int
+	token String @unique
+	expired_at DateTime
+	created_at DateTime @default(now())
+
+	student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+	@@map("telegram_token")
 }
 
 model Lesson {
@@ -58,6 +85,9 @@ model Lesson {
   plan_id     Int
   start_date  DateTime
 	status      LessonStatus @default(PENDING)
+	comment     String?
+	lesson_notifications LessonNotification[]
+	payment_status Boolean @default(false)
   created_at  DateTime @default(now())
 
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)

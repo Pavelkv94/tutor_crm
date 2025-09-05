@@ -5,9 +5,18 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { PlansModule } from './plans/plans.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TelegramModule } from './telegram/telegram.module';
 @Module({
-	imports: [PrismaModule, ConfigModule.forRoot(), ScheduleModule.forRoot(), StudentsModule, LessonsModule, PlansModule],
+	imports: [
+		PrismaModule,
+		ConfigModule.forRoot({ isGlobal: true }),
+		ScheduleModule.forRoot(),
+		TelegramModule,
+		StudentsModule,
+		LessonsModule,
+		PlansModule
+	],
 	controllers: [],
 	providers: [],
 })
-export class AppModule {}
+export class AppModule { }

@@ -17,12 +17,28 @@ import Preloader from "../Preloader/Preloader";
 const Home = () => {
 	const [selectedPeriod, setSelectedPeriod] = useState<Dayjs>(dayjs(new Date()));
 
-	const { isLoading, isError } = useQuery({
+	const { data: lessons, isLoading, isError } = useQuery({
 		queryKey: ["lessons", selectedPeriod],
 		queryFn: () => {
 			return axios.get(`${import.meta.env.VITE_API_URL}/lessons?start_date=${selectedPeriod.startOf('month').toISOString()}&end_date=${selectedPeriod.endOf('month').toISOString()}`)
 		},
 	})
+
+
+	const { data: plans, isLoading: isLoadingPlans } = useQuery({
+		queryKey: ["plans"],
+		queryFn: () => {
+			return axios.get(`${import.meta.env.VITE_API_URL}/plans`)
+		},
+	})
+
+	const { data: students, isLoading: isLoadingStudents } = useQuery({
+		queryKey: ["students"],
+		queryFn: () => {
+			return axios.get(`${import.meta.env.VITE_API_URL}/students`)
+		},
+	})
+
 
 	const daysInMonth = selectedPeriod?.daysInMonth() || 0;
 	const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -52,7 +68,7 @@ const Home = () => {
 	const weeks = getDaysInWeeks(selectedPeriod, daysInMonth);
 
 
-	if (isLoading) return <Preloader isLoading={isLoading} />
+	if (isLoading || isLoadingPlans || isLoadingStudents) return <Preloader isLoading={isLoading || isLoadingPlans || isLoadingStudents} />
 
 	if (isError) return <div>Error</div>
 
@@ -162,6 +178,7 @@ const Home = () => {
 											hourUTC3={hoursUTC3[hourIndex]}
 											day={dayNumber}
 											selectedPeriod={selectedPeriod}
+											lessons={lessons}
 											onClick={handleDayClick({
 												hourUTC3: hoursUTC3[hourIndex],
 												day: dayNumber,
@@ -169,7 +186,7 @@ const Home = () => {
 												weekDay: weekDays[dayIndex]
 											})}
 										/>}
-										{dayNumber && <div className="popovers">{`${dayNumber}.${selectedPeriod.format("MM.YYYY")} ${hoursUTC3[hourIndex]}, ${weekDays[dayIndex]}`}</div>}
+										{dayNumber && <div className="popovers">{hoursUTC3[hourIndex]}</div>}
 									</Grid>
 								))}
 							</Grid>
@@ -182,7 +199,7 @@ const Home = () => {
 				open={openDrawer}
 				onClose={() => setOpenDrawer(false)}
 			>
-				<Lesson lesson={selectedLesson} onClose={() => setOpenDrawer(false)} />
+				<Lesson lesson={selectedLesson} onClose={() => setOpenDrawer(false)} selectedPeriod={selectedPeriod} plans={plans} students={students} />
 			</Drawer>
 		</div>
 	)

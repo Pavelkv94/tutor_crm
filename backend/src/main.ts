@@ -3,10 +3,12 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
+import { SimpleExeptionFilter } from './exeptions/simple-exception';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 	app.useGlobalPipes(new ValidationPipe());
+	app.useGlobalFilters(new SimpleExeptionFilter());
 
 	const config = new DocumentBuilder()
 		.setTitle('School API')

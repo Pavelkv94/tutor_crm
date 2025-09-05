@@ -1,12 +1,29 @@
 .lesson {
 	background-color: #fff;
-	width: 400px;
 	height: 100%;
 	padding: 1rem;
 
+	.lesson-header {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 10px;
+		}
+	
+		.lesson-container {
+			display: flex;
+			gap: 10px;
+		}
 	section {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
+&.lesson-info {
+		width: 300px;
+	}
+
+	&.lesson-form {
+		width: 380px;
+	}
 	}
 }

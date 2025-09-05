@@ -10,15 +10,18 @@ import '@fontsource/roboto/700.css';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import "react-day-picker/style.css";
+import { NotificationProvider } from './components/notifier/NotificationProvider.tsx';
 
 
-const queryClient = new QueryClient()
+export const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
 	<QueryClientProvider client={queryClient}>
 		<BrowserRouter>
 		<LocalizationProvider dateAdapter={AdapterDayjs}>
+				<NotificationProvider>
 			<App />
+				</NotificationProvider>
 			</LocalizationProvider>
 		</BrowserRouter>
 	</QueryClientProvider>

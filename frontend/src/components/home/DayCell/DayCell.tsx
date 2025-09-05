@@ -1,7 +1,6 @@
 import "./DayCell.styles.scss"
 import { Dayjs } from "dayjs";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { convertToUTC } from "../convertToUTC";
 
 enum LessonStatus {
 	PENDING = "PENDING",
@@ -9,33 +8,24 @@ enum LessonStatus {
 	CANCELLED = "CANCELLED",
 }
 
-export const DayCell = ({ hour, hourUTC3, day, selectedPeriod, onClick }: { hour: string, hourUTC3: string, day: number, selectedPeriod: Dayjs, onClick: () => void }) => {
-	const year = selectedPeriod.year();
-	const month = selectedPeriod.month();
-	const hourNumber = Number(hourUTC3.split(":")[0]);
-	const minute = Number(hourUTC3.split(":")[1]);
-	const date = new Date(Date.UTC(year, month, day, hourNumber - 3, minute)); // приводим к UTC+0
-	const utcString = date.toISOString();
+export const DayCell = ({ hour, hourUTC3, day, selectedPeriod, onClick, lessons }: { hour: string, hourUTC3: string, day: number, selectedPeriod: Dayjs, onClick: () => void, lessons: any }) => {
 
-	const { data: lessons, } = useQuery({
-		queryKey: ["lessons", selectedPeriod],
-		queryFn: () => {
-			return axios.get(`${import.meta.env.VITE_API_URL}/lessons?start_date=${selectedPeriod.startOf('month').toISOString()}&end_date=${selectedPeriod.endOf('month').toISOString()}`)
-		},
-	})
+	const startDateUTC0 = convertToUTC(selectedPeriod, day, hourUTC3);
 
-	const currentLessons = lessons?.data.filter((lesson: any) => {
-		return lesson.start_date === utcString
+	const currentLessonsWithCanceled = lessons?.data.filter((lesson: any) => {
+		return lesson.start_date === startDateUTC0
 	});
+
+	const actualLessons = currentLessonsWithCanceled.filter((lesson: any) => lesson.status !== LessonStatus.CANCELLED);
 
 	let statusClass = "";
 	if (lessons) {
-		if (currentLessons[0]?.status === LessonStatus.COMPLETED) {
+		if (actualLessons[0]?.status === LessonStatus.COMPLETED) {
 			statusClass = "status-completed";
-		} else if (currentLessons[0]?.status === LessonStatus.CANCELLED) {
-			statusClass = "status-cancelled";
-		} else if (currentLessons[0]?.status === LessonStatus.PENDING) {
+		} else if (actualLessons[0]?.status === LessonStatus.PENDING) {
 			statusClass = "status-pending";
+		} else if (currentLessonsWithCanceled.length > 0) {
+			statusClass = "status-cancelled";
 		}
 	}
 	const isLunchTime = Number(hour.split(":")[0]) === 12;
@@ -43,14 +33,11 @@ export const DayCell = ({ hour, hourUTC3, day, selectedPeriod, onClick }: { hour
 	const isNowMonth =  currentMonth === new Date(selectedPeriod.toDate())?.getMonth()
 	const isToday = selectedPeriod?.date() === day;
 
-	const cellContent = lessons && <>
-		{currentLessons[0] &&<div key={currentLessons[0]?.id}>{currentLessons[0]?.student.name} {currentLessons[0]?.student.class} класс</div>}
-		{currentLessons[1] &&<div className="separator"></div>}
-		{currentLessons[1] && <div key={currentLessons[1]?.id}>{currentLessons[1]?.student.name} {currentLessons[1]?.student.class} класс</div>}
-	</>
 	return (
 		<div className={`day ${isLunchTime ? "lunch" : ""} ${statusClass} ${isToday && isNowMonth ? "today-day" : ""}`} onClick={onClick}>
-			{cellContent}
+			{currentLessonsWithCanceled.map((lesson: any) => (
+				<div key={lesson.id}>{lesson.student.name} {lesson.student.class} класс <span style={{ color: lesson.status === LessonStatus.CANCELLED ? "red" : "black" }}>{lesson.status === LessonStatus.CANCELLED && "(Canceled)"}</span></div>
+			))}
 		</div>
 	)
 }
