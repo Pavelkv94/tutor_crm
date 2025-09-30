@@ -13,6 +13,7 @@ export class LessonsService {
 	async create(createLessonDto: CreateLessonDto) {
 		const { bookUntilCancellation, plan_id, specificDays, start_date, student_id, corrected_time } = createLessonDto;
 
+		const corrected_time_date = new Date(corrected_time);
 		const lessonAlreadyBooked = await this.prisma.lesson.findFirst({
 			where: {
 				start_date,
@@ -65,12 +66,14 @@ export class LessonsService {
 				// Создаём занятия на каждый найденный день
 				for (const date of lessonDates) {
 
+					const merged = new Date(date);
+					merged.setUTCHours(corrected_time_date.getUTCHours(), corrected_time_date.getUTCMinutes(), corrected_time_date.getUTCSeconds(), corrected_time_date.getUTCMilliseconds());
 					await this.prisma.lesson.create({
 						data: {
 							plan_id,
 							start_date: date,
 							student_id,
-							corrected_time,
+							corrected_time: merged.toISOString(),
 							is_regular: true
 						},
 					});
@@ -87,12 +90,14 @@ export class LessonsService {
 
 			if (daysIsFree) {
 				updatedDates.forEach(async (day) => {
+					const merged = new Date(day);
+					merged.setUTCHours(corrected_time_date.getUTCHours(), corrected_time_date.getUTCMinutes(), corrected_time_date.getUTCSeconds(), corrected_time_date.getUTCMilliseconds());
 					await this.prisma.lesson.create({
 						data: {
 							plan_id,
 							start_date: day,
 							student_id,
-							corrected_time,
+							corrected_time: merged.toISOString(),
 							is_regular: true
 						},
 					});

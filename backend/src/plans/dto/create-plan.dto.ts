@@ -1,6 +1,6 @@
 import { IsEnum, IsInt,  IsNotEmpty, IsString, Max } from "class-validator";
 
-enum PlanType {
+export enum PlanType {
 	INDIVIDUAL = "INDIVIDUAL",
 	PAIR = "PAIR",
 }
