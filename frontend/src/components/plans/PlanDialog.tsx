@@ -95,7 +95,7 @@ export const PlanDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dialog
 				<DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, width: "500px" }}>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Plan Type</Typography>
+						<Typography style={{ margin: 0 }}>Тип занятий</Typography>
 						<Select
 							labelId="demo-simple-select-label"
 							id="demo-simple-select"
@@ -107,7 +107,7 @@ export const PlanDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dialog
 						</Select>
 					</div>
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Plan Currency</Typography>
+						<Typography style={{ margin: 0 }}>Валюта</Typography>
 						<Select
 							value={planBody.plan_currency}
 							inputProps={{ 'aria-label': 'Without label' }}
@@ -118,7 +118,7 @@ export const PlanDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dialog
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Plan Price</Typography>
+						<Typography style={{ margin: 0 }}>Стоимость занятий</Typography>
 						<TextField
 							autoFocus
 							required
@@ -132,7 +132,7 @@ export const PlanDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dialog
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Plan Duration</Typography>
+						<Typography style={{ margin: 0 }}>Длительность занятий</Typography>
 						<Select
 							value={planBody.duration}
 							inputProps={{ 'aria-label': 'Without label' }}
@@ -143,9 +143,9 @@ export const PlanDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dialog
 					</div>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={handleClose}>Cancel</Button>
+					<Button onClick={handleClose}>Отмена</Button>
 					<Button type="submit" variant="contained" color="success" disabled={isButtonDisabled} onClick={handleCreatePlan}>
-						Create Plan
+						Добавить план
 					</Button>
 				</DialogActions>
 			</Dialog>

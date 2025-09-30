@@ -19,11 +19,12 @@ export enum Severity {
 }
 
 export enum LessonStatus {
-	PENDING = "PENDING",
-	COMPLETED = "COMPLETED",
 	CANCELLED = "CANCELLED",
+	COMPLETED = "COMPLETED",
+	MISSED = "MISSED",
+	RESCHEDULED = "RESCHEDULED",
+	PENDING = "PENDING",
 }
-
 
 export const currencies = [{
 	label: PlanCurrency.USD,

@@ -34,12 +34,13 @@ export const DeleteDialog = ({ dialogTitle, onDelete }: { dialogTitle: string, o
 			<Dialog open={open} onClose={handleClose}>
 				<DialogTitle>{dialogTitle}</DialogTitle>
 				<DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, width: "500px" }}>
-					<Typography variant="body1">Are you sure you want to delete this item?</Typography>
+					<Typography variant="body1">Вы уверены, что хотите удалить этот элемент?</Typography>
+					{dialogTitle === "Удалить студента" && <Typography variant="body1">Запись о студенте будет удалена из списков, но записи о проведенных с ним занятиях останутся.</Typography>}
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={handleClose}>Cancel</Button>
+					<Button onClick={handleClose}>Отмена</Button>
 					<Button type="submit" variant="contained" color="error" onClick={handleDelete}>
-						Delete
+						Удалить
 					</Button>
 				</DialogActions>
 			</Dialog>

@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PlansModule } from './plans/plans.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TelegramModule } from './telegram/telegram.module';
+import { ReportsModule } from './reports/reports.module';
 @Module({
 	imports: [
 		PrismaModule,
@@ -14,7 +15,8 @@ import { TelegramModule } from './telegram/telegram.module';
 		TelegramModule,
 		StudentsModule,
 		LessonsModule,
-		PlansModule
+		PlansModule,
+		ReportsModule
 	],
 	controllers: [],
 	providers: [],

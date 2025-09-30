@@ -1,4 +1,4 @@
-import { TextareaAutosize, Typography } from "@mui/material"
+import { Checkbox, TextareaAutosize, Typography } from "@mui/material"
 import Card from "@mui/material/Card";
 import { LessonStatus } from "@/App.constants";
 import { Button } from "@mui/material";
@@ -9,16 +9,23 @@ import { useState } from "react";
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { Dayjs } from "dayjs";
 
+enum CancelationType {
+	MISSED = "MISSED",
+	RESCHEDULED = "RESCHEDULED",
+	CANCELLED = "CANCELLED",
+}
+
 export const InfoLessonCard = ({ lesson, startDateUTC0, index, selectedPeriod }: { lesson: any, startDateUTC0: string, index: number, selectedPeriod: Dayjs }) => {
 	const queryClient = useQueryClient()
 	const notify = useNotification()
 
 	const [openTextarea, setOpenTextarea] = useState(false)
 	const [comment, setComment] = useState("")
+	const [cancelationType, setCancelationType] = useState<CancelationType>(CancelationType.RESCHEDULED)
 
 	const { mutate: cancelLesson } = useMutation({
-		mutationFn: ({ id, comment }: { id: number, comment: string }) => {
-			return axios.patch(`${import.meta.env.VITE_API_URL}/lessons/${id}/cancel`, { comment })
+		mutationFn: ({ id, comment, cancelationType }: { id: number, comment: string, cancelationType: CancelationType }) => {
+			return axios.patch(`${import.meta.env.VITE_API_URL}/lessons/${id}/cancel`, { comment, cancelationType })
 		},
 		onSuccess: (response) => {
 			queryClient.invalidateQueries({ queryKey: ["lessons", "assigned", startDateUTC0] })
@@ -38,14 +45,15 @@ export const InfoLessonCard = ({ lesson, startDateUTC0, index, selectedPeriod }:
 	}
 
 	const handleCancelLesson = (lesson: any) => {
-		cancelLesson({ id: lesson.id, comment: comment })
+		cancelLesson({ id: lesson.id, comment: comment, cancelationType: cancelationType })
 		setOpenTextarea(false)
 		setComment("")
 	}
 
 	const backgroundColor = lesson.status === LessonStatus.CANCELLED ? "#fdd5d5" : "#d5f4fd";
 
-	const [openCard, setOpenCard] = useState(true)
+	const [openCard, setOpenCard] = useState(true);
+
 	return (
 		!openCard ? <Card variant="outlined" style={{ padding: 10, backgroundColor: backgroundColor, cursor: "pointer" }} onClick={() => setOpenCard(true)}>
 			<Typography fontSize={14}><b>Canceled Lesson {index + 1}</b></Typography>
@@ -60,18 +68,34 @@ export const InfoLessonCard = ({ lesson, startDateUTC0, index, selectedPeriod }:
 				<Typography fontSize={18}><b>Status:</b> <span style={{ color: statusColors[lesson.status as LessonStatus] }}>{lesson.status}</span></Typography>
 				{lesson.comment && <Typography fontSize={16}><b>Comment:</b> {lesson.comment}</Typography>}
 				<br />
-				{openTextarea && <TextareaAutosize
-					placeholder="Set comment about cancellation reason"
-					value={comment}
-					onChange={(e) => setComment(e.target.value)}
-					minRows={3}
-					style={{ width: "100%", resize: "vertical" }}
-				/>}
+				{openTextarea && <>
+					<TextareaAutosize
+						placeholder="Комментарий"
+						value={comment}
+						onChange={(e) => setComment(e.target.value)}
+						minRows={3}
+						style={{ width: "100%", resize: "vertical" }}
+					/>
+					<div>
+						<div style={{ display: "flex", alignItems: "center" }}>
+							<Checkbox checked={cancelationType === CancelationType.MISSED} onChange={(e) => setCancelationType(e.target.checked ? CancelationType.MISSED : CancelationType.RESCHEDULED)} />
+							<Typography style={{ margin: 0 }}>Прогул</Typography>
+						</div>
+						<div style={{ display: "flex", alignItems: "center" }}>
+							<Checkbox checked={cancelationType === CancelationType.RESCHEDULED} onChange={(e) => setCancelationType(e.target.checked ? CancelationType.RESCHEDULED : CancelationType.MISSED)} />
+							<Typography style={{ margin: 0 }}>Перенос</Typography>
+						</div>
+						<div style={{ display: "flex", alignItems: "center" }}>
+							<Checkbox checked={cancelationType === CancelationType.CANCELLED} onChange={(e) => setCancelationType(e.target.checked ? CancelationType.CANCELLED : CancelationType.MISSED)} />
+							<Typography style={{ margin: 0 }}>Отмена</Typography>
+						</div>
+					</div>
+					<Button variant="contained" size="small" color="error" disabled={lesson.status === LessonStatus.CANCELLED} onClick={() => {
+						handleCancelLesson(lesson)
+					}}>Отменить</Button>
+				</>}
 				{!openTextarea && <Button variant="contained" size="small" color="error" disabled={lesson.status === LessonStatus.CANCELLED} onClick={() => {
 					setOpenTextarea(true)
-				}}>Cancel Lesson</Button>}
-				{openTextarea && <Button variant="contained" size="small" color="error" disabled={lesson.status === LessonStatus.CANCELLED} onClick={() => {
-					handleCancelLesson(lesson)
-				}}>Cancel Lesson</Button>}
+				}}>Отменить</Button>}
 			</Card>)
 }

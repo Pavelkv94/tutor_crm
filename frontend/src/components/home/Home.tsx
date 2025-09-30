@@ -13,6 +13,7 @@ import CurrentTime from "./CurrentTime/CurrentTime";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Preloader from "../Preloader/Preloader";
+import { convertCurrentDateToUTCBelarus, convertCurrentDateToUTCPoland } from "./convertToUTC";
 
 const Home = () => {
 	const [selectedPeriod, setSelectedPeriod] = useState<Dayjs>(dayjs(new Date()));
@@ -55,11 +56,10 @@ const Home = () => {
 	// Создаем массив часов от 8:00 до 22:00 для UTC+2 и UTC+3
 	const hoursUTC2: string[] = [];
 	const hoursUTC3: string[] = [];
-	for (let i = 9; i <= 20; i++) {
-		const timeUTC3 = `${(i).toString().padStart(2, '0')}:00`;
-		const timeUTC2 = `${(i - 1).toString().padStart(2, '0')}:00`;
-		hoursUTC2.push(timeUTC2);
-		hoursUTC3.push(timeUTC3);
+
+	for (let i = 6; i <= 17; i++) {
+		hoursUTC2.push(convertCurrentDateToUTCPoland(i));
+		hoursUTC3.push(convertCurrentDateToUTCBelarus(i));
 	}
 
 	const timeInUTC3 = new Date(new Date().toLocaleString("en-US", { timeZone: "Etc/GMT-3" }))
@@ -77,9 +77,10 @@ const Home = () => {
 			<div className="home-header">
 				<CurrentTime />
 				<DatePicker
-					label="Period"
+					label="Период"
 					views={['year', 'month']}
 					openTo="month"
+					format="DD.MM.YYYY"
 					value={selectedPeriod}
 					onChange={(newValue) => setSelectedPeriod(newValue as Dayjs)}
 				/>
@@ -91,15 +92,11 @@ const Home = () => {
 					<Grid size={0.5} sx={{ backgroundColor: "#f0e8f8", borderRight: "2px solid #333" }}>
 						<Typography variant="body2" sx={{ textAlign: "center", fontWeight: "bold" }}>
 							Minsk
-							<br />
-							(UTC+3)
 						</Typography>
 					</Grid>
 					<Grid size={0.5} sx={{ backgroundColor: "#e8f4f8", borderRight: "1px solid #ddd" }}>
 						<Typography variant="body2" sx={{ textAlign: "center", fontWeight: "bold" }}>
 							Warsaw
-							<br />
-							(UTC+2)
 						</Typography>
 					</Grid>
 					{/* Дни недели */}
@@ -131,7 +128,6 @@ const Home = () => {
 						{/* Часы для этой недели */}
 						{hoursUTC2.map((hourUTC2, hourIndex) => (
 							<Grid container key={hourIndex}
-							//  sx={{ borderBottom: hourIndex < hoursUTC2.length - 1 ? "1px solid #eee" : "none" }}
 							>
 
 

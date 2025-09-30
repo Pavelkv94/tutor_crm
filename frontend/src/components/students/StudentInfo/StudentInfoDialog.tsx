@@ -22,12 +22,11 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, setOpen: (open: boolean) => void, student: any }) => {
 
 	const notify = useNotification()
-	const [selectedPeriod, setSelectedPeriod] = useState<Dayjs>(dayjs(new Date()));
 
 	const { data: studentData } = useQuery({
-		queryKey: ["students", student.id, selectedPeriod],
+		queryKey: ["students", student.id],
 		queryFn: () => {
-			return axios.get(`${import.meta.env.VITE_API_URL}/students/${student.id}?start_date=${selectedPeriod.startOf('month').toISOString()}&end_date=${selectedPeriod.endOf('month').toISOString()}`)
+			return axios.get(`${import.meta.env.VITE_API_URL}/students/${student.id}`)
 		},
 		staleTime: 60 * 60 * 1000,
 	})
@@ -66,11 +65,11 @@ export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, s
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["students"] })
-			notify("Student updated successfully", "success")
+			notify("Студент успешно обновлен", "success")
 
 		},
 		onError: (error) => {
-			notify("Error updating student: " + (error as any)?.response?.data?.message, "error")
+			notify("Ошибка при обновлении студента: " + (error as any)?.response?.data?.message, "error")
 		}
 	})
 
@@ -81,25 +80,18 @@ export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, s
 	};
 
 	const handleSaveStudent = () => {
-		mutate({ id: student.id.toString(), student: { ...studentBody, birth_date: birthDate?.toISOString(), class: +studentBody.class} })
+		mutate({ id: student.id.toString(), student: { ...studentBody, birth_date: birthDate?.toISOString(), class: +studentBody.class } })
 	}
 
 	return <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
 		<DialogTitle className="student-info-title">
-			Student Info
-			<DatePicker
-				label="Period"
-				views={['year', 'month']}
-				openTo="month"
-				value={selectedPeriod}
-				onChange={(newValue) => setSelectedPeriod(newValue as Dayjs)}
-			/>
+			Информация о студенте
 		</DialogTitle>
 
 		<DialogContent className="student-info-content">
 			<section>
 				<div>
-					<Typography style={{ margin: 0 }}>Student Name</Typography>
+					<Typography style={{ margin: 0 }}>Имя студента</Typography>
 					<TextField
 						size="small"
 						autoFocus
@@ -114,7 +106,7 @@ export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, s
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-					<Typography style={{ margin: 0 }}>Student Class</Typography>
+					<Typography style={{ margin: 0 }}>Класс студента</Typography>
 					<TextField
 						size="small"
 						autoFocus
@@ -129,52 +121,43 @@ export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, s
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-					<Typography style={{ margin: 0 }}>Student Birth Date</Typography>
-					<DatePicker label="Birth Date" value={birthDate} onChange={(e) => setBirthDate(e)} />
+					<Typography style={{ margin: 0 }}>Дата рождения</Typography>
+					<DatePicker label="Birth Date" value={birthDate} onChange={(e) => setBirthDate(e)} format="DD.MM.YYYY" />
 				</div>
 
 				<div >
 					<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-						<Typography style={{ margin: 0 }}>Book Lessons Until Cancellation:</Typography>
+						<Typography style={{ margin: 0 }}>Бронировать занятия до отмены:</Typography>
 						<Switch checked={studentBody.bookUntilCancellation} onChange={(e) => setStudentBody({ ...studentBody, bookUntilCancellation: e.target.checked })} />
 					</div>
-					<Typography fontSize={12} color="#666" style={{ margin: 0 }}>Lessons will be automatically booked next month</Typography>
+					<Typography fontSize={12} color="#666" style={{ margin: 0 }}>Занятия будут автоматически забронированы на следующий месяц</Typography>
 				</div>
 
 				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-					<Typography style={{ margin: 0 }}>Notify me about birthday:</Typography>
+					<Typography style={{ margin: 0 }}>Уведомить меня о дне рождения:</Typography>
 					<Switch checked={studentBody.notifyAboutBirthday} onChange={(e) => setStudentBody({ ...studentBody, notifyAboutBirthday: e.target.checked })} />
 				</div>
 
 				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-					<Typography style={{ margin: 0 }}>Notify student about lessons:</Typography>
+					<Typography style={{ margin: 0 }}>Уведомить студента о занятиях:</Typography>
 					<Switch checked={studentBody.notifyAboutLessons} onChange={(e) => setStudentBody({ ...studentBody, notifyAboutLessons: e.target.checked })} />
 				</div>
 
 				<Button type="submit" variant="contained" color="success" disabled={isButtonDisabled} onClick={handleSaveStudent}>
-					Save Student
+					Сохранить студента
 				</Button>
 			</section>
 			<section>
-				<Typography style={{ margin: 0 }}>Total Lessons: {studentData?.data.totalLessonsCount}</Typography>
-				<Typography style={{ margin: 0 }}>Canceled Lessons: {studentData?.data.canceledLessonsCount}</Typography>
-				<Typography style={{ margin: 0 }}>Completed Lessons: {studentData?.data.completedLessonsCount}</Typography>
-				<Typography style={{ margin: 0 }}>Pending Lessons: {studentData?.data.pendingLessonsCount}</Typography>
-				<Typography style={{ margin: 0 }}>Total Lessons Price: {studentData?.data.totalLessonsPrice}</Typography>
-				<Typography style={{ margin: 0 }}>Balance: {studentData?.data.balance}</Typography>
-
-
-
-
-
-
-				<Typography style={{ margin: 0, display: "flex", alignItems: "center", gap: 10 }}><TelegramIcon style={{ color: "#1976d2" }} />Connected Telegrams:</Typography>
+				<Typography style={{ margin: 0, display: "flex", alignItems: "center", gap: 10 }}><TelegramIcon style={{ color: "#1976d2" }} />Подключенные Telegram:</Typography>
+				{studentData?.data.telegrams.length === 0 && (
+					<Typography fontSize={12} style={{ margin: 0 }}>Подключенные Telegram не найдены</Typography>
+				)}
 				{studentData?.data.telegrams.map((telegram: any) => (
-					<span key={telegram.id}>{"• "} 
-					<a href={`https://t.me/${telegram.username}`} target="_blank" style={{ margin: 0, color: "#1976d2", textDecoration: "none" }}>@{telegram.username} {telegram.first_name} ({telegram.type})</a>
+					<span key={telegram.id}>{"• "}
+						<a href={`https://t.me/${telegram.username}`} target="_blank" style={{ margin: 0, color: "#1976d2", textDecoration: "none" }}>@{telegram.username} {telegram.first_name} ({telegram.type})</a>
 					</span>
 				))}
-				<Button size="small" variant="outlined" color="primary" disabled={isButtonDisabled} onClick={() => refetchTelegramLink()}>Generate Telegram Link for this student</Button>
+				<Button size="small" variant="outlined" color="primary" disabled={isButtonDisabled} onClick={() => refetchTelegramLink()}>Сгенерировать Telegram Link для этого студента</Button>
 				{telegramLink?.data.link && <Typography fontSize={12} style={{ margin: 0 }}>
 					Telegram Link: <span style={{ fontSize: 12, color: "#666" }}>{telegramLink?.data.link}</span>
 					<ContentCopyIcon sx={{ fontSize: 16, marginLeft: 1 }} onClick={() => navigator.clipboard.writeText(telegramLink?.data.link)} style={{ cursor: "pointer" }} />
@@ -182,7 +165,7 @@ export const StudentInfoDialog = ({ open, setOpen, student }: { open: boolean, s
 			</section>
 		</DialogContent>
 		<DialogActions>
-			<Button onClick={handleClose}>Close</Button>
+			<Button onClick={handleClose}>Закрыть</Button>
 		</DialogActions>
 	</Dialog>
 }

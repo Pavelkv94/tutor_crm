@@ -18,7 +18,7 @@ export const queryClient = new QueryClient()
 createRoot(document.getElementById('root')!).render(
 	<QueryClientProvider client={queryClient}>
 		<BrowserRouter>
-		<LocalizationProvider dateAdapter={AdapterDayjs}>
+			<LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en-gb">
 				<NotificationProvider>
 			<App />
 				</NotificationProvider>

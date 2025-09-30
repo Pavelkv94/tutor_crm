@@ -3,7 +3,7 @@ import { CreateLessonDto } from './dto/create-lesson.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { addDays, endOfMonth } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PlanType } from '@prisma/client';
+import { LessonStatus, PlanType } from '@prisma/client';
 import { CancelLessonDto } from './dto/cancel-lesson.dto';
 
 @Injectable()
@@ -11,7 +11,19 @@ export class LessonsService {
 	constructor(private readonly prisma: PrismaService) { }
 
 	async create(createLessonDto: CreateLessonDto) {
-		const { bookUntilCancellation, plan_id, specificDays, start_date, student_id } = createLessonDto;
+		const { bookUntilCancellation, plan_id, specificDays, start_date, student_id, corrected_time } = createLessonDto;
+
+		const lessonAlreadyBooked = await this.prisma.lesson.findFirst({
+			where: {
+				start_date,
+				student_id,
+			},
+		});
+
+		if (lessonAlreadyBooked) {
+			throw new BadRequestException("Lesson already booked for this student");
+		}
+
 
 		const plan = await this.prisma.plan.findUnique({
 			where: {
@@ -58,6 +70,8 @@ export class LessonsService {
 							plan_id,
 							start_date: date,
 							student_id,
+							corrected_time,
+							is_regular: true
 						},
 					});
 				}
@@ -78,6 +92,8 @@ export class LessonsService {
 							plan_id,
 							start_date: day,
 							student_id,
+							corrected_time,
+							is_regular: true
 						},
 					});
 				});
@@ -88,13 +104,31 @@ export class LessonsService {
 			};
 		}
 
-		await this.prisma.lesson.create({
+
+
+		const newLesson = await this.prisma.lesson.create({
 			data: {
 				plan_id,
 				start_date,
 				student_id,
+				corrected_time,
+				rescheduled_lesson_id: createLessonDto.rescheduled_lesson_id || null,
+				rescheduled_lesson_date: createLessonDto.rescheduled_lesson_date || null,
+				is_regular: false
 			},
 		});
+
+		if (createLessonDto.rescheduled_lesson_id) {
+			await this.prisma.lesson.update({
+				data: {
+					rescheduled_to_lesson_id: newLesson.id,
+					rescheduled_to_lesson_date: newLesson.corrected_time,
+				},
+				where: {
+					id: createLessonDto.rescheduled_lesson_id,
+				},
+			});
+		}
 
 		return {
 			message: "Lesson created successfully",
@@ -119,7 +153,7 @@ export class LessonsService {
 	async cancelLesson(id: number, cancelLessonDto: CancelLessonDto) {
 		return await this.prisma.lesson.update({
 			data: {
-				status: "CANCELLED",
+				status: cancelLessonDto.cancelationType,
 				comment: cancelLessonDto.comment,
 			},
 			where: { id },

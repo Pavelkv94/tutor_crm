@@ -25,7 +25,7 @@ export class TelegramService extends Telegraf {
 		const firstName = ctx.message?.from?.first_name;
 		const token = ctx.message?.text?.split(' ')[1];
 		const chatId = ctx.message?.chat?.id;
-
+		console.log(chatId);
 		if (!username) {
 			await ctx.replyWithHTML(TELEGRAM_MESSAGES.welcome);
 		}
@@ -66,6 +66,10 @@ export class TelegramService extends Telegraf {
 		if (chatId === this.configService.get<string>('ADMIN_TG_ID') as string) {
 			await ctx.reply(TELEGRAM_MESSAGES.adminWelcome);
 		}
+	}
+
+	async sendMessageToAdmin(message: string) {
+		await this.telegram.sendMessage(this.configService.get<string>('ADMIN_TG_ID') as string, message);
 	}
 
 	private async connectTelegram(studentId: number, chatId: string, username: string, firstName: string) {
@@ -115,8 +119,12 @@ export class TelegramService extends Telegraf {
 	}
 
 	@Cron(CronExpression.EVERY_DAY_AT_9AM)
-	async send() {
-		const allStudents = await this.prismaService.student.findMany();
+	async birthdayRemind() {
+		const allStudents = await this.prismaService.student.findMany({
+			where: {
+				deleted_at: null,
+			},
+		});
 
 		const today = new Date();
 		const todayMonth = today.getMonth() + 1; // месяцы от 0
@@ -156,7 +164,7 @@ ${noteEmoji} Don't forget to wish them a happy birthday!
 		} else {
 			const studentsList = students.map(student => {
 				const age = this.calculateAge(student.birth_date);
-				return `• ${student.name} (${age} years old)`;
+				return `• ${student.name} ${student.class}кл (${age} years old)`;
 			}).join('\n');
 
 			return `
@@ -224,7 +232,7 @@ ${noteEmoji} Don't forget to wish them all happy birthdays!
 					},
 				});
 
-				if (!alreadyNotified) {
+				if (!alreadyNotified) {// занятие начинается в 14:00 
 					console.log(`⏰ До начала занятия осталось ${diffMinutes} мин. ID занятия: ${lesson.id}. Начало в ${startDate}`);
 					await this.sendMessageToTelegram(lesson.student_id, `⏰ До начала занятия осталось ${diffMinutes} мин. Начало в ${startDate}`);
 

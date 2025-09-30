@@ -26,16 +26,32 @@
 		background-color: #88f1ec;
 	}
 
-	&.status-completed {
-		background-color: #7ffa6f;
+		&.status-completed-paid {
+			background-color: #0f8300;
+		}
+	
+		&.status-completed-unpaid {
+			background-color: #fd7e43;
 	}
 
 	&.status-cancelled {
 		background-color: #f18888;
 	}
 
-	&.status-pending {
-		background-color: #f5f397;
+		&.status-missed {
+			background-color: #ffe75c;
+		}
+	
+		&.status-rescheduled {
+			background-color: #f188ce;
+		}
+	
+		&.status-pending-unpaid {
+			background-color: #bff7b7;
+		}
+	
+		&.status-pending-paid {
+			background-color: #bff7b7;
 	}
 
 	&:hover {

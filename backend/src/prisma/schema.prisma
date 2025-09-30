@@ -40,6 +40,8 @@ model Student {
   lessons    Lesson[]
 	telegram_tokens TelegramToken[]
 
+	deleted_at DateTime?
+
 	@@map("student")
 }
 
@@ -88,7 +90,15 @@ model Lesson {
 	comment     String?
 	lesson_notifications LessonNotification[]
 	payment_status Boolean @default(false)
+	corrected_time DateTime
   created_at  DateTime @default(now())
+	is_paid Boolean @default(false)
+	is_regular Boolean @default(false)
+	is_free Boolean @default(false)
+	rescheduled_lesson_id Int?
+	rescheduled_lesson_date DateTime?
+	rescheduled_to_lesson_id Int?
+	rescheduled_to_lesson_date DateTime?
 
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
   plan        Plan     @relation(fields: [plan_id], references: [id])
@@ -130,5 +140,7 @@ enum PlanCurrency {
 enum LessonStatus {
   PENDING
   COMPLETED
+	MISSED
+	RESCHEDULED
   CANCELLED
 }

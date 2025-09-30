@@ -5,16 +5,18 @@ import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import { DayPicker } from "react-day-picker";
 import { useNotification } from "@/components/notifier/NotificationProvider";
-import { convertToUTC } from "../convertToUTC";
+import { convertDateFromBelarusToUTC0, convertDateToUTCBelarus, convertToUTC0, formatDateEuropeMinsk } from "../convertToUTC";
 import { PlanType } from "@/App.constants";
 import { LessonStatus } from "@/App.constants";
 import { InfoLessonCard } from "./InfoLessonCard/InfoLessonCard";
 import { queryClient } from "@/main";
+import dayjs from "dayjs";
+import { TimePicker } from "@mui/x-date-pickers";
 
 type Lesson = {
 	hour: string;
@@ -27,13 +29,17 @@ type Lesson = {
 type LessonBodyType = {
 	student_id: string;
 	plan_id: string;
+	corrected_time: Dayjs;
+	rescheduled_lesson_id: string;
+	rescheduled_lesson_date: string;
 }
 
 export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { lesson: Lesson, onClose: () => void, selectedPeriod: Dayjs, plans: any, students: any }) => {
 
 	const notify = useNotification();
 
-	const startDateUTC0 = convertToUTC(lesson.selectedPeriod, lesson.day, lesson.hourUTC3);
+	const startDateUTC0 = convertToUTC0(lesson.selectedPeriod, lesson.day, lesson.hourUTC3);
+
 	const { data: assignedLessons } = useQuery({
 		queryKey: ["lessons", "assigned", startDateUTC0],
 		queryFn: () => {
@@ -50,6 +56,9 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 	const [lessonBody, setLessonBody] = useState<LessonBodyType>({
 		student_id: "",
 		plan_id: "",
+		corrected_time: dayjs(convertDateToUTCBelarus(new Date(startDateUTC0))),
+		rescheduled_lesson_id: "",
+		rescheduled_lesson_date: "",
 	})
 
 	const selectedDay = lesson.day < 10 ? `0${lesson.day}` : lesson.day;
@@ -57,6 +66,7 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 	const [specificDays, setSpecificDays] = useState<Date[]>([]);
 	const [bookUntilCancellation, setBookUntilCancellation] = useState<boolean>(false);
 	const [bookSpecificDays, setBookSpecificDays] = useState<boolean>(false);
+	const [isRescheduledLesson, setIsRescheduledLesson] = useState<boolean>(false);
 
 	const { mutate: createLesson } = useMutation({
 		mutationFn: (lesson: any) => {
@@ -64,7 +74,7 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 		},
 		onSuccess: (response) => {
 			queryClient.invalidateQueries({ queryKey: ["lessons", lesson.selectedPeriod] })
-			notify("Lesson created successfully", "success")
+			notify("Занятие успешно создано", "success")
 			console.log(response)
 		},
 		onError: (error) => {
@@ -72,7 +82,7 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 		}
 	})
 
-	const studentsOptions = students?.data.map((student: any) => ({
+	const studentsOptions = students?.data.filter((student: any) => student.deleted_at === null).map((student: any) => ({
 		label: `${student.name} (${student.class} класс)`,
 		value: student.id,
 	}))
@@ -87,16 +97,25 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 			start_date: startDateUTC0,
 			bookUntilCancellation: bookUntilCancellation,
 			specificDays: specificDays,
+			corrected_time: convertDateFromBelarusToUTC0(lessonBody.corrected_time),
+			rescheduled_lesson_id: lessonBody.rescheduled_lesson_id || null,
+			rescheduled_lesson_date: lessonBody.rescheduled_lesson_date || null,
 		})
 		onClose()
 	}
 
+	useEffect(() => {
+		setLessonBody({ ...lessonBody, rescheduled_lesson_id: "", plan_id: "" })
+	}, [isRescheduledLesson])
+
 	const isButtonDisabled = !lessonBody.student_id || !lessonBody.plan_id || (bookSpecificDays && specificDays.length === 0)
+
+	const isRescheduledLessonExists = students.data.find((st: any) => st.id === lessonBody.student_id) && students.data.find((st: any) => st.id === lessonBody.student_id).lessons.filter((l: any) => l.status === LessonStatus.RESCHEDULED && l.rescheduled_to_lesson_id === null).length > 0;
 
 	return (
 		<div className="lesson">
 			<div className="lesson-header">
-				<Typography variant="h6">Lesson</Typography>
+				<Typography variant="h6">Занятие</Typography>
 				<Typography style={{ margin: 0, backgroundColor: "#f0f0f0", padding: 4, borderRadius: 5, border: "1px solid #e0e0e0" }}>
 					{selectedDay}.{lesson.selectedPeriod.format("MM.YYYY")} {lesson.hourUTC3}, {lesson.weekDay}
 				</Typography>
@@ -109,7 +128,12 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 				</section>}
 				{!isInfoMode && <section className="lesson-form">
 					<div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-						<Typography style={{ margin: 0 }}>Student</Typography>
+						<Typography style={{ margin: 0 }}>Скорректировать время</Typography>
+						<TimePicker value={lessonBody.corrected_time} ampm={false} onChange={(value) => setLessonBody({ ...lessonBody, corrected_time: value as Dayjs })} />
+					</div>
+
+					<div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+						<Typography style={{ margin: 0 }}>Студент</Typography>
 						<Select
 							size="small"
 							value={lessonBody.student_id}
@@ -120,34 +144,62 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 						</Select>
 					</div>
 
+					{isRescheduledLessonExists && <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+						<Checkbox checked={isRescheduledLesson} onChange={(e) => {
+							setIsRescheduledLesson(e.target.checked)
+						}} />
+						<Typography style={{ margin: 0 }}>Отработка занятия(<span style={{ color: "red" }}>у студента есть неотработанные занятия</span>)</Typography>
+					</div>}
+
+					{isRescheduledLesson && <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+						<Typography style={{ margin: 0 }}>Неотработанные занятия:</Typography>
+						<Select
+							size="small"
+							value={lessonBody.rescheduled_lesson_id}
+							inputProps={{ 'aria-label': 'Without label' }}
+							onChange={(e) => {
+								const lesson = students.data.find((st: any) => st.id === lessonBody.student_id)?.lessons.find((l: any) => l.id === e.target.value as string)
+								return setLessonBody({ ...lessonBody, rescheduled_lesson_id: e.target.value as string, plan_id: lesson?.plan_id, rescheduled_lesson_date: lesson?.corrected_time })
+							}}
+						>
+							{students.data.find((st: any) => st.id === lessonBody.student_id)?.lessons.filter((l: any) => l.status === LessonStatus.RESCHEDULED).map((lesson: any, index: number) => <MenuItem key={index} value={lesson.id}>{formatDateEuropeMinsk(lesson.start_date)}</MenuItem>)}
+						</Select>
+					</div>}
+
+
 					<div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-						<Typography style={{ margin: 0 }}>Plan</Typography>
+						<Typography style={{ margin: 0 }}>План</Typography>
 						<Select
 							size="small"
 							value={lessonBody.plan_id}
 							inputProps={{ 'aria-label': 'Without label' }}
 							onChange={(e) => setLessonBody({ ...lessonBody, plan_id: e.target.value as string })}
+							disabled={isRescheduledLesson}
 						>
 							{plansOptions.map((plan: any, index: number) => <MenuItem key={index} value={plan.value}>{plan.label}</MenuItem>)}
 						</Select>
 					</div>
 
-					<div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+
+
+
+
+					{!isRescheduledLesson && <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
 						<Checkbox checked={bookUntilCancellation} onChange={(e) => {
 							setBookUntilCancellation(e.target.checked)
 							setBookSpecificDays(false)
 							setSpecificDays([])
 						}} />
-						<Typography style={{ margin: 0 }}>Book Lesson until cancellation</Typography>
-					</div>
-					<div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+						<Typography style={{ margin: 0 }}>Бронировать занятие до отмены</Typography>
+					</div>}
+					{!isRescheduledLesson && <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
 						<Checkbox checked={bookSpecificDays} onChange={(e) => {
 							setBookSpecificDays(e.target.checked)
 							setBookUntilCancellation(false)
 							setSpecificDays([])
 						}} />
-						<Typography style={{ margin: 0 }}>Book specific days</Typography>
-					</div>
+						<Typography style={{ margin: 0 }}>Бронировать конкретные дни</Typography>
+					</div>}
 					{bookSpecificDays &&
 						<div>
 							{specificDays.length > 0 && <Typography style={{ margin: 0, backgroundColor: "#f0f0f0", padding: 10, borderRadius: 5, fontSize: 12 }}>
@@ -172,7 +224,7 @@ export const Lesson = ({ lesson, onClose, selectedPeriod, plans, students }: { l
 							</div>
 						</div>
 					}
-					<Button variant="contained" color="primary" onClick={handleCreateLesson} disabled={isButtonDisabled}>Create Lesson</Button>
+					<Button variant="contained" color="primary" onClick={handleCreateLesson} disabled={isButtonDisabled}>Создать занятие</Button>
 				</section>}
 			</div>
 		</div>

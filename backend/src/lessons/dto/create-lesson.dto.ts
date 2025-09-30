@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsString } from "class-validator";
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class CreateLessonDto {
 	@IsBoolean()
@@ -20,4 +20,16 @@ export class CreateLessonDto {
 	@IsInt()
 	@IsNotEmpty()
 	student_id: number;
+
+	@IsString()
+	@IsNotEmpty()
+	corrected_time: string;
+
+	@IsInt()
+	@IsOptional()
+	rescheduled_lesson_id: number | null;
+
+	@IsString()
+	@IsOptional()
+	rescheduled_lesson_date: string | null;
 }

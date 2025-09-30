@@ -51,6 +51,8 @@ export const StudentDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dia
 
 	const handleClose = () => {
 		setOpen(false);
+		setBirthDate(dayjs(new Date()))
+		setStudentBody({ name: "", class: "" })
 	};
 
 	const handleCreateStudent = () => {
@@ -70,7 +72,7 @@ export const StudentDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dia
 				<DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, width: "500px" }}>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Student Name</Typography>
+						<Typography style={{ margin: 0 }}>Имя студента</Typography>
 						<TextField
 							autoFocus
 							required
@@ -84,7 +86,7 @@ export const StudentDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dia
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Student Class</Typography>
+						<Typography style={{ margin: 0 }}>Класс студента</Typography>
 						<TextField
 							autoFocus
 							required
@@ -98,14 +100,14 @@ export const StudentDialog = ({ btnTitle, dialogTitle }: { btnTitle: string, dia
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<Typography style={{ margin: 0 }}>Student Birth Date</Typography>
-						<DatePicker label="Birth Date" value={birthDate} onChange={(e) => setBirthDate(e)} />
+						<Typography style={{ margin: 0 }}>Дата рождения</Typography>
+						<DatePicker label="Birth Date" value={birthDate} onChange={(e) => setBirthDate(e)} format="DD.MM.YYYY" />
 					</div>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={handleClose}>Cancel</Button>
+					<Button onClick={handleClose}>Отмена</Button>
 					<Button type="submit" variant="contained" color="success" disabled={isButtonDisabled} onClick={handleCreateStudent}>
-						Create Student
+						Добавить студента
 					</Button>
 				</DialogActions>
 			</Dialog>

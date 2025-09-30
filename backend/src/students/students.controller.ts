@@ -29,8 +29,14 @@ export class StudentsController {
 
 	@HttpCode(HttpStatus.OK)
 	@Get(':id')
-	findOne(@Param('id') id: string, @Query('start_date') start_date: string, @Query('end_date') end_date: string) {
-		return this.studentsService.findOne(+id, start_date, end_date);
+	findOne(@Param('id') id: string) {
+		return this.studentsService.findOne(+id);
+	}
+
+	@HttpCode(HttpStatus.OK)
+	@Post(':id/pay')
+	pay(@Param('id') id: string, @Body() payDto: { sum: number }) {
+		return this.studentsService.pay(+id, payDto.sum);
 	}
 
 	@HttpCode(HttpStatus.OK)
