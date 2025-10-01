@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - 5006:5000
+      - 5007:5000
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
@@ -23,7 +23,7 @@ services:
     depends_on:
       - tutor_backend
     ports:
-      - 3006:3000
+      - 3007:3000
     environment:
       - VITE_API_URL=${VITE_API_URL}
     networks:
