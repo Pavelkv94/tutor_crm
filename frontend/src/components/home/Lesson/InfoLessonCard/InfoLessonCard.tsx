@@ -42,6 +42,8 @@ export const InfoLessonCard = ({ lesson, startDateUTC0, index, selectedPeriod }:
 		[LessonStatus.PENDING]: "#000",
 		[LessonStatus.COMPLETED]: "#0abf00",
 		[LessonStatus.CANCELLED]: "#e30000",
+		[LessonStatus.MISSED]: "#e30000",
+		[LessonStatus.RESCHEDULED]: "#000",
 	}
 
 	const handleCancelLesson = (lesson: any) => {
