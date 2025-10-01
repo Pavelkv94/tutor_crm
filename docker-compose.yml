@@ -25,7 +25,7 @@ services:
     ports:
       - 3008:3000
     environment:
-      - VITE_API_URL=${VITE_API_URL}
+      - VITE_API_URL=http://tutor_backend:5000
     networks:
       - tutor_network
 
