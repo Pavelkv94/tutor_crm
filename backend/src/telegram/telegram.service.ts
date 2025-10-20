@@ -194,56 +194,56 @@ ${noteEmoji} Don't forget to wish them all happy birthdays!
 		return age;
 	}
 
-	@Cron(CronExpression.EVERY_10_SECONDS)
-	async sendNotificationAboutLesson() {
-		const currentMoment = new Date();
+	// @Cron(CronExpression.EVERY_10_SECONDS)
+	// async sendNotificationAboutLesson() {
+	// 	const currentMoment = new Date();
 
-		const startOfDay = new Date();
-		startOfDay.setHours(0, 0, 0, 0);
+	// 	const startOfDay = new Date();
+	// 	startOfDay.setHours(0, 0, 0, 0);
 
-		const endOfDay = new Date();
-		endOfDay.setHours(23, 59, 59, 999);
+	// 	const endOfDay = new Date();
+	// 	endOfDay.setHours(23, 59, 59, 999);
 
-		const allTodayLessons = await this.prismaService.lesson.findMany({
-			where: {
-				start_date: {
-					gte: startOfDay,
-					lte: endOfDay,
-				},
-			},
-			include: {
-				student: {
-					include: {
-						telegrams: true,
-					},
-				},
-			},
-		});
+	// 	const allTodayLessons = await this.prismaService.lesson.findMany({
+	// 		where: {
+	// 			start_date: {
+	// 				gte: startOfDay,
+	// 				lte: endOfDay,
+	// 			},
+	// 		},
+	// 		include: {
+	// 			student: {
+	// 				include: {
+	// 					telegrams: true,
+	// 				},
+	// 			},
+	// 		},
+	// 	});
 
-		for (const lesson of allTodayLessons) {
-			const startDate = new Date(lesson.start_date);
-			const diffMs = startDate.getTime() - currentMoment.getTime();
-			const diffMinutes = Math.floor(diffMs / 60000);
+	// 	for (const lesson of allTodayLessons) {
+	// 		const startDate = new Date(lesson.start_date);
+	// 		const diffMs = startDate.getTime() - currentMoment.getTime();
+	// 		const diffMinutes = Math.floor(diffMs / 60000);
 
-			if (diffMinutes <= 20 && diffMinutes > 0) {
-				const alreadyNotified = await this.prismaService.lessonNotification.findUnique({
-					where: {
-						lesson_id: lesson.id,
-					},
-				});
+	// 		if (diffMinutes <= 20 && diffMinutes > 0) {
+	// 			const alreadyNotified = await this.prismaService.lessonNotification.findUnique({
+	// 				where: {
+	// 					lesson_id: lesson.id,
+	// 				},
+	// 			});
 
-				if (!alreadyNotified) {// занятие начинается в 14:00 
-					console.log(`⏰ До начала занятия осталось ${diffMinutes} мин. ID занятия: ${lesson.id}. Начало в ${startDate}`);
-					await this.sendMessageToTelegram(lesson.student_id, `⏰ До начала занятия осталось ${diffMinutes} мин. Начало в ${startDate}`);
+	// 			if (!alreadyNotified) {// занятие начинается в 14:00
+	// 				console.log(`⏰ До начала занятия осталось ${diffMinutes} мин. ID занятия: ${lesson.id}. Начало в ${startDate}`);
+	// 				await this.sendMessageToTelegram(lesson.student_id, `⏰ До начала занятия осталось ${diffMinutes} мин. Начало в ${startDate}`);
 
-					await this.prismaService.lessonNotification.create({
-						data: {
-							lesson_id: lesson.id,
-						},
-					});
-				}
-			}
-		}
-	}
+	// 				await this.prismaService.lessonNotification.create({
+	// 					data: {
+	// 						lesson_id: lesson.id,
+	// 					},
+	// 				});
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 }

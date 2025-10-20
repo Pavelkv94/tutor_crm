@@ -299,7 +299,7 @@ export class LessonsService {
 		return true;
 	}
 
-	@Cron(CronExpression.EVERY_5_MINUTES)
+	@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
 	async updateLessonsStatus() {
 		const now = new Date();
 
