@@ -3,7 +3,7 @@ import { Ctx, Start, Update } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { TELEGRAM_MESSAGES } from './telegram.messages';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Update()

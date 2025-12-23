@@ -2,8 +2,7 @@ import { ArgumentsHost, ExceptionFilter, HttpException, HttpStatus } from '@nest
 
 export class SimpleExeptionFilter implements ExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost): any {
-    const contextType = host.getType();
-    
+		const contextType = host.getType();
     // Handle HTTP context
     if (contextType === 'http') {
       const ctx = host.switchToHttp();

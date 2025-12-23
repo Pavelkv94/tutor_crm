@@ -182,7 +182,7 @@ const Home = () => {
 												weekDay: weekDays[dayIndex]
 											})}
 										/>}
-										{dayNumber && <div className="popovers">{hoursUTC3[hourIndex]}</div>}
+										{dayNumber && <div className="popovers">{`${hoursUTC3[hourIndex]} ${weekDays[dayIndex]}`}</div>}
 									</Grid>
 								))}
 							</Grid>

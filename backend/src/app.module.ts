@@ -1,22 +1,19 @@
 import { Module } from '@nestjs/common';
-import { StudentsModule } from './students/students.module';
-import { LessonsModule } from './lessons/lessons.module';
-import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule } from '@nestjs/config';
-import { PlansModule } from './plans/plans.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TelegramModule } from './telegram/telegram.module';
-import { ReportsModule } from './reports/reports.module';
+import { CoreModule } from './core/core.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TeacherModule } from './modules/teacher/teacher.module';
 @Module({
 	imports: [
-		PrismaModule,
-		ConfigModule.forRoot({ isGlobal: true }),
-		ScheduleModule.forRoot(),
-		TelegramModule,
-		StudentsModule,
-		LessonsModule,
-		PlansModule,
-		ReportsModule
+		CoreModule,
+		ThrottlerModule.forRoot([
+			{
+				ttl: 10000,
+				limit: 5,
+			},
+		]),
+		AuthModule,
+		TeacherModule,
 	],
 	controllers: [],
 	providers: [],

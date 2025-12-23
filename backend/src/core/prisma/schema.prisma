@@ -14,15 +14,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
-model Admin {
+model Teacher {
   id          Int      @id @default(autoincrement())
   name        String
-  telegram_id Int
+	login       String @unique
+	password    String
+  telegram_id String?
   created_at  DateTime @default(now())
+	role        TeacherRole @default(TEACHER)
 
-	@@map("admin")
+	@@map("teacher")
 }
 
 model Student {
@@ -143,4 +144,9 @@ enum LessonStatus {
 	MISSED
 	RESCHEDULED
   CANCELLED
+}
+
+enum TeacherRole {
+  TEACHER
+  ADMIN
 }

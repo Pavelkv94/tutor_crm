@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateLessonDto } from './dto/create-lesson.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { addDays, endOfMonth } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { LessonStatus, PlanType } from '@prisma/client';

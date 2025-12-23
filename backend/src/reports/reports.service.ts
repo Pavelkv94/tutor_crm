@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../core/prisma/prisma.service';
 import { LessonStatus } from '@prisma/client';
 import { SendReportDto } from './dto/send-report.dto';
 import { TelegramService } from 'src/telegram/telegram.service';
