@@ -1,0 +1,1075 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Teacher was successfully logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "If the password or login or email is wrong"
+          },
+          "429": {
+            "description": "More than 5 attempts from one IP-address during 10 seconds"
+          }
+        },
+        "summary": "Login teacher",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/register-admin": {
+      "post": {
+        "operationId": "AuthController_registerAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterAdminOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 5 attempts from one IP-address during 10 seconds"
+          }
+        },
+        "summary": "Registrate a new admin",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "operationId": "AuthController_refreshToken",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Token pair was successfully refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOutputDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "If the refresh token is wrong or expired"
+          },
+          "429": {
+            "description": "More than 5 attempts from one IP-address during 10 seconds"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate new pair of jwt tokens",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/teachers": {
+      "get": {
+        "operationId": "TeacherController_getTeachers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Teachers have been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeacherOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all teachers",
+        "tags": [
+          "Teachers"
+        ]
+      },
+      "post": {
+        "operationId": "TeacherController_createTeacher",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeacherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Teacher has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new teacher",
+        "tags": [
+          "Teachers"
+        ]
+      }
+    },
+    "/plans": {
+      "post": {
+        "operationId": "PlanController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plan created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new plan",
+        "tags": [
+          "Plans"
+        ]
+      },
+      "get": {
+        "operationId": "PlanController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Plans have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all plans",
+        "tags": [
+          "Plans"
+        ]
+      }
+    },
+    "/plans/{id}": {
+      "delete": {
+        "operationId": "PlanController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Plan has been successfully deleted."
+          },
+          "404": {
+            "description": "Plan not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a plan",
+        "tags": [
+          "Plans"
+        ]
+      }
+    },
+    "/students": {
+      "post": {
+        "operationId": "StudentController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Student data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The student has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a student",
+        "tags": [
+          "Students"
+        ]
+      },
+      "get": {
+        "operationId": "StudentController_findAllForCurrentTeacher",
+        "parameters": [
+          {
+            "name": "teacher_id",
+            "required": false,
+            "in": "query",
+            "description": "Teacher ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Students have been successfully retrieved for current teacher",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StudentOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all students for current teacher, or if current teacher is admin, get students by teacher ID in query",
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/students/{id}": {
+      "get": {
+        "operationId": "StudentController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Student has been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentExtendedOutputDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a student",
+        "tags": [
+          "Students"
+        ]
+      },
+      "patch": {
+        "operationId": "StudentController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The student has been successfully updated."
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a student",
+        "tags": [
+          "Students"
+        ]
+      },
+      "delete": {
+        "operationId": "StudentController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The student has been successfully deleted."
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a student",
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/lessons": {
+      "post": {
+        "operationId": "LessonController_createSingleLesson",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SingleLessonInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesson created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lesson already booked for this student at this time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Plan not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a single lesson",
+        "tags": [
+          "Lessons"
+        ]
+      },
+      "get": {
+        "operationId": "LessonController_findLessonsForPeriod",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Start date",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "description": "End date",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teacher_id",
+            "required": false,
+            "in": "query",
+            "description": "Teacher ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lessons have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LessonOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all lessons for a period for current teacher, or if current teacher is admin, get lessons by teacher ID in query or admin's lessons",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "School API",
+    "description": "The School API description",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "LoginOutputDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "The access token",
+            "example": "1234567890"
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "BadRequestErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "description": "The HTTP status code",
+            "example": 400
+          },
+          "path": {
+            "type": "string",
+            "description": "The path of the request",
+            "example": "/api/v1/users"
+          },
+          "message": {
+            "type": "object",
+            "description": "The message of the error",
+            "example": [
+              "Error message 1",
+              "Error message 2"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "path",
+          "message"
+        ]
+      },
+      "RegisterAdminDto": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "The login of the admin",
+            "example": "admin123"
+          },
+          "password": {
+            "type": "string",
+            "description": "The password of the admin",
+            "example": "password123"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the admin",
+            "example": "John Doe"
+          },
+          "telegram_id": {
+            "type": "string",
+            "description": "The telegram id of the admin",
+            "example": "1234567890"
+          },
+          "secret_key": {
+            "type": "string",
+            "description": "The secret key for the admin",
+            "example": "1234567890"
+          }
+        },
+        "required": [
+          "login",
+          "password",
+          "name",
+          "telegram_id",
+          "secret_key"
+        ]
+      },
+      "RegisterAdminOutputDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The message",
+            "example": "Admin registered successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "TeacherOutputDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateTeacherDto": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "The login of the teacher",
+            "example": "teacher123"
+          },
+          "password": {
+            "type": "string",
+            "description": "The password of the teacher",
+            "example": "password123"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          },
+          "telegram_id": {
+            "type": "object",
+            "description": "The telegram id of the teacher",
+            "example": "1234567890"
+          }
+        },
+        "required": [
+          "login",
+          "password",
+          "name",
+          "telegram_id"
+        ]
+      },
+      "CreatePlanInputDto": {
+        "type": "object",
+        "properties": {
+          "plan_type": {
+            "type": "string",
+            "enum": [
+              "INDIVIDUAL",
+              "PAIR"
+            ]
+          },
+          "plan_currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
+          },
+          "plan_price": {
+            "type": "number",
+            "example": 1000000
+          },
+          "duration": {
+            "type": "number",
+            "example": 10
+          },
+          "plan_name": {
+            "type": "string",
+            "example": "10 minutes"
+          }
+        },
+        "required": [
+          "plan_type",
+          "plan_currency",
+          "plan_price",
+          "duration",
+          "plan_name"
+        ]
+      },
+      "PlanOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the plan",
+            "example": 1
+          },
+          "plan_name": {
+            "type": "string",
+            "description": "The name of the plan",
+            "example": "10 minutes"
+          },
+          "plan_price": {
+            "type": "number",
+            "description": "The price of the plan",
+            "example": 1000000
+          },
+          "plan_currency": {
+            "type": "string",
+            "description": "The currency of the plan",
+            "example": "USD"
+          },
+          "duration": {
+            "type": "number",
+            "description": "The duration of the plan",
+            "example": 10
+          },
+          "plan_type": {
+            "type": "string",
+            "description": "The type of the plan",
+            "example": "INDIVIDUAL"
+          }
+        },
+        "required": [
+          "id",
+          "plan_name",
+          "plan_price",
+          "plan_currency",
+          "duration",
+          "plan_type"
+        ]
+      },
+      "CreateStudentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the student",
+            "example": "John Doe"
+          },
+          "class": {
+            "type": "number",
+            "description": "The class of the student",
+            "example": 1
+          },
+          "birth_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The birth date of the student",
+            "example": "2000-01-01T00:00:00.000Z"
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "The teacher id of the student",
+            "example": 1
+          }
+        },
+        "required": [
+          "name",
+          "class",
+          "birth_date",
+          "teacher_id"
+        ]
+      },
+      "StudentOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the student",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the student",
+            "example": "John Doe"
+          },
+          "class": {
+            "type": "number",
+            "description": "The class of the student",
+            "example": 1
+          },
+          "birth_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The birth date of the student",
+            "example": "2000-01-01"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class",
+          "birth_date"
+        ]
+      },
+      "StudentExtendedOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the student",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the student",
+            "example": "John Doe"
+          },
+          "class": {
+            "type": "number",
+            "description": "The class of the student",
+            "example": 1
+          },
+          "birth_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The birth date of the student",
+            "example": "2000-01-01"
+          },
+          "balance": {
+            "type": "number",
+            "description": "The balance of the student",
+            "example": 0
+          },
+          "bookUntilCancellation": {
+            "type": "boolean",
+            "description": "The book until cancellation of the student",
+            "example": false
+          },
+          "notifyAboutBirthday": {
+            "type": "boolean",
+            "description": "The notify about birthday of the student",
+            "example": true
+          },
+          "notifyAboutLessons": {
+            "type": "boolean",
+            "description": "The notify about lessons of the student",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class",
+          "birth_date",
+          "balance",
+          "bookUntilCancellation",
+          "notifyAboutBirthday",
+          "notifyAboutLessons"
+        ]
+      },
+      "UpdateStudentDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SingleLessonInputDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "LessonOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Lesson ID",
+            "example": 1
+          },
+          "plan_id": {
+            "type": "number",
+            "description": "Plan ID",
+            "example": 1
+          },
+          "start_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Start date",
+            "example": "2025-12-28T15:46:58.925Z"
+          },
+          "student_id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "Teacher ID",
+            "example": 1
+          },
+          "corrected_time": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Corrected time",
+            "example": "2025-12-28T15:46:58.925Z"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status",
+            "example": "PENDING_PAID"
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment",
+            "example": "Comment"
+          },
+          "payment_status": {
+            "type": "boolean",
+            "description": "Payment status",
+            "example": true
+          },
+          "is_paid": {
+            "type": "boolean",
+            "description": "Is paid",
+            "example": true
+          },
+          "is_regular": {
+            "type": "boolean",
+            "description": "Is regular",
+            "example": true
+          },
+          "is_free": {
+            "type": "boolean",
+            "description": "Is free",
+            "example": true
+          },
+          "rescheduled_lesson_id": {
+            "type": "object",
+            "description": "Rescheduled lesson ID",
+            "example": 1
+          },
+          "rescheduled_lesson_date": {
+            "type": "object",
+            "description": "Rescheduled lesson date",
+            "example": "2025-12-28T15:46:58.925Z"
+          },
+          "rescheduled_to_lesson_id": {
+            "type": "object",
+            "description": "Rescheduled to lesson ID",
+            "example": 1
+          },
+          "rescheduled_to_lesson_date": {
+            "type": "object",
+            "description": "Rescheduled to lesson date",
+            "example": "2025-12-28T15:46:58.925Z"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at",
+            "example": "2025-12-28T15:46:58.925Z"
+          }
+        },
+        "required": [
+          "id",
+          "plan_id",
+          "start_date",
+          "student_id",
+          "teacher_id",
+          "corrected_time",
+          "status",
+          "comment",
+          "payment_status",
+          "is_paid",
+          "is_regular",
+          "is_free",
+          "rescheduled_lesson_id",
+          "rescheduled_lesson_date",
+          "rescheduled_to_lesson_id",
+          "rescheduled_to_lesson_date",
+          "created_at"
+        ]
+      }
+    }
+  }
+}
