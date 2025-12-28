@@ -1,4 +1,5 @@
 import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { ToUTC } from "src/core/decorators/transform/to-utc.decorator";
 
 export class CreateLessonDto {
 	@IsBoolean()
@@ -15,6 +16,7 @@ export class CreateLessonDto {
 
 	@IsString()
 	@IsNotEmpty()
+	@ToUTC()
 	start_date: string;
 
 	@IsInt()

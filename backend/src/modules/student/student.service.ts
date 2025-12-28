@@ -3,18 +3,23 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentRepository } from './student.repository';
 import { StudentOutputDto, StudentExtendedOutputDto } from './dto/student.output.dto';
+import { TeacherService } from '../teacher/teacher.service';
+import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 
 @Injectable()
 export class StudentService {
-	constructor(private readonly studentRepository: StudentRepository) { }
+	constructor(private readonly studentRepository: StudentRepository, private readonly teacherService: TeacherService) { }
 
 	async create(createStudentDto: CreateStudentDto): Promise<StudentOutputDto> {
+		const teacher = await this.teacherService.getTeacherById(createStudentDto.teacher_id);
+		if (!teacher) {
+			throw new NotFoundException("Teacher not found");
+		}
 		return await this.studentRepository.create(createStudentDto);
 	}
 
-	async findAll(): Promise<StudentOutputDto[]> {
-		return await this.studentRepository.getStudents();
-
+	async findAllForCurrentTeacher(teacher_id: number): Promise<StudentOutputDto[]> {
+		return await this.studentRepository.getStudentsByTeacherId(teacher_id);
 	}
 
 	async findOne(id: number): Promise<StudentExtendedOutputDto> {

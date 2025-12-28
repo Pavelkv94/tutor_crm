@@ -84,8 +84,8 @@ ${lessonsResultMessage.join('\n')}
 		const canceledLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.CANCELLED).length;
 		const missedLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.MISSED).length;
 		const rescheduledLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.RESCHEDULED).length;
-		const completedLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.COMPLETED).length;
-		const pendingLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.PENDING).length;
+		const completedLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.COMPLETED_UNPAID).length;
+		const pendingLessonsCount = student.lessons.filter((lesson: any) => lesson.status === LessonStatus.PENDING_UNPAID).length;
 		const totalLessonsCount = student.lessons.length;
 		const totalLessonsPrice = student.lessons.reduce((acc: number, lesson: any) => acc + lesson.plan.plan_price, 0);
 

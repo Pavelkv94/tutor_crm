@@ -35,6 +35,23 @@ export class StudentRepository {
 		return students.map(this.mapStudentToView);
 	}
 
+	async getStudentsByTeacherId(teacher_id: number): Promise<StudentOutputDto[]> {
+		const students = await this.prisma.student.findMany({
+			include: {
+				telegrams: true,
+				lessons: true,
+			},
+			where: {
+				deleted_at: null,
+				teacher_id: teacher_id,
+			},
+			orderBy: {
+				name: 'asc',
+			},
+		});
+		return students.map(this.mapStudentToView);
+	}
+
 	async getStudent(id: number): Promise<StudentExtendedOutputDto> {
 		const student = await this.prisma.student.findUnique({
 			where: { id },

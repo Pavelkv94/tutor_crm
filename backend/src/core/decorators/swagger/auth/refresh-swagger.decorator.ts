@@ -1,5 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTooManyRequestsResponse, ApiUnauthorizedResponse } from "@nestjs/swagger";
+import { LoginOutputDto } from "src/modules/auth/dto/login.output.dto";
 
 /**
  * @swagger
@@ -13,7 +14,7 @@ export const RefreshTokenSwagger = () => {
 		ApiOperation({ summary: "Generate new pair of jwt tokens" }),
 		ApiOkResponse({
 			description: "Token pair was successfully refreshed",
-			// type: AccessTokenDto,
+			type: LoginOutputDto,
 		}),
 		ApiUnauthorizedResponse({
 			description: "If the refresh token is wrong or expired",

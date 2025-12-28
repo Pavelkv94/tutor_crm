@@ -11,7 +11,7 @@ export const CreateTeacherSwagger = () => {
 		ApiResponse({
 			status: HttpStatus.CREATED,
 			description: "Teacher has been successfully created.",
-			type: [TeacherOutputDto],
+			type: TeacherOutputDto,
 		}),
 		ApiBearerAuth(),
 		ApiBadRequestResponse({

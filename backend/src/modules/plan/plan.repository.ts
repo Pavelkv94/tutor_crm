@@ -20,6 +20,16 @@ export class PlanRepository {
 		return plans.map(this.mapPlanToView);
 	}
 
+	async getPlanById(id: number): Promise<PlanOutputDto | null> {
+		const plan = await this.prisma.plan.findUnique({
+			where: { id },
+		});
+		if (!plan) {
+			return null;
+		}
+		return this.mapPlanToView(plan);
+	}
+
 	async deletePlan(id: number): Promise<boolean> {
 		const plan = await this.prisma.plan.findUnique({
 			where: { id },

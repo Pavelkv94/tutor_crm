@@ -15,6 +15,10 @@ export class PlanService {
     return await this.planRepository.getPlans();
   }
 
+	async findById(id: number): Promise<PlanOutputDto | null> {
+		return await this.planRepository.getPlanById(id);
+	}
+
   async remove(id: number): Promise<boolean> {
     return await this.planRepository.deletePlan(id);
   }

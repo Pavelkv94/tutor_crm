@@ -12,6 +12,9 @@ import { GetStudentExtendedSwagger } from 'src/core/decorators/swagger/student/g
 import { StudentExtendedOutputDto } from './dto/student.output.dto';
 import { UpdateStudentSwagger } from '../../core/decorators/swagger/student/update-student-swagger.decorator';
 import { DeleteStudentSwagger } from '../../core/decorators/swagger/student/delete-student-swagger.decorator';
+import { ExtractTeacherFromRequest } from 'src/core/decorators/param/extract-teacher-from-request';
+import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
+import { TeacherRole } from '../teacher/dto/teacherRole';
 
 @ApiTags('Students')
 @Controller('students')
@@ -31,8 +34,15 @@ export class StudentController {
 	@HttpCode(HttpStatus.OK)
 	@UseGuards(JwtAccessGuard)
 	@Get()
-	async findAll(): Promise<StudentOutputDto[]> {
-		return await this.studentsService.findAll();
+	async findAllForCurrentTeacher(@ExtractTeacherFromRequest() teacher: JwtPayloadDto, @Query('teacher_id') teacher_id: string | undefined): Promise<StudentOutputDto[]> {
+		if (teacher.role !== TeacherRole.ADMIN) {
+			return await this.studentsService.findAllForCurrentTeacher(+teacher.id);
+		} else {
+			if (!teacher_id) {
+				return await this.studentsService.findAllForCurrentTeacher(+teacher.id);
+			}
+			return await this.studentsService.findAllForCurrentTeacher(+teacher_id);
+		}
 	}
 
 	@GetStudentExtendedSwagger()

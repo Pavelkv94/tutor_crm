@@ -22,7 +22,8 @@
     "prisma:generate": "dotenv -e .env.development.local -- npx prisma generate --schema=src/core/prisma/schema.prisma",
     "prisma:migrate": "dotenv -e .env.development.local -- npx prisma migrate dev --schema=src/core/prisma/schema.prisma",
     "prisma:studio": "dotenv -e .env.development.local -- npx prisma studio --schema=src/core/prisma/schema.prisma",
-    "prisma:deploy": "dotenv -e .env.development.local -- npx prisma migrate deploy --schema=src/core/prisma/schema.prisma"
+		"prisma:deploy": "dotenv -e .env.development.local -- npx prisma migrate deploy --schema=src/core/prisma/schema.prisma",
+		"swagger:generate": "ts-node scripts/generate-swagger.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

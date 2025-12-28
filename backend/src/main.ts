@@ -18,7 +18,6 @@ async function bootstrap() {
 		.setTitle('School API')
 		.setDescription('The School API description')
 		.setVersion('1.0')
-		.addTag('school')
 		.build();
 	const documentFactory = () => SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('api/swagger', app, documentFactory);

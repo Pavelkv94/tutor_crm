@@ -20,4 +20,9 @@ export class CreateStudentDto {
 	@IsDate()
 	@IsNotEmpty()
 	birth_date: Date;
+
+	@ApiProperty({ description: 'The teacher id of the student', example: 1 })
+	@IsInt()
+	@IsNotEmpty()
+	teacher_id: number;
 }

@@ -23,6 +23,9 @@ model Teacher {
   created_at  DateTime @default(now())
 	role        TeacherRole @default(TEACHER)
 
+	lessons Lesson[]
+	students Student[]
+
 	@@map("teacher")
 }
 
@@ -36,6 +39,9 @@ model Student {
 	notifyAboutLessons Boolean @default(true)
 	bookUntilCancellation Boolean @default(false)
   created_at DateTime   @default(now())
+	teacher_id Int?
+
+	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
 
   telegrams  Telegram[]
   lessons    Lesson[]
@@ -87,7 +93,7 @@ model Lesson {
   student_id  Int
   plan_id     Int
   start_date  DateTime
-	status      LessonStatus @default(PENDING)
+	status      LessonStatus @default(PENDING_UNPAID)
 	comment     String?
 	lesson_notifications LessonNotification[]
 	payment_status Boolean @default(false)
@@ -100,11 +106,14 @@ model Lesson {
 	rescheduled_lesson_date DateTime?
 	rescheduled_to_lesson_id Int?
 	rescheduled_to_lesson_date DateTime?
+	teacher_id Int
 
+	teacher     Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
   plan        Plan     @relation(fields: [plan_id], references: [id])
 
 	@@map("lesson")
+	@@unique([student_id, start_date, teacher_id])
 }
 
 model Plan {
@@ -139,8 +148,10 @@ enum PlanCurrency {
 }
 
 enum LessonStatus {
-  PENDING
-  COMPLETED
+  PENDING_PAID
+	PENDING_UNPAID
+  COMPLETED_PAID
+	COMPLETED_UNPAID
 	MISSED
 	RESCHEDULED
   CANCELLED

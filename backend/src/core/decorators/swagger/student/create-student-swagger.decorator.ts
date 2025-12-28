@@ -8,7 +8,6 @@ export const CreateStudentSwagger = () => {
 	const decorators = [
 		ApiOperation({ summary: 'Create a student' }),
 		ApiResponse({ status: HttpStatus.CREATED, description: 'The student has been successfully created.', type: StudentOutputDto }),
-		ApiBadRequestResponse({ description: 'Bad request.' }),
 		ApiBody({ description: 'Student data', type: CreateStudentDto }),
 		ApiBearerAuth(),
 		ApiBadRequestResponse({ description: 'Bad request.', type: BadRequestErrorResponse }),
