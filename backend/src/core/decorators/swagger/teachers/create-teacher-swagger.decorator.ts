@@ -1,5 +1,6 @@
 import { applyDecorators, HttpStatus } from "@nestjs/common";
-import { ApiBearerAuth, ApiNoContentResponse, ApiOperation, ApiResponse, ApiTooManyRequestsResponse } from "@nestjs/swagger";
+import { ApiBadRequestResponse, ApiBearerAuth, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { BadRequestErrorResponse } from "src/exeptions/simple-exception";
 import { TeacherOutputDto } from "src/modules/teacher/dto/teacher.output.dto";
 
 export const CreateTeacherSwagger = () => {
@@ -12,7 +13,11 @@ export const CreateTeacherSwagger = () => {
 			description: "Teacher has been successfully created.",
 			type: [TeacherOutputDto],
 		}),
-		ApiBearerAuth()
+		ApiBearerAuth(),
+		ApiBadRequestResponse({
+			description: "Bad request",
+			type: BadRequestErrorResponse,
+		}),
 	];
 
 	return applyDecorators(...decorators);
