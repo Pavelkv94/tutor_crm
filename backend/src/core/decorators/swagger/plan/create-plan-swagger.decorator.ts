@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOperation, ApiBadRequestResponse } from "@nestjs/swagger";
-import { BadRequestErrorResponse } from "src/exeptions/simple-exception";
+import { BadRequestErrorResponse } from "src/core/exeptions/simple-exception";
 import { PlanOutputDto } from "src/modules/plan/dto/plan.output.dto";
 
 export const CreatePlanSwagger = () => {

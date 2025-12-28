@@ -4,6 +4,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TeacherModule } from './modules/teacher/teacher.module';
 import { PlanModule } from './modules/plan/plan.module';
+import { StudentModule } from './modules/student/student.module';
 @Module({
 	imports: [
 		CoreModule,
@@ -16,6 +17,7 @@ import { PlanModule } from './modules/plan/plan.module';
 		AuthModule,
 		TeacherModule,
 		PlanModule,
+		StudentModule
 	],
 	controllers: [],
 	providers: [],

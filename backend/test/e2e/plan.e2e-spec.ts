@@ -216,7 +216,7 @@ describe('PlanController (e2e)', () => {
 	});
 
 	describe('GET /plans', () => {
-		it('should succeed with valid JWT', async () => {
+		it('should succeed with admin JWT', async () => {
 			// Create a plan first
 			await prisma.plan.create({
 				data: testPlan,
@@ -226,28 +226,28 @@ describe('PlanController (e2e)', () => {
 				data: testPlan2,
 			});
 
-			// Create teacher user (any authenticated user can access)
-			const passwordHash = await bcryptService.generateHash(testTeacher.password);
-			const teacher = await prisma.teacher.create({
+			// Create admin user (class-level guard requires admin)
+			const passwordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
 				data: {
-					...testTeacher,
+					...testAdmin,
 					password: passwordHash,
-					role: TeacherRole.TEACHER,
+					role: TeacherRole.ADMIN,
 				},
 			});
 
 			const jwtService = getJwtService(module);
 			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			const response = await request(app.getHttpServer())
 				.get('/plans')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.expect(200);
 
 			expect(Array.isArray(response.body)).toBe(true);
@@ -266,28 +266,28 @@ describe('PlanController (e2e)', () => {
 		});
 
 		it('should return empty array when no plans exist', async () => {
-			// Create teacher user
-			const passwordHash = await bcryptService.generateHash(testTeacher.password);
-			const teacher = await prisma.teacher.create({
+			// Create admin user (class-level guard requires admin)
+			const passwordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
 				data: {
-					...testTeacher,
+					...testAdmin,
 					password: passwordHash,
-					role: TeacherRole.TEACHER,
+					role: TeacherRole.ADMIN,
 				},
 			});
 
 			const jwtService = getJwtService(module);
 			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			const response = await request(app.getHttpServer())
 				.get('/plans')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.expect(200);
 
 			expect(Array.isArray(response.body)).toBe(true);
@@ -323,7 +323,7 @@ describe('PlanController (e2e)', () => {
 			await request(app.getHttpServer())
 				.delete(`/plans/${createdPlan.id}`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.expect(200);
+				.expect(204);
 
 			// Verify plan was deleted from database
 			const deletedPlan = await prisma.plan.findUnique({

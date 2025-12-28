@@ -1,7 +1,7 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTooManyRequestsResponse } from "@nestjs/swagger";
 import { RegisterAdminOutputDto } from "src/modules/auth/dto/register-admin.output.dto";
-import { BadRequestErrorResponse } from "src/exeptions/simple-exception";
+import { BadRequestErrorResponse } from "src/core/exeptions/simple-exception";
 
 export const RegistrationSwagger = () => {
 	const decorators = [

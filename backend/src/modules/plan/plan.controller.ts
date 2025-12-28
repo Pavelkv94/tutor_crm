@@ -7,7 +7,11 @@ import { PlanOutputDto } from './dto/plan.output.dto';
 import { CreatePlanSwagger } from 'src/core/decorators/swagger/plan/create-plan-swagger.decorator';
 import { GetPlansSwagger } from 'src/core/decorators/swagger/plan/get-plans-swagger.decorator';
 import { DeletePlanSwagger } from 'src/core/decorators/swagger/plan/delete-plan-swagger.decorator';
+import { ApiTags } from '@nestjs/swagger';
+
+@ApiTags('Plans')
 @Controller('plans')
+@UseGuards(JwtAccessGuard, AdminAccessGuard)
 export class PlanController {
   constructor(private readonly planService: PlanService) {}
 

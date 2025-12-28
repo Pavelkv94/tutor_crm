@@ -1,7 +1,7 @@
 // import { AccessTokenDto } from "@libs/contracts/auth-contracts/output/access-token.dto";
 import { applyDecorators } from "@nestjs/common";
 import { ApiBadRequestResponse, ApiOkResponse, ApiOperation, ApiTooManyRequestsResponse, ApiUnauthorizedResponse } from "@nestjs/swagger";
-import { BadRequestErrorResponse } from "src/exeptions/simple-exception";
+import { BadRequestErrorResponse } from "src/core/exeptions/simple-exception";
 import { LoginOutputDto } from "src/modules/auth/dto/login.output.dto";
 
 export const LoginSwagger = () => {

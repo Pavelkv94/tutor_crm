@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { SimpleExeptionFilter } from './exeptions/simple-exception';
+import { SimpleExeptionFilter } from './core/exeptions/simple-exception';
 import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {

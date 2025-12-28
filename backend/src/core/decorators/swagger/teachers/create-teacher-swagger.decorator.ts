@@ -1,6 +1,6 @@
 import { applyDecorators, HttpStatus } from "@nestjs/common";
 import { ApiBadRequestResponse, ApiBearerAuth, ApiOperation, ApiResponse } from "@nestjs/swagger";
-import { BadRequestErrorResponse } from "src/exeptions/simple-exception";
+import { BadRequestErrorResponse } from "src/core/exeptions/simple-exception";
 import { TeacherOutputDto } from "src/modules/teacher/dto/teacher.output.dto";
 
 export const CreateTeacherSwagger = () => {
