@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsInt,  IsNotEmpty, IsString, Max } from "class-validator";
 
-export enum PlanType {
+export enum PlanTypeEnum {
 	INDIVIDUAL = "INDIVIDUAL",
 	PAIR = "PAIR",
 }
@@ -14,10 +14,10 @@ enum PlanCurrency {
 }
 
 export class CreatePlanInputDto {
-	@ApiProperty({ enum: PlanType })
-	@IsEnum(PlanType)
+	@ApiProperty({ enum: PlanTypeEnum })
+	@IsEnum(PlanTypeEnum)
 	@IsNotEmpty()
-	plan_type: PlanType;
+	plan_type: PlanTypeEnum;
 
 	@ApiProperty({ enum: PlanCurrency })
 	@IsEnum(PlanCurrency)

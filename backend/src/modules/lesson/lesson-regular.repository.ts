@@ -1,6 +1,5 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
-import { RegularLessonInputDto, RegularLessonsInputDto } from "./dto/regular-lesson.input.dto";
-import { LessonOutputDto } from "./dto/lesson.output.dto";
+import { RegularLessonInputDto } from "./dto/regular-lesson.input.dto";
 import { Injectable } from "@nestjs/common";
 import { RegularLesson } from "@prisma/client";
 import { RegularLessonOutputDto } from "./dto/regular-lesson.output.dto";
@@ -23,6 +22,14 @@ export class LessonRegularRepository {
 			},
 		});
 		return this.mapRegularLessonToView(regularLesson);
+	}
+
+	async deleteRegularLesson(regularLesson_id: number): Promise<void> {
+		await this.prisma.regularLesson.delete({
+			where: {
+				id: regularLesson_id,
+			},
+		});
 	}
 
 	private mapRegularLessonToView(regularLesson: RegularLesson): RegularLessonOutputDto {

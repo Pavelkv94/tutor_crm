@@ -78,7 +78,6 @@ model RegularLesson {
 	lessons Lesson[]
 
 	@@map("regular_lesson")
-	@@unique([student_id, start_time, week_day])
 }
 
 model Telegram {
@@ -124,8 +123,7 @@ model Lesson {
   plan_id     Int
 	status      LessonStatus @default(PENDING_UNPAID)
 	comment     String?
-	date  DateTime @db.Date
-	start_time DateTime @db.Time
+	date  DateTime @db.Timestamptz
 	is_regular Boolean @default(false)
 
 	payment_status Boolean @default(false)

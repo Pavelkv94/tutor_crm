@@ -1207,32 +1207,27 @@
             "description": "Lesson ID",
             "example": 1
           },
-          "plan_id": {
-            "type": "number",
-            "description": "Plan ID",
-            "example": 1
+          "student": {
+            "description": "Student information",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentOutputDto"
+              }
+            ]
           },
-          "start_date": {
+          "plan": {
+            "description": "Plan information",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanOutputDto"
+              }
+            ]
+          },
+          "date": {
             "format": "date-time",
             "type": "string",
-            "description": "Start date",
-            "example": "2026-01-02T15:12:09.148Z"
-          },
-          "student_id": {
-            "type": "number",
-            "description": "Student ID",
-            "example": 1
-          },
-          "teacher_id": {
-            "type": "number",
-            "description": "Teacher ID",
-            "example": 1
-          },
-          "corrected_time": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Corrected time",
-            "example": "2026-01-02T15:12:09.148Z"
+            "description": "Start date with time",
+            "example": "2026-01-02T18:26:06.145Z"
           },
           "status": {
             "type": "string",
@@ -1242,7 +1237,8 @@
           "comment": {
             "type": "object",
             "description": "Comment",
-            "example": "Comment"
+            "example": "Comment",
+            "nullable": true
           },
           "payment_status": {
             "type": "boolean",
@@ -1267,37 +1263,39 @@
           "rescheduled_lesson_id": {
             "type": "object",
             "description": "Rescheduled lesson ID",
-            "example": 1
+            "example": 1,
+            "nullable": true
           },
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-02T15:12:09.148Z"
+            "example": "2026-01-02T18:26:06.145Z",
+            "nullable": true
           },
           "rescheduled_to_lesson_id": {
             "type": "object",
             "description": "Rescheduled to lesson ID",
-            "example": 1
+            "example": 1,
+            "nullable": true
           },
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-02T15:12:09.148Z"
+            "example": "2026-01-02T18:26:06.145Z",
+            "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-02T15:12:09.148Z"
+            "example": "2026-01-02T18:26:06.145Z"
           }
         },
         "required": [
           "id",
-          "plan_id",
-          "start_date",
-          "student_id",
-          "teacher_id",
-          "corrected_time",
+          "student",
+          "plan",
+          "date",
           "status",
           "comment",
           "payment_status",

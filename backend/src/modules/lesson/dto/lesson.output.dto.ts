@@ -1,5 +1,7 @@
 import { LessonStatusDto } from "./lesson-status.enum";
 import { ApiProperty } from "@nestjs/swagger";
+import { StudentOutputDto } from "../../student/dto/student.output.dto";
+import { PlanOutputDto } from "../../plan/dto/plan.output.dto";
 
 export class LessonOutputDto {
 	@ApiProperty({
@@ -7,80 +9,90 @@ export class LessonOutputDto {
 		example: 1,
 	})
 	id: number;
+
 	@ApiProperty({
-		description: "Plan ID",
-		example: 1,
+		description: "Student information",
+		type: () => StudentOutputDto,
 	})
-	plan_id: number;
+	student: StudentOutputDto;
+
 	@ApiProperty({
-		description: "Start date",
+		description: "Plan information",
+		type: () => PlanOutputDto,
+	})
+	plan: PlanOutputDto;
+
+	@ApiProperty({
+		description: "Start date with time",
 		example: new Date(),
 	})
 	date: Date;
-	@ApiProperty({
-		description: "Student ID",
-		example: 1,
-	})
-	student_id: number;
-	@ApiProperty({
-		description: "Teacher ID",
-		example: 1,
-	})
-	teacher_id: number;
+
 	@ApiProperty({
 		description: "Status",
 		example: LessonStatusDto.PENDING_PAID,
 	})
 	status: LessonStatusDto;
+
 	@ApiProperty({
 		description: "Comment",
 		example: "Comment",
+		nullable: true,
 	})
 	comment: string | null;
+
 	@ApiProperty({
 		description: "Payment status",
 		example: true,
 	})
 	payment_status: boolean;
+
 	@ApiProperty({
 		description: "Is paid",
 		example: true,
 	})
 	is_paid: boolean;
+
 	@ApiProperty({
 		description: "Is regular",
 		example: true,
 	})
 	is_regular: boolean;
+
 	@ApiProperty({
 		description: "Is free",
 		example: true,
 	})
 	is_free: boolean;
+
 	@ApiProperty({
 		description: "Rescheduled lesson ID",
 		example: 1,
+		nullable: true,
 	})
 	rescheduled_lesson_id: number | null;
+
 	@ApiProperty({
 		description: "Rescheduled lesson date",
 		example: new Date(),
+		nullable: true,
 	})
 	rescheduled_lesson_date: Date | null;
+
 	@ApiProperty({
 		description: "Rescheduled to lesson ID",
 		example: 1,
+		nullable: true,
 	})
 	rescheduled_to_lesson_id: number | null;
+
 	@ApiProperty({
 		description: "Rescheduled to lesson date",
 		example: new Date(),
+		nullable: true,
 	})
 	rescheduled_to_lesson_date: Date | null;
-	@ApiProperty({
-		description: "Created at",
-		example: new Date(),
-	})
+
 	@ApiProperty({
 		description: "Created at",
 		example: new Date(),

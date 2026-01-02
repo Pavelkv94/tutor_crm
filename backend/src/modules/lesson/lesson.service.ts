@@ -1,9 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLessonDto } from './dto/create-lesson.dto';
-import { PrismaService } from 'src/core/prisma/prisma.service';
 import { addDays, endOfMonth, parseISO, getDay, startOfDay, format } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { LessonStatus, PlanType } from '@prisma/client';
 import { CancelLessonDto } from './dto/cancel-lesson.dto';
 import { SingleLessonInputDto } from './dto/single-lesson.input.dto';
 import { LessonRepository } from './lesson.repository';
@@ -12,13 +10,15 @@ import { LessonOutputDto } from './dto/lesson.output.dto';
 import { RegularLessonsInputDto, WeekDay } from './dto/regular-lesson.input.dto';
 import { LessonRegularRepository } from './lesson-regular.repository';
 import { RegularLessonOutputDto } from './dto/regular-lesson.output.dto';
+import { PlanTypeEnum } from '../plan/dto/create-plan.input.dto';
+
+
 @Injectable()
 export class LessonService {
 	constructor(
 		private readonly lessonRepository: LessonRepository,
 		private readonly planService: PlanService,
 		private readonly lessonRegularRepository: LessonRegularRepository,
-		private readonly prisma: PrismaService
 	) { }
 
 	// async createSingleLesson(singleLessonInputDto: SingleLessonInputDto): Promise<LessonOutputDto> {
@@ -47,7 +47,6 @@ export class LessonService {
 		const regularLessons: RegularLessonOutputDto[] = [];
 		for (const lesson of lessons) {
 			const { plan_id, start_time, week_day, start_period_date, end_period_date, teacher_id } = lesson;
-			console.log(lesson);
 			const plan = await this.planService.findById(plan_id);
 			if (!plan) {
 				throw new NotFoundException('Plan not found');
@@ -58,62 +57,85 @@ export class LessonService {
 			// Generate all dates for the specified week_day between start_period_date and end_period_date
 			const lessonDates = this.getDatesForWeekDay(week_day, start_period_date, end_period_date);
 
-			// Parse time strings once
-			const startTimeHourDate = parseISO(start_time);
+			// Parse start_time as ISO date string and extract UTC hours and minutes
+			const startTimeDate = parseISO(start_time);
+			const hours = startTimeDate.getUTCHours();
+			const minutes = startTimeDate.getUTCMinutes();
 
 			// Create individual lessons for each date
 			for (const lessonDate of lessonDates) {
+				// Merge date with time from start_time using Date.UTC to ensure correct timezone handling
+				const mergedDate = new Date(Date.UTC(
+					lessonDate.getUTCFullYear(),
+					lessonDate.getUTCMonth(),
+					lessonDate.getUTCDate(),
+					hours,
+					minutes,
+					0,
+					0
+				));
+
 				// Check if lesson already exists
-				const existingLesson = await this.prisma.lesson.findFirst({
-					where: {
-						student_id,
-						teacher_id,
-						date: lessonDate,
-					},
-				});
-
-				if (existingLesson) {
-					continue; // Skip if lesson already exists
+				const existingLessons = await this.lessonRepository.findExistingLessonsByDate(mergedDate);
+				//todo проверить статусы занятий
+				if (existingLessons.length > 1) {
+					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);
 				}
-
+				if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+					throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
+				}
+				if (existingLessons.filter(el => el.student.id === student_id).length > 0) {
+					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+					throw new BadRequestException(`Это время уже назначено у ${existingLessons[0].student.name}: ${mergedDate}`);
+				}
+				if (existingLessons[0].plan_id !== plan_id) {
+					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+					throw new BadRequestException(`Не совпадает тарифный план: ${mergedDate}`);
+				}
 				// Create the lesson
-				await this.prisma.lesson.create({
-					data: {
-						student_id,
-						teacher_id,
-						plan_id,
-						date: lessonDate,
-						start_time: startTimeHourDate,
-						is_regular: true,
-						regular_lesson_id: regularLesson.id,
-						status: LessonStatus.PENDING_UNPAID,
-					},
-				});
+				await this.lessonRepository.createRegularLesson(student_id, teacher_id, plan_id, mergedDate, regularLesson);
 			}
 		}
 		return regularLessons;
 	}
 
 	private getDatesForWeekDay(weekDay: WeekDay, startDate: string, endDate: string): Date[] {
-		const start = startOfDay(parseISO(startDate));
-		const end = startOfDay(parseISO(endDate));
+		// Parse ISO dates (already in UTC)
+		const startParsed = parseISO(startDate);
+		const endParsed = parseISO(endDate);
+
+		// Get UTC start of day (00:00:00 UTC)
+		const start = new Date(Date.UTC(
+			startParsed.getUTCFullYear(),
+			startParsed.getUTCMonth(),
+			startParsed.getUTCDate(),
+			0, 0, 0, 0
+		));
+
+		const end = new Date(Date.UTC(
+			endParsed.getUTCFullYear(),
+			endParsed.getUTCMonth(),
+			endParsed.getUTCDate(),
+			0, 0, 0, 0
+		));
+
 		const targetDayOfWeek = this.weekDayToNumber(weekDay);
 		const dates: Date[] = [];
 
 		// Find the first occurrence of the target weekday on or after start date
 		let current = new Date(start);
-		const startDayOfWeek = getDay(current);
+		const startDayOfWeek = current.getUTCDay(); // Use UTC day of week
 
 		// Calculate days to add to reach the target weekday
 		// If start date is already the target day, daysToAdd will be 0
 		const daysToAdd = (targetDayOfWeek - startDayOfWeek + 7) % 7;
 		current = addDays(current, daysToAdd);
 
-		// If we moved past the start date and it wasn't the target day, we're good
-		// If start date was the target day, current is still on start date
 		// Generate all dates for the target weekday within the date range (inclusive)
 		while (current <= end) {
-			if (getDay(current) === targetDayOfWeek) {
+			if (current.getUTCDay() === targetDayOfWeek) { // Use UTC day of week
 				dates.push(new Date(current));
 			}
 			current = addDays(current, 7); // Move to next week
@@ -424,20 +446,8 @@ export class LessonService {
 	// 	return true;
 	// }
 
-	// @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-	// async updateLessonsStatus() {
-	// 	const now = new Date();
-
-	// 	await this.prisma.lesson.updateMany({
-	// 		data: {
-	// 			status: LessonStatus.COMPLETED_UNPAID,
-	// 		},
-	// 		where: {
-	// 			start_date: {
-	// 				lte: now,
-	// 			},
-	// 			status: LessonStatus.PENDING_UNPAID,
-	// 		},
-	// 	});
-	// }
+	@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+	async updateLessonsStatus() {
+		await this.lessonRepository.updatePendingLessonsStatus();
+	}
 }
