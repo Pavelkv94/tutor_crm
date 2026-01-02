@@ -16,7 +16,7 @@ export class LessonOutputDto {
 		description: "Start date",
 		example: new Date(),
 	})
-	start_date: Date;
+	date: Date;
 	@ApiProperty({
 		description: "Student ID",
 		example: 1,
@@ -27,11 +27,6 @@ export class LessonOutputDto {
 		example: 1,
 	})
 	teacher_id: number;
-	@ApiProperty({
-		description: "Corrected time",
-		example: new Date(),
-	})
-	corrected_time: Date;
 	@ApiProperty({
 		description: "Status",
 		example: LessonStatusDto.PENDING_PAID,

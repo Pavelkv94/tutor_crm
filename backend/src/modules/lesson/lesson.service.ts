@@ -47,6 +47,7 @@ export class LessonService {
 		const regularLessons: RegularLessonOutputDto[] = [];
 		for (const lesson of lessons) {
 			const { plan_id, start_time, week_day, start_period_date, end_period_date, teacher_id } = lesson;
+			console.log(lesson);
 			const plan = await this.planService.findById(plan_id);
 			if (!plan) {
 				throw new NotFoundException('Plan not found');
