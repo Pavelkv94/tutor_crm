@@ -15,6 +15,7 @@ import { DeleteStudentSwagger } from '../../core/decorators/swagger/student/dele
 import { ExtractTeacherFromRequest } from 'src/core/decorators/param/extract-teacher-from-request';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { TeacherRole } from '../teacher/dto/teacherRole';
+import { FilterStudentQuery } from './dto/filter.query.dto';
 
 @ApiTags('Students')
 @Controller('students')
@@ -34,14 +35,14 @@ export class StudentController {
 	@HttpCode(HttpStatus.OK)
 	@UseGuards(JwtAccessGuard)
 	@Get()
-	async findAllForCurrentTeacher(@ExtractTeacherFromRequest() teacher: JwtPayloadDto, @Query('teacher_id') teacher_id: string | undefined): Promise<StudentOutputDto[]> {
+	async findAllForCurrentTeacher(@ExtractTeacherFromRequest() teacher: JwtPayloadDto, @Query('filter') filter: FilterStudentQuery = FilterStudentQuery.ALL, @Query('teacher_id') teacher_id: string | undefined): Promise<StudentOutputDto[]> {
 		if (teacher.role !== TeacherRole.ADMIN) {
-			return await this.studentsService.findAllForCurrentTeacher(+teacher.id);
+			return await this.studentsService.findAllForCurrentTeacher(+teacher.id, filter);
 		} else {
 			if (!teacher_id) {
-				return await this.studentsService.findAllForCurrentTeacher(+teacher.id);
+				return await this.studentsService.findAllForCurrentTeacher(+teacher.id, filter);
 			}
-			return await this.studentsService.findAllForCurrentTeacher(+teacher_id);
+			return await this.studentsService.findAllForCurrentTeacher(+teacher_id, filter);
 		}
 	}
 

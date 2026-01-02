@@ -26,6 +26,7 @@ model Teacher {
 
 	lessons Lesson[]
 	students Student[]
+	regular_lessons RegularLesson[]
 
   created_at  DateTime @default(now())
 	deleted_at DateTime?
@@ -47,6 +48,7 @@ model Student {
 
 	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
 
+	regular_lessons RegularLesson[]
   telegrams  Telegram[]
   lessons    Lesson[]
 	telegram_tokens TelegramToken[]
@@ -54,6 +56,29 @@ model Student {
 	deleted_at DateTime?
 
 	@@map("student")
+}
+
+model RegularLesson {
+	id Int @id @default(autoincrement())
+	plan_id Int
+	student_id Int
+	teacher_id Int
+	start_time String
+	week_day WeekDay
+	start_period_date DateTime
+	end_period_date DateTime
+
+	created_at DateTime @default(now())
+	deleted_at DateTime?
+
+	teacher     Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+	student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+	plan        Plan     @relation(fields: [plan_id], references: [id])
+
+	lessons Lesson[]
+
+	@@map("regular_lesson")
+	@@unique([student_id, start_time, week_day])
 }
 
 model Telegram {
@@ -95,29 +120,35 @@ model TelegramToken {
 model Lesson {
   id          Int      @id @default(autoincrement())
   student_id  Int
+	teacher_id Int
   plan_id     Int
-  start_date  DateTime
 	status      LessonStatus @default(PENDING_UNPAID)
 	comment     String?
-	lesson_notifications LessonNotification[]
+	date  DateTime @db.Date
+	start_time DateTime @db.Time
+	is_regular Boolean @default(false)
+
 	payment_status Boolean @default(false)
-	corrected_time DateTime
   created_at  DateTime @default(now())
 	is_paid Boolean @default(false)
-	is_regular Boolean @default(false)
 	is_free Boolean @default(false)
 	rescheduled_lesson_id Int?
 	rescheduled_lesson_date DateTime?
 	rescheduled_to_lesson_id Int?
 	rescheduled_to_lesson_date DateTime?
-	teacher_id Int
+
+	regular_lesson_id Int?
+
+	lesson_notifications LessonNotification[]
 
 	teacher     Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
   plan        Plan     @relation(fields: [plan_id], references: [id])
 
+	regular_lesson RegularLesson? @relation(fields: [regular_lesson_id], references: [id])
+
 	@@map("lesson")
-	@@unique([student_id, start_date, teacher_id])
+	@@unique([student_id, date, teacher_id])
 }
 
 model Plan {
@@ -131,6 +162,7 @@ model Plan {
 	deleted_at    DateTime?
 
   lessons       Lesson[]
+	regular_lessons RegularLesson[]
 
 	@@map("plan")
 }
@@ -170,4 +202,14 @@ enum TeacherRole {
 enum Timezone {
 	BY
 	PL
+}
+
+enum WeekDay {
+	MONDAY
+	TUESDAY
+	WEDNESDAY
+	THURSDAY
+	FRIDAY
+	SATURDAY
+	SUNDAY
 }

@@ -9,6 +9,10 @@ export class StudentOutputDto {
 	class: number;
 	@ApiProperty({ description: 'The birth date of the student' , example: '2000-01-01' })
 	birth_date: Date;
+	@ApiProperty({ description: 'The created at of the student', example: '2026-01-01T00:00:00.000Z' })
+	created_at: Date;
+	@ApiProperty({ description: 'The deleted at of the student', example: '2026-01-01T00:00:00.000Z' })
+	deleted_at: Date | null;
 }
 
 export class StudentExtendedOutputDto extends StudentOutputDto {

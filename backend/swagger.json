@@ -120,7 +120,16 @@
     "/teachers": {
       "get": {
         "operationId": "TeacherController_getTeachers",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "filter",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Teachers have been successfully retrieved.",
@@ -192,6 +201,88 @@
         ]
       }
     },
+    "/teachers/{id}": {
+      "patch": {
+        "operationId": "TeacherController_updateTeacher",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeacherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Teacher has been successfully updated."
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a teacher",
+        "tags": [
+          "Teachers"
+        ]
+      },
+      "delete": {
+        "operationId": "TeacherController_deleteTeacher",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Teacher has been successfully deleted."
+          },
+          "404": {
+            "description": "Teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a teacher",
+        "tags": [
+          "Teachers"
+        ]
+      }
+    },
     "/plans": {
       "post": {
         "operationId": "PlanController_create",
@@ -240,7 +331,16 @@
       },
       "get": {
         "operationId": "PlanController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "filter",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Plans have been successfully retrieved",
@@ -349,6 +449,14 @@
       "get": {
         "operationId": "StudentController_findAllForCurrentTeacher",
         "parameters": [
+          {
+            "name": "filter",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "teacher_id",
             "required": false,
@@ -505,54 +613,6 @@
       }
     },
     "/lessons": {
-      "post": {
-        "operationId": "LessonController_createSingleLesson",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SingleLessonInputDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Lesson created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LessonOutputDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Lesson already booked for this student at this time",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Plan not found"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a single lesson",
-        "tags": [
-          "Lessons"
-        ]
-      },
       "get": {
         "operationId": "LessonController_findLessonsForPeriod",
         "parameters": [
@@ -605,6 +665,68 @@
           }
         ],
         "summary": "Get all lessons for a period for current teacher, or if current teacher is admin, get lessons by teacher ID in query or admin's lessons",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/regular/{student_id}": {
+      "post": {
+        "operationId": "LessonController_createRegularLesson",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegularLessonsInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Regular lessons created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LessonOutputDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lesson already booked for this student at this time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create regular lessons for a student",
         "tags": [
           "Lessons"
         ]
@@ -714,7 +836,65 @@
       },
       "TeacherOutputDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the teacher",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          },
+          "login": {
+            "type": "string",
+            "description": "The login of the teacher",
+            "example": "john.doe"
+          },
+          "telegram_id": {
+            "type": "object",
+            "description": "The telegram id of the teacher",
+            "example": "1234567890"
+          },
+          "role": {
+            "type": "string",
+            "description": "The role of the teacher",
+            "example": "TEACHER"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "The timezone of the teacher",
+            "example": "BY"
+          },
+          "telegram_link": {
+            "type": "object",
+            "description": "The telegram link of the teacher",
+            "example": "https://t.me/john.doe"
+          },
+          "deleted_at": {
+            "type": "object",
+            "description": "The deleted at of the teacher",
+            "example": "2026-01-01T00:00:00.000Z"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The created at of the teacher",
+            "example": "2026-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "login",
+          "telegram_id",
+          "role",
+          "timezone",
+          "telegram_link",
+          "deleted_at",
+          "created_at"
+        ]
       },
       "CreateTeacherDto": {
         "type": "object",
@@ -734,17 +914,48 @@
             "description": "The name of the teacher",
             "example": "John Doe"
           },
-          "telegram_id": {
+          "telegram_link": {
             "type": "object",
-            "description": "The telegram id of the teacher",
-            "example": "1234567890"
+            "description": "The telegram link of the teacher",
+            "example": "https://t.me/teacher123"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "The timezone of the teacher",
+            "example": "BY"
           }
         },
         "required": [
           "login",
           "password",
           "name",
-          "telegram_id"
+          "telegram_link",
+          "timezone"
+        ]
+      },
+      "UpdateTeacherDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          },
+          "telegram_link": {
+            "type": "object",
+            "description": "The telegram link of the teacher",
+            "example": "https://t.me/teacher123"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "The timezone of the teacher",
+            "example": "BY"
+          }
+        },
+        "required": [
+          "name",
+          "telegram_link",
+          "timezone"
         ]
       },
       "CreatePlanInputDto": {
@@ -773,18 +984,13 @@
           "duration": {
             "type": "number",
             "example": 10
-          },
-          "plan_name": {
-            "type": "string",
-            "example": "10 minutes"
           }
         },
         "required": [
           "plan_type",
           "plan_currency",
           "plan_price",
-          "duration",
-          "plan_name"
+          "duration"
         ]
       },
       "PlanOutputDto": {
@@ -819,6 +1025,17 @@
             "type": "string",
             "description": "The type of the plan",
             "example": "INDIVIDUAL"
+          },
+          "deleted_at": {
+            "type": "object",
+            "description": "The deleted at of the plan",
+            "example": "2026-01-01T00:00:00.000Z"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The created at of the plan",
+            "example": "2026-01-01T00:00:00.000Z"
           }
         },
         "required": [
@@ -827,7 +1044,9 @@
           "plan_price",
           "plan_currency",
           "duration",
-          "plan_type"
+          "plan_type",
+          "deleted_at",
+          "created_at"
         ]
       },
       "CreateStudentDto": {
@@ -885,13 +1104,26 @@
             "type": "string",
             "description": "The birth date of the student",
             "example": "2000-01-01"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The created at of the student",
+            "example": "2026-01-01T00:00:00.000Z"
+          },
+          "deleted_at": {
+            "type": "object",
+            "description": "The deleted at of the student",
+            "example": "2026-01-01T00:00:00.000Z"
           }
         },
         "required": [
           "id",
           "name",
           "class",
-          "birth_date"
+          "birth_date",
+          "created_at",
+          "deleted_at"
         ]
       },
       "StudentExtendedOutputDto": {
@@ -917,6 +1149,17 @@
             "type": "string",
             "description": "The birth date of the student",
             "example": "2000-01-01"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The created at of the student",
+            "example": "2026-01-01T00:00:00.000Z"
+          },
+          "deleted_at": {
+            "type": "object",
+            "description": "The deleted at of the student",
+            "example": "2026-01-01T00:00:00.000Z"
           },
           "balance": {
             "type": "number",
@@ -944,6 +1187,8 @@
           "name",
           "class",
           "birth_date",
+          "created_at",
+          "deleted_at",
           "balance",
           "bookUntilCancellation",
           "notifyAboutBirthday",
@@ -951,10 +1196,6 @@
         ]
       },
       "UpdateStudentDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "SingleLessonInputDto": {
         "type": "object",
         "properties": {}
       },
@@ -975,7 +1216,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2025-12-28T15:46:58.925Z"
+            "example": "2026-01-02T15:12:09.148Z"
           },
           "student_id": {
             "type": "number",
@@ -991,7 +1232,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Corrected time",
-            "example": "2025-12-28T15:46:58.925Z"
+            "example": "2026-01-02T15:12:09.148Z"
           },
           "status": {
             "type": "string",
@@ -1031,7 +1272,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2025-12-28T15:46:58.925Z"
+            "example": "2026-01-02T15:12:09.148Z"
           },
           "rescheduled_to_lesson_id": {
             "type": "object",
@@ -1041,13 +1282,13 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2025-12-28T15:46:58.925Z"
+            "example": "2026-01-02T15:12:09.148Z"
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2025-12-28T15:46:58.925Z"
+            "example": "2026-01-02T15:12:09.148Z"
           }
         },
         "required": [
@@ -1069,6 +1310,10 @@
           "rescheduled_to_lesson_date",
           "created_at"
         ]
+      },
+      "RegularLessonsInputDto": {
+        "type": "object",
+        "properties": {}
       }
     }
   }

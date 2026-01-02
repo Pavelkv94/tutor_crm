@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, HttpStatus, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, HttpStatus, HttpCode, Query } from '@nestjs/common';
 import { PlanService } from './plan.service';
 import { CreatePlanInputDto } from './dto/create-plan.input.dto';
 import { JwtAccessGuard } from 'src/core/guards/jwt-access.guard';
@@ -8,6 +8,7 @@ import { CreatePlanSwagger } from 'src/core/decorators/swagger/plan/create-plan-
 import { GetPlansSwagger } from 'src/core/decorators/swagger/plan/get-plans-swagger.decorator';
 import { DeletePlanSwagger } from 'src/core/decorators/swagger/plan/delete-plan-swagger.decorator';
 import { ApiTags } from '@nestjs/swagger';
+import { FilterPlanQuery } from './dto/filter.query.dto';
 
 @ApiTags('Plans')
 @Controller('plans')
@@ -27,8 +28,8 @@ export class PlanController {
   @Get()
 	@HttpCode(HttpStatus.OK)
 	@UseGuards(JwtAccessGuard)
-	async findAll(): Promise<PlanOutputDto[]> {
-		return await this.planService.findAll();
+	async findAll(@Query('filter') filter: FilterPlanQuery = FilterPlanQuery.ALL): Promise<PlanOutputDto[]> {
+		return await this.planService.findAll(filter);
   }
 
 	@DeletePlanSwagger()

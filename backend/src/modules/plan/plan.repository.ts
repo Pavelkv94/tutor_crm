@@ -1,8 +1,10 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Plan } from "@prisma/client";
 import { CreatePlanInputDto } from "./dto/create-plan.input.dto";
 import { PlanOutputDto } from "./dto/plan.output.dto";
+import { FilterPlanQuery } from "./dto/filter.query.dto";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class PlanRepository {
@@ -15,11 +17,16 @@ export class PlanRepository {
 		return this.mapPlanToView(plan);
 	}
 	
-	async getPlans(): Promise<PlanOutputDto[]> {
+	async getPlans(filter: FilterPlanQuery): Promise<PlanOutputDto[]> {
+		const where: Prisma.PlanWhereInput = {};
+		if (filter === FilterPlanQuery.ACTIVE) {
+			where.deleted_at = null;
+		} else if (filter === FilterPlanQuery.DELETED) {
+			where.deleted_at = { not: null };
+		}
 		const plans = await this.prisma.plan.findMany({
-			orderBy: {
-				deleted_at: 'desc',
-			},
+			where,
+			orderBy: [{ deleted_at: 'desc' }, { plan_name: 'asc' }],
 		});
 		return plans.map(this.mapPlanToView);
 	}
@@ -35,12 +42,6 @@ export class PlanRepository {
 	}
 
 	async deletePlan(id: number): Promise<boolean> {
-		const plan = await this.prisma.plan.findUnique({
-			where: { id },
-		});
-		if (!plan) {
-			throw new NotFoundException('Plan not found');
-		}
 		const result = await this.prisma.plan.update({
 			where: { id },
 			data: {
@@ -59,6 +60,7 @@ export class PlanRepository {
 			duration: plan.duration,
 			plan_type: plan.plan_type,
 			deleted_at: plan.deleted_at || null,
+			created_at: plan.created_at,
 		};
 	}
 }

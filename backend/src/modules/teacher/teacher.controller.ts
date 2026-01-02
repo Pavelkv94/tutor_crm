@@ -2,7 +2,7 @@
 import { ApiOperation } from "@nestjs/swagger";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { TeacherService } from "./teacher.service";
-import { Controller, HttpCode, HttpStatus, Get, Body, Post, UseGuards, Param, Patch, Delete } from "@nestjs/common";
+import { Controller, HttpCode, HttpStatus, Get, Body, Post, UseGuards, Param, Patch, Delete, Query } from "@nestjs/common";
 import { ApiTags, ApiResponse } from "@nestjs/swagger";
 import { GetTeachersSwagger } from "src/core/decorators/swagger/teachers/get-teachers-swagger.decorator";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
@@ -12,6 +12,7 @@ import { DeleteTeacherSwagger } from "src/core/decorators/swagger/teachers/delet
 import { JwtAccessGuard } from "src/core/guards/jwt-access.guard";
 import { AdminAccessGuard } from "src/core/guards/admin-access.guard";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
+import { FilterTeacherQuery } from "./dto/filter.query.dto";
 
 
 @ApiTags('Teachers')
@@ -23,8 +24,8 @@ export class TeacherController {
 	@GetTeachersSwagger()
 	@Get()
 	@HttpCode(HttpStatus.OK)
-	async getTeachers(): Promise<TeacherOutputDto[]> {
-		return await this.teacherService.getTeachers();
+	async getTeachers(@Query('filter') filter: FilterTeacherQuery = FilterTeacherQuery.ALL): Promise<TeacherOutputDto[]> {
+		return await this.teacherService.getTeachers(filter);
 	}
 
 	@CreateTeacherSwagger()

@@ -1,27 +1,36 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
 import { Teacher, TeacherRole } from "@prisma/client";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
 import { Timezone } from "./dto/teacher.output.dto";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
+import { FilterTeacherQuery } from "./dto/filter.query.dto";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class TeacherRepository {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async getTeacherById(id: number): Promise<TeacherOutputDto> {
+	async getTeacherById(id: number): Promise<TeacherOutputDto | null> {
 		const teacher = await this.prisma.teacher.findUnique({
 			where: { id }
 		});
 		if (!teacher) {
-			throw new NotFoundException("Teacher not found");
+			return null;
 		}
 		return this.mapTeacherToView(teacher);
 	}
 
-	async getTeachers(): Promise<TeacherOutputDto[]> {
+	async getTeachers(filter: FilterTeacherQuery): Promise<TeacherOutputDto[]> {
+		const where: Prisma.TeacherWhereInput = {};
+		if (filter === FilterTeacherQuery.ACTIVE) {
+			where.deleted_at = null;
+		} else if (filter === FilterTeacherQuery.DELETED) {
+			where.deleted_at = { not: null };
+		}
 		const teachers = await this.prisma.teacher.findMany({
+			where,
 			select: {
 				id: true,
 				name: true,
@@ -31,7 +40,9 @@ export class TeacherRepository {
 				timezone: true,
 				telegram_link: true,
 				deleted_at: true,
+				created_at: true,
 			},
+			orderBy: [{ deleted_at: 'desc' }, { name: 'asc' }],
 		});
 		return teachers.map(this.mapTeacherToView);
 	}
@@ -82,6 +93,7 @@ export class TeacherRepository {
 			timezone: teacher.timezone as Timezone,
 			telegram_link: teacher.telegram_link || null,
 			deleted_at: teacher.deleted_at || null,
+			created_at: teacher.created_at,
 		};
 	}
 }

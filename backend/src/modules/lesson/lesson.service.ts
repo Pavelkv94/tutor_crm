@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import { addDays, endOfMonth } from 'date-fns';
+import { addDays, endOfMonth, parseISO, getDay, startOfDay, format } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { LessonStatus, PlanType } from '@prisma/client';
 import { CancelLessonDto } from './dto/cancel-lesson.dto';
@@ -9,30 +9,129 @@ import { SingleLessonInputDto } from './dto/single-lesson.input.dto';
 import { LessonRepository } from './lesson.repository';
 import { PlanService } from '../plan/plan.service';
 import { LessonOutputDto } from './dto/lesson.output.dto';
-
+import { RegularLessonsInputDto, WeekDay } from './dto/regular-lesson.input.dto';
+import { LessonRegularRepository } from './lesson-regular.repository';
+import { RegularLessonOutputDto } from './dto/regular-lesson.output.dto';
 @Injectable()
 export class LessonService {
-	constructor(private readonly lessonRepository: LessonRepository, private readonly planService: PlanService) { }
+	constructor(
+		private readonly lessonRepository: LessonRepository,
+		private readonly planService: PlanService,
+		private readonly lessonRegularRepository: LessonRegularRepository,
+		private readonly prisma: PrismaService
+	) { }
 
-	async createSingleLesson(singleLessonInputDto: SingleLessonInputDto): Promise<LessonOutputDto> {
-		const { plan_id, start_date, student_id, teacher_id, corrected_time, status, rescheduled_lesson_id, rescheduled_lesson_date } = singleLessonInputDto;
+	// async createSingleLesson(singleLessonInputDto: SingleLessonInputDto): Promise<LessonOutputDto> {
+	// 	const { plan_id, start_date, student_id, teacher_id, corrected_time, status, rescheduled_lesson_id, rescheduled_lesson_date } = singleLessonInputDto;
 
-		const lessonAlreadyBooked = await this.lessonRepository.getLessonByStartDateAndStudentId(start_date, student_id);
+	// 	const lessonAlreadyBooked = await this.lessonRepository.getLessonByStartDateAndStudentId(start_date, student_id);
 
-		if (lessonAlreadyBooked) {
-			throw new BadRequestException("Lesson already booked for this student at this time");
-		}
+	// 	if (lessonAlreadyBooked) {
+	// 		throw new BadRequestException("Lesson already booked for this student at this time");
+	// 	}
 
-		const plan = await this.planService.findById(plan_id);
-		if (!plan) {
-			throw new NotFoundException('Plan not found');
-		}
+	// 	const plan = await this.planService.findById(plan_id);
+	// 	if (!plan) {
+	// 		throw new NotFoundException('Plan not found');
+	// 	}
 
-		return await this.lessonRepository.createLesson(singleLessonInputDto);
-	}
+	// 	return await this.lessonRepository.createLesson(singleLessonInputDto);
+	// }
 
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
 		return await this.lessonRepository.findLessonsForPeriod(start_date, end_date, teacher_id);
+	}
+
+	async createRegularLessons(regularLessonsInputDto: RegularLessonsInputDto, student_id: number): Promise<RegularLessonOutputDto[]> {
+		const { lessons } = regularLessonsInputDto;
+		const regularLessons: RegularLessonOutputDto[] = [];
+		for (const lesson of lessons) {
+			const { plan_id, start_time, week_day, start_period_date, end_period_date, teacher_id } = lesson;
+			const plan = await this.planService.findById(plan_id);
+			if (!plan) {
+				throw new NotFoundException('Plan not found');
+			}
+			const regularLesson: RegularLessonOutputDto = await this.lessonRegularRepository.createRegularLesson(lesson, student_id);
+			regularLessons.push(regularLesson);
+
+			// Generate all dates for the specified week_day between start_period_date and end_period_date
+			const lessonDates = this.getDatesForWeekDay(week_day, start_period_date, end_period_date);
+
+			// Parse time strings once
+			const startTimeHourDate = parseISO(start_time);
+
+			// Create individual lessons for each date
+			for (const lessonDate of lessonDates) {
+				// Check if lesson already exists
+				const existingLesson = await this.prisma.lesson.findFirst({
+					where: {
+						student_id,
+						teacher_id,
+						date: lessonDate,
+					},
+				});
+
+				if (existingLesson) {
+					continue; // Skip if lesson already exists
+				}
+
+				// Create the lesson
+				await this.prisma.lesson.create({
+					data: {
+						student_id,
+						teacher_id,
+						plan_id,
+						date: lessonDate,
+						start_time: startTimeHourDate,
+						is_regular: true,
+						regular_lesson_id: regularLesson.id,
+						status: LessonStatus.PENDING_UNPAID,
+					},
+				});
+			}
+		}
+		return regularLessons;
+	}
+
+	private getDatesForWeekDay(weekDay: WeekDay, startDate: string, endDate: string): Date[] {
+		const start = startOfDay(parseISO(startDate));
+		const end = startOfDay(parseISO(endDate));
+		const targetDayOfWeek = this.weekDayToNumber(weekDay);
+		const dates: Date[] = [];
+
+		// Find the first occurrence of the target weekday on or after start date
+		let current = new Date(start);
+		const startDayOfWeek = getDay(current);
+
+		// Calculate days to add to reach the target weekday
+		// If start date is already the target day, daysToAdd will be 0
+		const daysToAdd = (targetDayOfWeek - startDayOfWeek + 7) % 7;
+		current = addDays(current, daysToAdd);
+
+		// If we moved past the start date and it wasn't the target day, we're good
+		// If start date was the target day, current is still on start date
+		// Generate all dates for the target weekday within the date range (inclusive)
+		while (current <= end) {
+			if (getDay(current) === targetDayOfWeek) {
+				dates.push(new Date(current));
+			}
+			current = addDays(current, 7); // Move to next week
+		}
+
+		return dates;
+	}
+
+	private weekDayToNumber(weekDay: WeekDay): number {
+		const mapping: Record<WeekDay, number> = {
+			[WeekDay.SUNDAY]: 0,
+			[WeekDay.MONDAY]: 1,
+			[WeekDay.TUESDAY]: 2,
+			[WeekDay.WEDNESDAY]: 3,
+			[WeekDay.THURSDAY]: 4,
+			[WeekDay.FRIDAY]: 5,
+			[WeekDay.SATURDAY]: 6,
+		};
+		return mapping[weekDay];
 	}
 
 	// async create(createLessonDto: CreateLessonDto) {

@@ -6,12 +6,13 @@ import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
 import { BcryptService } from "../auth/bcrypt.service";
 import { Teacher } from "@prisma/client";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
+import { FilterTeacherQuery } from "./dto/filter.query.dto";
 
 @Injectable()
 export class TeacherService {
 	constructor(private readonly teacherRepository: TeacherRepository, private readonly bcryptService: BcryptService) {}
 
-	async getTeacherById(id: number): Promise<any> {
+	async getTeacherById(id: number): Promise<TeacherOutputDto | null> {
 		return await this.teacherRepository.getTeacherById(id);
 	}
 
@@ -19,8 +20,8 @@ export class TeacherService {
 		return await this.teacherRepository.getTeacherByLogin(login);
 	}
 
-	async getTeachers(): Promise<TeacherOutputDto[]> {
-		return await this.teacherRepository.getTeachers();
+	async getTeachers(filter: FilterTeacherQuery): Promise<TeacherOutputDto[]> {
+		return await this.teacherRepository.getTeachers(filter);
 	}
 
 	async createTeacher(createTeacherDto: CreateTeacherDto): Promise<TeacherOutputDto> {
@@ -40,8 +41,9 @@ export class TeacherService {
 		if (!teacher) {
 			throw new NotFoundException("Teacher not found");
 		}
-		const passwordHash = await this.bcryptService.generateHash(updateTeacherDto.password);
-		updateTeacherDto.password = passwordHash;
+		if (teacher.deleted_at) {
+			throw new BadRequestException("Teacher is deleted");
+		}
 		await this.teacherRepository.updateTeacher(teacher.id, updateTeacherDto);
 	}
 
@@ -49,6 +51,9 @@ export class TeacherService {
 		const teacher = await this.teacherRepository.getTeacherById(id);
 		if (!teacher) {
 			throw new NotFoundException("Teacher not found");
+		}
+		if (teacher.deleted_at) {
+			throw new BadRequestException("Teacher already deleted");
 		}
 		await this.teacherRepository.deleteTeacher(teacher.id);
 	}

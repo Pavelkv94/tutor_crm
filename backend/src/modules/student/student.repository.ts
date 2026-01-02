@@ -1,9 +1,11 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
 import { CreateStudentDto } from "./dto/create-student.dto";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Student } from "@prisma/client";
 import { StudentOutputDto, StudentExtendedOutputDto } from "./dto/student.output.dto";
 import { UpdateStudentDto } from "./dto/update-student.dto";
+import { FilterStudentQuery } from "./dto/filter.query.dto";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class StudentRepository {
@@ -19,15 +21,35 @@ export class StudentRepository {
 		return this.mapStudentToView(student);
 	}
 
-	async getStudents(): Promise<StudentOutputDto[]> {
+	// async getStudents(): Promise<StudentOutputDto[]> {
+	// 	const students = await this.prisma.student.findMany({
+	// 		include: {
+	// 			telegrams: true,
+	// 			lessons: true,
+	// 		},
+	// 		where: {
+	// 			deleted_at: null,
+	// 		},
+	// 		orderBy: {
+	// 			name: 'asc',
+	// 		},
+	// 	});
+	// 	return students.map(this.mapStudentToView);
+	// }
+
+	async getStudentsByTeacherId(teacher_id: number, filter: FilterStudentQuery): Promise<StudentOutputDto[]> {
+		const where: Prisma.StudentWhereInput = {};
+		if (filter === FilterStudentQuery.ACTIVE) {
+			where.deleted_at = null;
+		} else if (filter === FilterStudentQuery.DELETED) {
+			where.deleted_at = { not: null };
+		}
 		const students = await this.prisma.student.findMany({
 			include: {
 				telegrams: true,
 				lessons: true,
 			},
-			where: {
-				deleted_at: null,
-			},
+			where: { ...where, teacher_id: teacher_id },
 			orderBy: {
 				name: 'asc',
 			},
@@ -35,44 +57,21 @@ export class StudentRepository {
 		return students.map(this.mapStudentToView);
 	}
 
-	async getStudentsByTeacherId(teacher_id: number): Promise<StudentOutputDto[]> {
-		const students = await this.prisma.student.findMany({
-			include: {
-				telegrams: true,
-				lessons: true,
-			},
-			where: {
-				deleted_at: null,
-				teacher_id: teacher_id,
-			},
-			orderBy: {
-				name: 'asc',
-			},
-		});
-		return students.map(this.mapStudentToView);
-	}
-
-	async getStudent(id: number): Promise<StudentExtendedOutputDto> {
+	async getStudent(id: number): Promise<StudentExtendedOutputDto | null> {
 		const student = await this.prisma.student.findUnique({
 			where: { id },
 			include: {
 				telegrams: true,
 			},
 		});
-
 		if (!student) {
-			throw new NotFoundException("Student not found");
+			return null;
 		}
+
 		return this.mapStudentToExtendedView(student);
 	}
 
 	async updateStudent(id: number, updateStudentDto: UpdateStudentDto): Promise<boolean> {
-		const student = await this.prisma.student.findUnique({
-			where: { id, deleted_at: null },
-		});
-		if (!student) {
-			throw new NotFoundException("Student not found");
-		}
 		const updateData: any = { ...updateStudentDto };
 		if (updateStudentDto.birth_date) {
 			updateData.birth_date = new Date(updateStudentDto.birth_date);
@@ -82,12 +81,6 @@ export class StudentRepository {
 	}
 
 	async deleteStudent(id: number): Promise<boolean> {
-		const student = await this.prisma.student.findUnique({
-			where: { id },
-		});
-		if (!student) {
-			throw new NotFoundException("Student not found");
-		}
 		const result = await this.prisma.student.update({ where: { id }, data: { deleted_at: new Date() } });
 		return result !== null;
 	}
@@ -98,6 +91,8 @@ export class StudentRepository {
 			name: student.name,
 			class: student.class,
 			birth_date: student.birth_date,
+			created_at: student.created_at,
+			deleted_at: student.deleted_at || null,
 		};
 	}
 

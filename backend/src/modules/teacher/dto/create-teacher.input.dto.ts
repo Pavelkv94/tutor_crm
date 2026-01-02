@@ -30,14 +30,6 @@ export class CreateTeacherDto {
 	@IsString()
 	@IsOptional()
 	@ApiProperty({
-		description: "The telegram id of the teacher",
-		example: "1234567890",
-	})
-	telegram_id: string | null;
-
-	@IsString()
-	@IsOptional()
-	@ApiProperty({
 		description: "The telegram link of the teacher",
 		example: "https://t.me/teacher123",
 	})

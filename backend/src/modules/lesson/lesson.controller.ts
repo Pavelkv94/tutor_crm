@@ -12,20 +12,21 @@ import { ExtractTeacherFromRequest } from 'src/core/decorators/param/extract-tea
 import { TeacherRole } from '../teacher/dto/teacherRole';
 import { GetLessonsForPeriodSwagger } from 'src/core/decorators/swagger/lesson/get-lessons-swagger.decorator';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
-
+import { RegularLessonsInputDto } from './dto/regular-lesson.input.dto';
+import { CreateRegularLessonsSwagger } from 'src/core/decorators/swagger/lesson/create-regular-lessons-swagger.decorator';
 
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
 	constructor(private readonly lessonService: LessonService) { }
 
-	@CreateSingleLessonSwagger()
-	@Post()
-	@HttpCode(HttpStatus.CREATED)
-	@UseGuards(JwtAccessGuard, AdminAccessGuard)
-	async createSingleLesson(@Body() singleLessonInputDto: SingleLessonInputDto) {
-		return await this.lessonService.createSingleLesson(singleLessonInputDto);
-	}
+	// @CreateSingleLessonSwagger()
+	// @Post()
+	// @HttpCode(HttpStatus.CREATED)
+	// @UseGuards(JwtAccessGuard, AdminAccessGuard)
+	// async createSingleLesson(@Body() singleLessonInputDto: SingleLessonInputDto) {
+	// 	return await this.lessonService.createSingleLesson(singleLessonInputDto);
+	// }
 
 	@GetLessonsForPeriodSwagger()
 	@Get()
@@ -40,6 +41,14 @@ export class LessonController {
 			}
 			return await this.lessonService.findLessonsForPeriod(start_date, end_date, +teacher_id);
 		}
+	}
+
+	@CreateRegularLessonsSwagger()
+	@Post('regular/:student_id')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async createRegularLesson(@Body() regularLessonsInputDto: RegularLessonsInputDto, @Param('student_id') student_id: string) {
+		return await this.lessonService.createRegularLessons(regularLessonsInputDto, +student_id);
 	}
 
 	// @Get()

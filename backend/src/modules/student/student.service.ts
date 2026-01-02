@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentRepository } from './student.repository';
 import { StudentOutputDto, StudentExtendedOutputDto } from './dto/student.output.dto';
 import { TeacherService } from '../teacher/teacher.service';
-import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
+import { FilterStudentQuery } from './dto/filter.query.dto';
 
 @Injectable()
 export class StudentService {
@@ -18,15 +18,29 @@ export class StudentService {
 		return await this.studentRepository.create(createStudentDto);
 	}
 
-	async findAllForCurrentTeacher(teacher_id: number): Promise<StudentOutputDto[]> {
-		return await this.studentRepository.getStudentsByTeacherId(teacher_id);
+	async findAllForCurrentTeacher(teacher_id: number, filter: FilterStudentQuery): Promise<StudentOutputDto[]> {
+		return await this.studentRepository.getStudentsByTeacherId(teacher_id, filter);
 	}
 
 	async findOne(id: number): Promise<StudentExtendedOutputDto> {
-		return await this.studentRepository.getStudent(id);
+		const student = await this.studentRepository.getStudent(id);
+		if (!student) {
+			throw new NotFoundException("Student not found");
+		}
+		if (student.deleted_at) {
+			throw new BadRequestException("Student already deleted");
+		}
+		return student;
 	}
 
 	async update(id: number, updateStudentDto: UpdateStudentDto): Promise<void> {
+		const student = await this.studentRepository.getStudent(id);
+		if (!student) {
+			throw new NotFoundException("Student not found");
+		}
+		if (student.deleted_at) {
+			throw new BadRequestException("Student already deleted");
+		}
 		const isUpdated = await this.studentRepository.updateStudent(id, updateStudentDto);
 		if (!isUpdated) {
 			throw new NotFoundException("Student not found");
@@ -65,6 +79,13 @@ export class StudentService {
 	// }
 
 	async remove(id: number): Promise<void> {
+		const student = await this.studentRepository.getStudent(id);
+		if (!student) {
+			throw new NotFoundException("Student not found");
+		}
+		if (student.deleted_at) {
+			throw new BadRequestException("Student already deleted");
+		}
 		const isDeleted = await this.studentRepository.deleteStudent(id);
 		if (!isDeleted) {
 			throw new NotFoundException("Student not found");

@@ -22,4 +22,6 @@ export class TeacherOutputDto {
 	telegram_link: string | null;
 	@ApiProperty({ description: 'The deleted at of the teacher', example: '2026-01-01T00:00:00.000Z' })
 	deleted_at: Date | null;
+	@ApiProperty({ description: 'The created at of the teacher', example: '2026-01-01T00:00:00.000Z' })
+	created_at: Date;
 }

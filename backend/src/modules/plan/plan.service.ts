@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePlanInputDto } from './dto/create-plan.input.dto';
 import { PlanRepository } from './plan.repository';
 import { PlanOutputDto } from './dto/plan.output.dto';
+import { FilterPlanQuery } from './dto/filter.query.dto';
 
 @Injectable()
 export class PlanService {
@@ -11,8 +12,8 @@ export class PlanService {
     return await this.planRepository.createPlan(createPlanDto);
   }
 
-  async findAll(): Promise<PlanOutputDto[]> {
-    return await this.planRepository.getPlans();
+	async findAll(filter: FilterPlanQuery): Promise<PlanOutputDto[]> {
+		return await this.planRepository.getPlans(filter);
   }
 
 	async findById(id: number): Promise<PlanOutputDto | null> {
@@ -20,6 +21,13 @@ export class PlanService {
 	}
 
   async remove(id: number): Promise<boolean> {
+		const plan = await this.planRepository.getPlanById(id);
+		if (!plan) {
+			throw new NotFoundException("Plan not found");
+		}
+		if (plan.deleted_at) {
+			throw new BadRequestException("Plan already deleted");
+		}
     return await this.planRepository.deletePlan(id);
   }
 }
