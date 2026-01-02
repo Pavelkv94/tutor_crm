@@ -1,10 +1,11 @@
 
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { TeacherRepository } from "./teacher.repository";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
 import { BcryptService } from "../auth/bcrypt.service";
 import { Teacher } from "@prisma/client";
+import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
 
 @Injectable()
 export class TeacherService {
@@ -32,5 +33,23 @@ export class TeacherService {
 			...createTeacherDto,
 			password: passwordHash,
 		});
+	}
+
+	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
+		const teacher = await this.teacherRepository.getTeacherById(id);
+		if (!teacher) {
+			throw new NotFoundException("Teacher not found");
+		}
+		const passwordHash = await this.bcryptService.generateHash(updateTeacherDto.password);
+		updateTeacherDto.password = passwordHash;
+		await this.teacherRepository.updateTeacher(teacher.id, updateTeacherDto);
+	}
+
+	async deleteTeacher(id: number): Promise<void> {
+		const teacher = await this.teacherRepository.getTeacherById(id);
+		if (!teacher) {
+			throw new NotFoundException("Teacher not found");
+		}
+		await this.teacherRepository.deleteTeacher(teacher.id);
 	}
 }

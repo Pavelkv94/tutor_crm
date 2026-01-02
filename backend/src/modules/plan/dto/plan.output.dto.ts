@@ -13,4 +13,6 @@ export class PlanOutputDto {
 	duration: number;
 	@ApiProperty({ description: 'The type of the plan', example: 'INDIVIDUAL' })
 	plan_type: string;
+	@ApiProperty({ description: 'The deleted at of the plan', example: '2026-01-01T00:00:00.000Z' })
+	deleted_at: Date | null;
 }

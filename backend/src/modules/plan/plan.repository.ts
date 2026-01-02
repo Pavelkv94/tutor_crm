@@ -10,13 +10,17 @@ export class PlanRepository {
 
 	async createPlan(createPlanDto: CreatePlanInputDto): Promise<PlanOutputDto> {
 		const plan = await this.prisma.plan.create({
-			data: createPlanDto,
+			data: { ...createPlanDto, plan_name: `${createPlanDto.plan_type} ${createPlanDto.duration} min` },
 		});
 		return this.mapPlanToView(plan);
 	}
 	
 	async getPlans(): Promise<PlanOutputDto[]> {
-		const plans = await this.prisma.plan.findMany();
+		const plans = await this.prisma.plan.findMany({
+			orderBy: {
+				deleted_at: 'desc',
+			},
+		});
 		return plans.map(this.mapPlanToView);
 	}
 
@@ -37,8 +41,11 @@ export class PlanRepository {
 		if (!plan) {
 			throw new NotFoundException('Plan not found');
 		}
-		const result = await this.prisma.plan.delete({
+		const result = await this.prisma.plan.update({
 			where: { id },
+			data: {
+				deleted_at: new Date(),
+			},
 		});
 		return result !== null;
 	}
@@ -51,6 +58,7 @@ export class PlanRepository {
 			plan_currency: plan.plan_currency,
 			duration: plan.duration,
 			plan_type: plan.plan_type,
+			deleted_at: plan.deleted_at || null,
 		};
 	}
 }

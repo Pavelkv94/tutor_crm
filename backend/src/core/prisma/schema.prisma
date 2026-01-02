@@ -20,11 +20,15 @@ model Teacher {
 	login       String @unique
 	password    String
   telegram_id String?
-  created_at  DateTime @default(now())
 	role        TeacherRole @default(TEACHER)
+	timezone    Timezone?
+	telegram_link String?
 
 	lessons Lesson[]
 	students Student[]
+
+  created_at  DateTime @default(now())
+	deleted_at DateTime?
 
 	@@map("teacher")
 }
@@ -124,6 +128,7 @@ model Plan {
   duration      Int
 	plan_price    Int
   created_at    DateTime    @default(now())
+	deleted_at    DateTime?
 
   lessons       Lesson[]
 
@@ -160,4 +165,9 @@ enum LessonStatus {
 enum TeacherRole {
   TEACHER
   ADMIN
+}
+
+enum Timezone {
+	BY
+	PL
 }

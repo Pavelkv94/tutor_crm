@@ -35,9 +35,4 @@ export class CreatePlanInputDto {
 	@ApiProperty({ example: '10' })
 	@IsNotEmpty()
 	duration: number;
-	
-	@ApiProperty({ example: '10 minutes' })
-	@IsString()
-	@IsNotEmpty()
-	plan_name: string;
 }

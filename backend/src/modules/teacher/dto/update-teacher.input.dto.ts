@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { Timezone } from "./teacher.output.dto";
 
-export class CreateTeacherDto {
+export class UpdateTeacherDto {
   @IsString()
   @IsNotEmpty()
 	@ApiProperty({

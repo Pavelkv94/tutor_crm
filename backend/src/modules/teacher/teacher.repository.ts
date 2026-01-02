@@ -3,6 +3,8 @@ import { Teacher, TeacherRole } from "@prisma/client";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
+import { Timezone } from "./dto/teacher.output.dto";
+import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
 
 @Injectable()
 export class TeacherRepository {
@@ -26,6 +28,9 @@ export class TeacherRepository {
 				login: true,
 				telegram_id: true,
 				role: true,
+				timezone: true,
+				telegram_link: true,
+				deleted_at: true,
 			},
 		});
 		return teachers.map(this.mapTeacherToView);
@@ -51,6 +56,22 @@ export class TeacherRepository {
 		return this.mapTeacherToView(teacher);
 	}
 
+	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
+		await this.prisma.teacher.update({
+			where: { id },
+			data: updateTeacherDto,
+		});
+	}
+
+	async deleteTeacher(id: number): Promise<void> {
+		await this.prisma.teacher.update({
+			where: { id },
+			data: {
+				deleted_at: new Date(),
+			},
+		});
+	}
+
 	private mapTeacherToView(teacher: Teacher): TeacherOutputDto {
 		return {
 			id: teacher.id,
@@ -58,6 +79,9 @@ export class TeacherRepository {
 			login: teacher.login,
 			telegram_id: teacher.telegram_id || null,
 			role: teacher.role,
+			timezone: teacher.timezone as Timezone,
+			telegram_link: teacher.telegram_link || null,
+			deleted_at: teacher.deleted_at || null,
 		};
 	}
 }

@@ -22,8 +22,12 @@ async function bootstrap() {
 	const documentFactory = () => SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('api/swagger', app, documentFactory);
 
-	app.enableCors();
-	app.setGlobalPrefix('api');
+	app.enableCors({
+		origin: 'http://localhost:5173', // Your Vite dev server URL
+		credentials: true, // Allow cookies
+		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+	}); app.setGlobalPrefix('api');
 
 	await app.listen(process.env.PORT ?? 5000, () => {
 		console.log(`Server is running on port ${process.env.PORT ?? 5000}`);
