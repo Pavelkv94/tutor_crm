@@ -2,9 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeacherService } from '../../../src/modules/teacher/teacher.service';
 import { TeacherRepository } from '../../../src/modules/teacher/teacher.repository';
 import { BcryptService } from '../../../src/modules/auth/bcrypt.service';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateTeacherDto } from '../../../src/modules/teacher/dto/create-teacher.input.dto';
+import { UpdateTeacherDto } from '../../../src/modules/teacher/dto/update-teacher.input.dto';
 import { TeacherRole } from '@prisma/client';
+import { Timezone } from '../../../src/modules/teacher/dto/teacher.output.dto';
+import { FilterTeacherQuery } from '../../../src/modules/teacher/dto/filter.query.dto';
 
 describe('TeacherService', () => {
 	let service: TeacherService;
@@ -18,6 +21,9 @@ describe('TeacherService', () => {
 		password: 'hashedPassword',
 		role: TeacherRole.TEACHER,
 		telegram_id: null,
+		telegram_link: null,
+		timezone: Timezone.BY,
+		deleted_at: null,
 		created_at: new Date(),
 	};
 
@@ -26,6 +32,10 @@ describe('TeacherService', () => {
 		login: 'testuser',
 		name: 'Test User',
 		telegram_id: null,
+		telegram_link: null,
+		timezone: Timezone.BY,
+		deleted_at: null,
+		created_at: new Date(),
 		role: TeacherRole.TEACHER,
 	};
 
@@ -40,6 +50,8 @@ describe('TeacherService', () => {
 						getTeacherByLogin: jest.fn(),
 						getTeachers: jest.fn(),
 						createTeacher: jest.fn(),
+						updateTeacher: jest.fn(),
+						deleteTeacher: jest.fn(),
 					},
 				},
 				{
@@ -85,12 +97,13 @@ describe('TeacherService', () => {
 	describe('getTeachers', () => {
 		it('should return all teachers', async () => {
 			const mockTeachers = [mockTeacherOutput];
+			const filter = FilterTeacherQuery.ALL;
 			jest.spyOn(repository, 'getTeachers').mockResolvedValue(mockTeachers);
 
-			const result = await service.getTeachers();
+			const result = await service.getTeachers(filter);
 
 			expect(result).toEqual(mockTeachers);
-			expect(repository.getTeachers).toHaveBeenCalled();
+			expect(repository.getTeachers).toHaveBeenCalledWith(filter);
 		});
 	});
 
@@ -100,7 +113,8 @@ describe('TeacherService', () => {
 				login: 'newuser',
 				password: 'password123',
 				name: 'New User',
-				telegram_id: null,
+				telegram_link: null,
+				timezone: Timezone.BY,
 			};
 
 			const hashedPassword = 'hashedPassword123';
@@ -126,7 +140,8 @@ describe('TeacherService', () => {
 				login: 'existinguser',
 				password: 'password123',
 				name: 'Existing User',
-				telegram_id: null,
+				telegram_link: null,
+				timezone: Timezone.BY,
 			};
 
 			jest.spyOn(repository, 'getTeacherByLogin').mockResolvedValue(mockTeacher);
@@ -135,6 +150,72 @@ describe('TeacherService', () => {
 			await expect(service.createTeacher(createTeacherDto)).rejects.toThrow('Teacher already exists');
 			expect(bcryptService.generateHash).not.toHaveBeenCalled();
 			expect(repository.createTeacher).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('updateTeacher', () => {
+		const updateTeacherDto: UpdateTeacherDto = {
+			name: 'Updated Teacher',
+			telegram_link: 'https://t.me/updated',
+			timezone: Timezone.BY,
+		};
+
+		it('should update teacher successfully', async () => {
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(mockTeacherOutput);
+			jest.spyOn(repository, 'updateTeacher').mockResolvedValue(undefined);
+
+			await service.updateTeacher(1, updateTeacherDto);
+
+			expect(repository.getTeacherById).toHaveBeenCalledWith(1);
+			expect(repository.updateTeacher).toHaveBeenCalledWith(1, updateTeacherDto);
+		});
+
+		it('should throw NotFoundException if teacher not found', async () => {
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(null);
+
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow(NotFoundException);
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Teacher not found');
+		});
+
+		it('should throw BadRequestException if teacher is deleted', async () => {
+			const deletedTeacher = {
+				...mockTeacherOutput,
+				deleted_at: new Date(),
+			};
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(deletedTeacher as any);
+
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow(BadRequestException);
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Teacher is deleted');
+		});
+	});
+
+	describe('deleteTeacher', () => {
+		it('should delete teacher successfully', async () => {
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(mockTeacherOutput);
+			jest.spyOn(repository, 'deleteTeacher').mockResolvedValue(undefined);
+
+			await service.deleteTeacher(1);
+
+			expect(repository.getTeacherById).toHaveBeenCalledWith(1);
+			expect(repository.deleteTeacher).toHaveBeenCalledWith(1);
+		});
+
+		it('should throw NotFoundException if teacher not found', async () => {
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(null);
+
+			await expect(service.deleteTeacher(1)).rejects.toThrow(NotFoundException);
+			await expect(service.deleteTeacher(1)).rejects.toThrow('Teacher not found');
+		});
+
+		it('should throw BadRequestException if teacher already deleted', async () => {
+			const deletedTeacher = {
+				...mockTeacherOutput,
+				deleted_at: new Date(),
+			};
+			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(deletedTeacher as any);
+
+			await expect(service.deleteTeacher(1)).rejects.toThrow(BadRequestException);
+			await expect(service.deleteTeacher(1)).rejects.toThrow('Teacher already deleted');
 		});
 	});
 });

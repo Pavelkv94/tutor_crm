@@ -471,7 +471,7 @@ describe('StudentController (e2e)', () => {
 				.expect(401);
 		});
 
-		it('should not return deleted students', async () => {
+		it('should not return deleted students when filter is ACTIVE', async () => {
 			// Create teacher user
 			const passwordHash = await bcryptService.generateHash(testTeacher.password);
 			const teacher = await prisma.teacher.create({
@@ -507,12 +507,12 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const response = await request(app.getHttpServer())
-				.get('/students')
+				.get('/students?filter=active')
 				.set('Authorization', `Bearer ${teacherToken}`)
 				.expect(200);
 
 			expect(Array.isArray(response.body)).toBe(true);
-			// Deleted student should not be in the list
+			// Deleted student should not be in the list when filter is ACTIVE
 			const studentNames = response.body.map((s: any) => s.name);
 			expect(studentNames).not.toContain(testStudent.name);
 		});

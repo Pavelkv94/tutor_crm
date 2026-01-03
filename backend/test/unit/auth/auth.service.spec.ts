@@ -8,6 +8,7 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { LoginInputDto } from '../../../src/modules/auth/dto/login.input.dto';
 import { RegisterAdminDto } from '../../../src/modules/auth/dto/register.dto';
 import { TeacherRole } from '@prisma/client';
+import { Timezone } from '../../../src/modules/teacher/dto/teacher.output.dto';
 
 describe('AuthService', () => {
 	let service: AuthService;
@@ -31,6 +32,9 @@ describe('AuthService', () => {
 		password: 'hashedPassword',
 		role: TeacherRole.TEACHER,
 		telegram_id: null,
+		telegram_link: null,
+		timezone: Timezone.BY,
+		deleted_at: null,
 		created_at: new Date(),
 	};
 

@@ -134,7 +134,9 @@ describe('PlanController (e2e)', () => {
 				.expect(201);
 
 			expect(response.body).toHaveProperty('id');
-			expect(response.body).toHaveProperty('plan_name', testPlan.plan_name);
+			expect(response.body).toHaveProperty('plan_name');
+			expect(response.body.plan_name).toContain(testPlan.plan_type);
+			expect(response.body.plan_name).toContain(`${testPlan.duration} min`);
 			expect(response.body).toHaveProperty('plan_price', testPlan.plan_price);
 			expect(response.body).toHaveProperty('plan_currency', testPlan.plan_currency);
 			expect(response.body).toHaveProperty('duration', testPlan.duration);
@@ -142,10 +144,12 @@ describe('PlanController (e2e)', () => {
 
 			// Verify plan was created in database
 			const createdPlan = await prisma.plan.findFirst({
-				where: { plan_name: testPlan.plan_name },
+				where: { id: response.body.id },
 			});
 			expect(createdPlan).toBeDefined();
-			expect(createdPlan?.plan_name).toBe(testPlan.plan_name);
+			expect(createdPlan?.plan_name).toBeDefined();
+			expect(createdPlan?.plan_name).toContain(testPlan.plan_type);
+			expect(createdPlan?.plan_name).toContain(`${testPlan.duration} min`);
 		});
 
 		it('should return 401 without token', async () => {
@@ -325,11 +329,12 @@ describe('PlanController (e2e)', () => {
 				.set('Authorization', `Bearer ${adminToken}`)
 				.expect(204);
 
-			// Verify plan was deleted from database
+			// Verify plan was soft deleted (deleted_at is set)
 			const deletedPlan = await prisma.plan.findUnique({
 				where: { id: createdPlan.id },
 			});
-			expect(deletedPlan).toBeNull();
+			expect(deletedPlan).toBeDefined();
+			expect(deletedPlan?.deleted_at).not.toBeNull();
 		});
 
 		it('should return 401 without token', async () => {

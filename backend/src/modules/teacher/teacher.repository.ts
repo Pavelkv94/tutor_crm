@@ -1,6 +1,6 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
 import { Teacher, TeacherRole } from "@prisma/client";
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
 import { Timezone } from "./dto/teacher.output.dto";
@@ -68,6 +68,12 @@ export class TeacherRepository {
 	}
 
 	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
+		const teacher = await this.prisma.teacher.findUnique({
+			where: { id }
+		});
+		if (!teacher) {
+			throw new NotFoundException("Teacher not found");
+		}
 		await this.prisma.teacher.update({
 			where: { id },
 			data: updateTeacherDto,
