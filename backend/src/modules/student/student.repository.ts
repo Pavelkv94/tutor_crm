@@ -21,22 +21,6 @@ export class StudentRepository {
 		return this.mapStudentToView(student);
 	}
 
-	// async getStudents(): Promise<StudentOutputDto[]> {
-	// 	const students = await this.prisma.student.findMany({
-	// 		include: {
-	// 			telegrams: true,
-	// 			lessons: true,
-	// 		},
-	// 		where: {
-	// 			deleted_at: null,
-	// 		},
-	// 		orderBy: {
-	// 			name: 'asc',
-	// 		},
-	// 	});
-	// 	return students.map(this.mapStudentToView);
-	// }
-
 	async getStudentsByTeacherId(teacher_id: number, filter: FilterStudentQuery): Promise<StudentOutputDto[]> {
 		const where: Prisma.StudentWhereInput = {};
 		if (filter === FilterStudentQuery.ACTIVE) {
@@ -93,6 +77,7 @@ export class StudentRepository {
 			birth_date: student.birth_date,
 			created_at: student.created_at,
 			deleted_at: student.deleted_at || null,
+			teacher_id: student.teacher_id || null,
 		};
 	}
 

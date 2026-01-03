@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { TeacherRole } from 'src/modules/teacher/dto/teacherRole';
+import { TeacherRoleEnum } from 'src/modules/teacher/dto/teacherRole';
 
 @Injectable()
 export class AdminAccessGuard implements CanActivate {
@@ -11,7 +11,7 @@ export class AdminAccessGuard implements CanActivate {
 			throw new UnauthorizedException('User not authenticated');
 		}
 
-		if (user.role !== TeacherRole.ADMIN) {
+		if (user.role !== TeacherRoleEnum.ADMIN) {
 			throw new UnauthorizedException('Access denied. Admin role required.');
 		}
 

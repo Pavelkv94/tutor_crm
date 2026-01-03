@@ -3,10 +3,12 @@ import { Injectable } from "@nestjs/common";
 import { SingleLessonInputDto } from "./dto/single-lesson.input.dto";
 import { Lesson, LessonStatus, Student } from "@prisma/client";
 import { LessonOutputDto } from "./dto/lesson.output.dto";
-import { LessonStatusDto } from "./dto/lesson-status.enum";
+import { LessonStatusEnum } from "./dto/lesson-status.enum";
 import { parseISO, startOfDay, endOfDay } from "date-fns";
 import { Plan } from "@prisma/client";
 import { RegularLessonOutputDto } from "./dto/regular-lesson.output.dto";
+import { Teacher } from "@prisma/client";
+import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto";
 @Injectable()
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
@@ -20,6 +22,25 @@ export class LessonRepository {
 	// 	});
 	// 	return lesson;
 	// }
+
+	async findLessonsByStartDate(start_date: Date, teacher_id: number): Promise<LessonOutputDto[]> {
+		const endDate = new Date(start_date.getTime() + 60 * 60 * 1000);
+		const lessons = await this.prisma.lesson.findMany({
+			where: {
+				date: { gte: start_date, lte: endDate },
+				student: {
+					teacher_id,
+				},
+			},
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+				regular_lesson: true,
+			},
+		});
+		return lessons.map(l => this.mapLessonToView(l));
+	}
 
 	async createRegularLesson(student_id: number,
 		teacher_id: number,
@@ -39,6 +60,19 @@ export class LessonRepository {
 		});
 	}
 
+	async createSingleLesson(newLesson: Lesson): Promise<LessonOutputDto> {
+		const lesson = await this.prisma.lesson.create({
+			data: newLesson,
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+				regular_lesson: true,
+			},
+		});
+		return this.mapLessonToView(lesson);
+	}
+
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
 		const startDate = startOfDay(parseISO(start_date));
 		const endDate = endOfDay(parseISO(end_date));
@@ -46,7 +80,9 @@ export class LessonRepository {
 		const lessons = await this.prisma.lesson.findMany({
 			where: {
 				date: { gte: startDate, lte: endDate },
-				teacher_id,
+				student: {
+					teacher_id,
+				},
 			},
 			include: {
 				student: true,
@@ -90,7 +126,47 @@ export class LessonRepository {
 		});
 	}
 
-	private mapLessonToView(lesson: Lesson & { student: Student } & { plan: Plan }): LessonOutputDto {
+	async changeTeacher(lessonId: number, teacherId: number): Promise<void> {
+		await this.prisma.lesson.update({
+			where: { id: lessonId },
+			data: { teacher_id: teacherId },
+		});
+	}
+
+	async findById(lessonId: number): Promise<LessonOutputDto | null> {
+		const lesson = await this.prisma.lesson.findUnique({
+			where: { id: lessonId },
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+				regular_lesson: true,
+			},
+		});
+		if (!lesson) {
+			return null;
+		}
+		return this.mapLessonToView(lesson);
+	}
+
+	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto): Promise<void> {
+		const data: { status?: LessonStatus } = {};
+		if (cancelLessonDto.status === CancelationStatusEnum.CANCELLED) {
+			data.status = LessonStatus.CANCELLED;
+		} else if (cancelLessonDto.status === CancelationStatusEnum.MISSED) {
+			data.status = LessonStatus.MISSED;
+		} else if (cancelLessonDto.status === CancelationStatusEnum.RESCHEDULED) {
+			data.status = LessonStatus.RESCHEDULED;
+		}
+
+		await this.prisma.lesson.update({
+			where: { id: lessonId },
+			data: { ...data, comment: cancelLessonDto.comment },
+		});
+
+	}
+
+	private mapLessonToView(lesson: Lesson & { student: Student } & { plan: Plan } & { teacher: Teacher }): LessonOutputDto {
 		return {
 			id: lesson.id,
 			student: {
@@ -100,6 +176,7 @@ export class LessonRepository {
 				birth_date: lesson.student.birth_date,
 				created_at: lesson.student.created_at,
 				deleted_at: lesson.student.deleted_at,
+				teacher_id: lesson.student.teacher_id || null,
 			},
 			plan: {
 				id: lesson.plan.id,
@@ -111,7 +188,7 @@ export class LessonRepository {
 				deleted_at: lesson.plan.deleted_at,
 				created_at: lesson.plan.created_at,
 			},
-			status: lesson.status as LessonStatusDto,
+			status: lesson.status as LessonStatusEnum,
 			comment: lesson.comment,
 			payment_status: lesson.payment_status,
 			created_at: lesson.created_at,
@@ -123,6 +200,10 @@ export class LessonRepository {
 			rescheduled_to_lesson_id: lesson.rescheduled_to_lesson_id,
 			rescheduled_to_lesson_date: lesson.rescheduled_to_lesson_date,
 			date: lesson.date,
+			teacher: {
+				id: lesson.teacher.id,
+				name: lesson.teacher.name
+			}
 		};
 	}
 }

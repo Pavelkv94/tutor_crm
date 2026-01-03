@@ -22,7 +22,7 @@ export class StudentService {
 		return await this.studentRepository.getStudentsByTeacherId(teacher_id, filter);
 	}
 
-	async findOne(id: number): Promise<StudentExtendedOutputDto> {
+	async findById(id: number): Promise<StudentExtendedOutputDto> {
 		const student = await this.studentRepository.getStudent(id);
 		if (!student) {
 			throw new NotFoundException("Student not found");

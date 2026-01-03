@@ -612,6 +612,56 @@
         ]
       }
     },
+    "/lessons/single": {
+      "post": {
+        "operationId": "LessonController_createSingleLessonByAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SingleLessonInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesson created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lesson already booked for this student at this time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Plan not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a single lesson",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
     "/lessons": {
       "get": {
         "operationId": "LessonController_findLessonsForPeriod",
@@ -727,6 +777,147 @@
           }
         ],
         "summary": "Create regular lessons for a student",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/assigned": {
+      "get": {
+        "operationId": "LessonController_findLessonsByStartDate",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Start date",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lessons have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LessonOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all assigned lessons for a date for current teacher",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/{id}/teacher": {
+      "patch": {
+        "operationId": "LessonController_changeTeacher",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeTeacherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Teacher changed successfully"
+          },
+          "400": {
+            "description": "Teacher not found or is deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change teacher for a lesson",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/{id}/cancel": {
+      "patch": {
+        "operationId": "LessonController_cancelLesson",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelLessonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lesson cancelled successfully"
+          },
+          "400": {
+            "description": "Lesson not found or is cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a lesson",
         "tags": [
           "Lessons"
         ]
@@ -1115,6 +1306,11 @@
             "type": "object",
             "description": "The deleted at of the student",
             "example": "2026-01-01T00:00:00.000Z"
+          },
+          "teacher_id": {
+            "type": "object",
+            "description": "The teacher id of the student",
+            "example": 1
           }
         },
         "required": [
@@ -1123,7 +1319,8 @@
           "class",
           "birth_date",
           "created_at",
-          "deleted_at"
+          "deleted_at",
+          "teacher_id"
         ]
       },
       "StudentExtendedOutputDto": {
@@ -1161,6 +1358,11 @@
             "description": "The deleted at of the student",
             "example": "2026-01-01T00:00:00.000Z"
           },
+          "teacher_id": {
+            "type": "object",
+            "description": "The teacher id of the student",
+            "example": 1
+          },
           "balance": {
             "type": "number",
             "description": "The balance of the student",
@@ -1189,6 +1391,7 @@
           "birth_date",
           "created_at",
           "deleted_at",
+          "teacher_id",
           "balance",
           "bookUntilCancellation",
           "notifyAboutBirthday",
@@ -1198,6 +1401,63 @@
       "UpdateStudentDto": {
         "type": "object",
         "properties": {}
+      },
+      "SingleLessonInputDto": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "number",
+            "description": "Plan ID",
+            "example": 1
+          },
+          "student_id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "Teacher ID",
+            "example": 1
+          },
+          "start_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Start date",
+            "example": "2026-01-03T17:47:58.385Z"
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "Is free",
+            "example": true
+          }
+        },
+        "required": [
+          "plan_id",
+          "student_id",
+          "teacher_id",
+          "start_date",
+          "isFree"
+        ]
+      },
+      "TeacherBasicOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the teacher",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
       },
       "LessonOutputDto": {
         "type": "object",
@@ -1227,7 +1487,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-02T18:26:06.145Z"
+            "example": "2026-01-03T17:47:58.401Z"
           },
           "status": {
             "type": "string",
@@ -1269,7 +1529,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-02T18:26:06.145Z",
+            "example": "2026-01-03T17:47:58.401Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1281,14 +1541,22 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-02T18:26:06.145Z",
+            "example": "2026-01-03T17:47:58.401Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-02T18:26:06.145Z"
+            "example": "2026-01-03T17:47:58.401Z"
+          },
+          "teacher": {
+            "description": "Teacher information",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeacherBasicOutputDto"
+              }
+            ]
           }
         },
         "required": [
@@ -1306,10 +1574,28 @@
           "rescheduled_lesson_date",
           "rescheduled_to_lesson_id",
           "rescheduled_to_lesson_date",
-          "created_at"
+          "created_at",
+          "teacher"
         ]
       },
       "RegularLessonsInputDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ChangeTeacherDto": {
+        "type": "object",
+        "properties": {
+          "teacher_id": {
+            "type": "number",
+            "description": "Teacher ID",
+            "example": 1
+          }
+        },
+        "required": [
+          "teacher_id"
+        ]
+      },
+      "CancelLessonDto": {
         "type": "object",
         "properties": {}
       }

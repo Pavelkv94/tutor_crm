@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
-export enum CancelationType {
+export enum CancelationStatusEnum {
 	MISSED = "MISSED",
 	RESCHEDULED = "RESCHEDULED",
 	CANCELLED = "CANCELLED",
@@ -11,8 +11,7 @@ export class CancelLessonDto {
 	@IsOptional()
 	comment: string;
 
-	@IsEnum(CancelationType)
+	@IsEnum(CancelationStatusEnum)
 	@IsNotEmpty()
-	cancelationType: CancelationType;
-
+	status: CancelationStatusEnum;
 }

@@ -1,40 +1,71 @@
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { ToUTC } from "src/core/decorators/transform/to-utc.decorator";
-import { LessonInputStatusDto } from "./lesson-status.enum";
+import { LessonInputStatusEnum } from "./lesson-status.enum";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class SingleLessonInputDto {
+	@ApiProperty({
+		description: "Plan ID",
+		example: 1,
+	})
 	@IsInt()
 	@IsNotEmpty()
 	plan_id: number;
 
-	@IsString()
-	@IsNotEmpty()
-	@ToUTC()
-	start_date: string;
- 
+	@ApiProperty({
+		description: "Student ID",
+		example: 1,
+	})
 	@IsInt()
 	@IsNotEmpty()
 	student_id: number;
 
+	@ApiProperty({
+		description: "Teacher ID",
+		example: 1,
+	})
 	@IsInt()
 	@IsNotEmpty()
 	teacher_id: number;
 
+	@ApiProperty({
+		description: "Start date",
+		example: new Date(),
+	})
 	@IsString()
 	@IsNotEmpty()
 	@ToUTC()
-	corrected_time: string;
+	start_date: Date;
 
-	@IsEnum(LessonInputStatusDto)
+	@ApiProperty({
+		description: "Is free",
+		example: true,
+	})
+	@IsBoolean()
 	@IsNotEmpty()
-	status: LessonInputStatusDto;
+	isFree: boolean;
 
-	@IsInt()
-	@IsOptional()
-	rescheduled_lesson_id: number | null;
 
-	@IsString()
-	@IsOptional()
-	@ToUTC()
-	rescheduled_lesson_date: string | null;
+
+
+
+
+
+	// @IsString()
+	// @IsNotEmpty()
+	// @ToUTC()
+	// corrected_time: string;
+
+	// @IsEnum(LessonInputStatusDto)
+	// @IsNotEmpty()
+	// status: LessonInputStatusDto;
+
+	// @IsInt()
+	// @IsOptional()
+	// rescheduled_lesson_id: number | null;
+
+	// @IsString()
+	// @IsOptional()
+	// @ToUTC()
+	// rescheduled_lesson_date: string | null;
 }

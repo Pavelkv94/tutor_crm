@@ -13,6 +13,8 @@ export class StudentOutputDto {
 	created_at: Date;
 	@ApiProperty({ description: 'The deleted at of the student', example: '2026-01-01T00:00:00.000Z' })
 	deleted_at: Date | null;
+	@ApiProperty({ description: 'The teacher id of the student', example: 1 })
+	teacher_id: number | null;
 }
 
 export class StudentExtendedOutputDto extends StudentOutputDto {

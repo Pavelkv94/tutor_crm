@@ -9,31 +9,35 @@ import { SingleLessonInputDto } from './dto/single-lesson.input.dto';
 import { CreateSingleLessonSwagger } from 'src/core/decorators/swagger/lesson/create-single-lesson-swagger.decorator';
 import { LessonOutputDto } from './dto/lesson.output.dto';
 import { ExtractTeacherFromRequest } from 'src/core/decorators/param/extract-teacher-from-request';
-import { TeacherRole } from '../teacher/dto/teacherRole';
+import { TeacherRoleEnum } from '../teacher/dto/teacherRole';
 import { GetLessonsForPeriodSwagger } from 'src/core/decorators/swagger/lesson/get-lessons-swagger.decorator';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { RegularLessonsInputDto } from './dto/regular-lesson.input.dto';
 import { CreateRegularLessonsSwagger } from 'src/core/decorators/swagger/lesson/create-regular-lessons-swagger.decorator';
+import { GetAssignedLessonsSwagger } from 'src/core/decorators/swagger/lesson/get-assigned-lessons-swagger.decorator';
+import { ChangeTeacherDto } from './dto/change-teacher.dto';
+import { ChangeTeacherSwagger } from 'src/core/decorators/swagger/lesson/change-teacher-swagger.decorator';
+import { CancelLessonSwagger } from 'src/core/decorators/swagger/lesson/cancel-lesson-swagger.decorator';
 
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
 	constructor(private readonly lessonService: LessonService) { }
 
-	// @CreateSingleLessonSwagger()
-	// @Post()
-	// @HttpCode(HttpStatus.CREATED)
-	// @UseGuards(JwtAccessGuard, AdminAccessGuard)
-	// async createSingleLesson(@Body() singleLessonInputDto: SingleLessonInputDto) {
-	// 	return await this.lessonService.createSingleLesson(singleLessonInputDto);
-	// }
+	@CreateSingleLessonSwagger()
+	@Post('single')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async createSingleLessonByAdmin(@Body() singleLessonInputDto: SingleLessonInputDto) {
+		return await this.lessonService.createSingleLessonByAdmin(singleLessonInputDto);
+	}
 
 	@GetLessonsForPeriodSwagger()
 	@Get()
 	@HttpCode(HttpStatus.OK)
 	@UseGuards(JwtAccessGuard)
 	async findLessonsForPeriod(@Query('start_date') start_date: string, @Query('end_date') end_date: string,@Query('teacher_id') teacher_id: string | undefined, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<LessonOutputDto[]> {
-		if (teacher.role !== TeacherRole.ADMIN) {
+		if (teacher.role !== TeacherRoleEnum.ADMIN) {
 			return await this.lessonService.findLessonsForPeriod(start_date, end_date, +teacher.id);
 		} else {
 			if (!teacher_id) {
@@ -51,31 +55,31 @@ export class LessonController {
 		return await this.lessonService.createRegularLessons(regularLessonsInputDto, +student_id);
 	}
 
-	// @Get()
-	// @HttpCode(HttpStatus.OK)
-	// findLessonsForPeriod(@Query('start_date') start_date: string, @Query('end_date') end_date: string) {
-	//   return this.lessonService.findLessonsForPeriod(start_date, end_date);
-	// }
+	@GetAssignedLessonsSwagger()
+	@Get('assigned')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtAccessGuard)
+	async findLessonsByStartDate(@Query('start_date') start_date: string, @Query('teacher_id') teacher_id: string | undefined, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<LessonOutputDto[]> {
+		// For admin, allow specifying teacher_id, otherwise use current teacher
+		const date = new Date(start_date);
+		const targetTeacherId = teacher.role === TeacherRoleEnum.ADMIN && teacher_id ? +teacher_id : +teacher.id;
+		return await this.lessonService.findLessonsByStartDate(date, targetTeacherId);
+	}
 
-	// @Get('assigned')
-	// @HttpCode(HttpStatus.OK)
-	// findLessonsByStartDate(@Query('start_date') start_date: string) {
-	// 	return this.lessonService.findLessonsByStartDate(start_date);
-	// }
+	@ChangeTeacherSwagger()
+	@Patch(':id/teacher')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async changeTeacher(@Param('id') id: string, @Body() changeTeacherDto: ChangeTeacherDto): Promise<void> {
+		await this.lessonService.changeTeacher(+id, changeTeacherDto);
+	}
 
-	// @Patch(':id/cancel')
-	// @HttpCode(HttpStatus.NO_CONTENT)
-	// cancelLesson(@Param('id') id: string, @Body() cancelLessonDto: CancelLessonDto) {
-	// 	return this.lessonService.cancelLesson(+id, cancelLessonDto);
-	// }
 
-	// @Patch(':id')
-	// update(@Param('id') id: string,) {
-	// 	return this.lessonService.update(+id);
-	// }
-
-	// @Delete(':id')
-	// remove(@Param('id') id: string) {
-	//   return this.lessonService.remove(+id);
-	// }
+	@CancelLessonSwagger()
+	@Patch(':id/cancel')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@UseGuards(JwtAccessGuard)
+	async cancelLesson(@Param('id') id: string, @Body() cancelLessonDto: CancelLessonDto, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<void> {
+		await this.lessonService.cancelLesson(+id, cancelLessonDto, teacher);
+	}
 }

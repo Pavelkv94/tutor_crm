@@ -1,7 +1,15 @@
-import { LessonStatusDto } from "./lesson-status.enum";
+import { LessonStatusEnum } from "./lesson-status.enum";
 import { ApiProperty } from "@nestjs/swagger";
 import { StudentOutputDto } from "../../student/dto/student.output.dto";
 import { PlanOutputDto } from "../../plan/dto/plan.output.dto";
+
+class TeacherBasicOutputDto {
+	@ApiProperty({ description: "The id of the teacher", example: 1 })
+	id: number;
+
+	@ApiProperty({ description: "The name of the teacher", example: "John Doe" })
+	name: string;
+}
 
 export class LessonOutputDto {
 	@ApiProperty({
@@ -30,9 +38,9 @@ export class LessonOutputDto {
 
 	@ApiProperty({
 		description: "Status",
-		example: LessonStatusDto.PENDING_PAID,
+		example: LessonStatusEnum.PENDING_PAID,
 	})
-	status: LessonStatusDto;
+	status: LessonStatusEnum;
 
 	@ApiProperty({
 		description: "Comment",
@@ -98,4 +106,10 @@ export class LessonOutputDto {
 		example: new Date(),
 	})
 	created_at: Date;
+
+	@ApiProperty({
+		description: "Teacher information",
+		type: () => TeacherBasicOutputDto,
+	})
+	teacher: TeacherBasicOutputDto;
 }
