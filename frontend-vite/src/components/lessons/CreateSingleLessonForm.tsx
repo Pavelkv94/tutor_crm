@@ -37,6 +37,7 @@ interface CreateSingleLessonFormProps {
   defaultTeacherId: number
   defaultDate: string // YYYY-MM-DD format in UTC+3
   defaultTime: string // HH:MM format
+  disableDate?: boolean // Disable date field when true
   onSuccess: () => void
   onCancel: () => void
 }
@@ -64,6 +65,7 @@ export const CreateSingleLessonForm = ({
   defaultTeacherId,
   defaultDate,
   defaultTime,
+  disableDate = false,
   onSuccess,
   onCancel,
 }: CreateSingleLessonFormProps) => {
@@ -73,6 +75,7 @@ export const CreateSingleLessonForm = ({
   const [date, setDate] = useState<string>(defaultDate)
   const [time, setTime] = useState<string>(defaultTime)
   const [isFree, setIsFree] = useState<boolean>(false)
+  const [isTrial, setIsTrial] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const handleSubmit = async () => {
@@ -89,6 +92,7 @@ export const CreateSingleLessonForm = ({
         teacher_id: parseInt(teacherId, 10),
         start_date: startDate,
         isFree,
+        isTrial,
       }
       await lessonsApi.createSingleLesson(data)
       onSuccess()
@@ -100,7 +104,16 @@ export const CreateSingleLessonForm = ({
   }
 
   const activeStudents = students.filter((student) => !student.deleted_at)
-  const activePlans = plans.filter((plan) => !plan.deleted_at)
+  // Filter plans: if isTrial is true, only show plans with price 0; if false, only show plans with price > 0
+  const activePlans = plans.filter((plan) => {
+    if (!plan.deleted_at) {
+      if (isTrial) {
+        return plan.plan_price === 0
+      }
+      return plan.plan_price > 0
+    }
+    return false
+  })
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
 
   return (
@@ -133,7 +146,7 @@ export const CreateSingleLessonForm = ({
                 <SelectContent>
                   {activePlans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id.toString()}>
-                      {plan.plan_name} - {plan.duration}мин
+                      {plan.plan_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -161,6 +174,8 @@ export const CreateSingleLessonForm = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                disabled={disableDate}
+                className={disableDate ? 'bg-gray-100' : ''}
               />
             </div>
             <div className="grid gap-2">
@@ -178,15 +193,61 @@ export const CreateSingleLessonForm = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2 pt-6">
-              <Checkbox
-                id="isFree"
-                checked={isFree}
-                onCheckedChange={(checked) => setIsFree(checked === true)}
-              />
-              <Label htmlFor="isFree" className="text-sm font-normal cursor-pointer">
-                Бесплатное занятие
-              </Label>
+            <div className="grid gap-2">
+              <Label className="text-sm font-medium text-muted-foreground">Тип занятия</Label>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isTrial"
+                    checked={isTrial}
+                    disabled={isFree}
+                    onCheckedChange={(checked) => {
+                      const newIsTrial = checked === true
+                      setIsTrial(newIsTrial)
+                      // When isTrial is checked, disable and uncheck isFree
+                      if (newIsTrial) {
+                        setIsFree(false)
+                        // Reset plan selection if current plan doesn't have price 0
+                        if (planId) {
+                          const selectedPlan = plans.find((p) => p.id.toString() === planId)
+                          if (selectedPlan && selectedPlan.plan_price !== 0) {
+                            setPlanId('')
+                          }
+                        }
+                      } else {
+                        // When isTrial is unchecked, reset plan selection if current plan has price 0
+                        if (planId) {
+                          const selectedPlan = plans.find((p) => p.id.toString() === planId)
+                          if (selectedPlan && selectedPlan.plan_price === 0) {
+                            setPlanId('')
+                          }
+                        }
+                      }
+                    }}
+                  />
+                  <Label htmlFor="isTrial" className={`text-sm font-normal ${isFree ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer'}`}>
+                    Пробное занятие
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isFree"
+                    checked={isFree}
+                    disabled={isTrial}
+                    onCheckedChange={(checked) => {
+                      const newIsFree = checked === true
+                      setIsFree(newIsFree)
+                      // When isFree is checked, disable and uncheck isTrial
+                      if (newIsFree) {
+                        setIsTrial(false)
+                      }
+                    }}
+                  />
+                  <Label htmlFor="isFree" className={`text-sm font-normal ${isTrial ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer'}`}>
+                    Бесплатное занятие
+                  </Label>
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex gap-2 pt-4">

@@ -50,18 +50,6 @@ export class LessonOutputDto {
 	comment: string | null;
 
 	@ApiProperty({
-		description: "Payment status",
-		example: true,
-	})
-	payment_status: boolean;
-
-	@ApiProperty({
-		description: "Is paid",
-		example: true,
-	})
-	is_paid: boolean;
-
-	@ApiProperty({
 		description: "Is regular",
 		example: true,
 	})
@@ -72,6 +60,12 @@ export class LessonOutputDto {
 		example: true,
 	})
 	is_free: boolean;
+
+	@ApiProperty({
+		description: "Is trial",
+		example: true,
+	})
+	is_trial: boolean;
 
 	@ApiProperty({
 		description: "Rescheduled lesson ID",

@@ -113,6 +113,7 @@ export interface Lesson {
   is_paid: boolean
   is_regular: boolean
   is_free: boolean
+  is_trial: boolean
   rescheduled_lesson_id: number | null
   rescheduled_lesson_date: string | null
   rescheduled_to_lesson_id: number | null
@@ -132,6 +133,7 @@ export interface SingleLessonInput {
   teacher_id: number
   start_date: string
   isFree: boolean
+  isTrial: boolean
 }
 
 export interface CancelLessonInput {
@@ -139,5 +141,11 @@ export interface CancelLessonInput {
   rescheduled: boolean
   missed: boolean
   fullCancel: boolean
+}
+
+export interface RescheduledLessonInput {
+  rescheduled_lesson_id: number
+  teacher_id?: number | null
+  start_date: string
 }
 

@@ -9,13 +9,21 @@ import {
 } from '@/components/ui/dialog'
 import { LessonCard } from '@/components/lessons/LessonCard'
 import { CreateSingleLessonForm } from '@/components/lessons/CreateSingleLessonForm'
+import { RescheduleLessonForm } from '@/components/lessons/RescheduleLessonForm'
 import { Button } from '@/components/ui/button'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select'
 import { lessonsApi } from '@/api/lessons'
 import { studentsApi } from '@/api/students'
 import { plansApi } from '@/api/plans'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Lesson, Student, Plan, Teacher } from '@/types'
+import type { Lesson } from '@/types'
 
 interface ScheduleCellModalProps {
   open: boolean
@@ -42,16 +50,6 @@ const convertUTC3ToUTC0Date = (year: number, month: number, day: number, hour: n
   
   // Return full ISO string
   return utc0Date.toISOString()
-}
-
-// Convert UTC+0 date to UTC+3 date string (YYYY-MM-DD)
-const convertUTC0ToUTC3Date = (utc0Date: string): string => {
-  const date = new Date(utc0Date)
-  const utc3Date = new Date(date.getTime() + 3 * 60 * 60 * 1000)
-  const year = utc3Date.getUTCFullYear()
-  const month = String(utc3Date.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(utc3Date.getUTCDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 // Get UTC+3 time string from UTC+0 date
@@ -83,6 +81,9 @@ export const ScheduleCellModal = ({
 }: ScheduleCellModalProps) => {
   const { isAdmin, user } = useAuth()
   const [showCreateForm, setShowCreateForm] = useState(false)
+	const [showRescheduleForm, setShowRescheduleForm] = useState(false)
+	const [showRescheduleSelect, setShowRescheduleSelect] = useState(false)
+	const [selectedRescheduleLesson, setSelectedRescheduleLesson] = useState<Lesson | null>(null)
   const queryClient = useQueryClient()
   
   // Convert to UTC+0 date for API (with hour for proper conversion)
@@ -98,6 +99,13 @@ export const ScheduleCellModal = ({
     enabled: open && !!effectiveTeacherId,
   })
 
+	// Fetch lessons for rescheduling
+	const { data: lessonsForReschedule = [] } = useQuery({
+		queryKey: ['lessons', 'rescheduled', effectiveTeacherId],
+		queryFn: () => lessonsApi.getLessonsForReschedule(effectiveTeacherId),
+		enabled: open && !!effectiveTeacherId,
+	})
+
   // Filter lessons by hour range (e.g., 9:00-9:59 for hour 9)
   const filteredLessons = lessons.filter((lesson: Lesson) => {
     const { hours: lessonHours } = getUTC3TimeString(lesson.date)
@@ -111,7 +119,24 @@ export const ScheduleCellModal = ({
   const activeLessons = filteredLessons.filter(
     (lesson: Lesson) => !inactiveStatuses.includes(lesson.status)
   )
-  
+
+	// Check if cell is "free" for rescheduling
+	// A cell is free if:
+	// 1. No lessons, OR
+	// 2. All lessons have inactive statuses, OR
+	// 3. Cell has exactly one lesson with rescheduled_lesson_id set (can create rescheduled lesson with same plan.id)
+	const isFreeCell =
+		filteredLessons.length === 0 ||
+		filteredLessons.every((lesson: Lesson) => inactiveStatuses.includes(lesson.status)) ||
+		(filteredLessons.length === 1 && filteredLessons[0].rescheduled_lesson_id !== null)
+
+	// Check if cell contains trial lesson
+	const hasTrialLesson = filteredLessons.some((lesson: Lesson) => lesson.is_trial)
+
+	// Check if we can show reschedule button
+	// Hide if cell contains trial lesson
+	const canShowRescheduleButton = isFreeCell && lessonsForReschedule.length > 0 && (isAdmin || user) && !hasTrialLesson
+
   // Check if there's an active INDIVIDUAL lesson
   const hasActiveIndividualLesson = activeLessons.some(
     (lesson: Lesson) => lesson.plan.plan_type === 'INDIVIDUAL'
@@ -154,10 +179,17 @@ export const ScheduleCellModal = ({
     enabled: open && isAdmin,
   })
 
-  // Reset create form when modal closes
+	// Reset forms when modal closes
   useEffect(() => {
     if (!open) {
-      setShowCreateForm(false)
+			// Reset all form states when modal closes
+			// Using setTimeout to avoid synchronous setState calls
+			setTimeout(() => {
+				setShowCreateForm(false)
+				setShowRescheduleForm(false)
+				setShowRescheduleSelect(false)
+				setSelectedRescheduleLesson(null)
+			}, 0)
     }
   }, [open])
 
@@ -167,6 +199,36 @@ export const ScheduleCellModal = ({
     // Invalidate schedule page lessons query to refresh the schedule
     queryClient.invalidateQueries({ queryKey: ['lessons'] })
   }
+
+	const handleRescheduleSuccess = () => {
+		setShowRescheduleForm(false)
+		setSelectedRescheduleLesson(null)
+		refetchLessons()
+		// Invalidate schedule page lessons query to refresh the schedule
+		queryClient.invalidateQueries({ queryKey: ['lessons'] })
+		// Also invalidate reschedule lessons query
+		queryClient.invalidateQueries({ queryKey: ['lessons', 'rescheduled'] })
+	}
+
+	const handleRescheduleLessonSelect = (lessonId: string) => {
+		const lesson = lessonsForReschedule.find((l: Lesson) => l.id.toString() === lessonId)
+		if (lesson) {
+			setSelectedRescheduleLesson(lesson)
+			setShowRescheduleSelect(false)
+			setShowRescheduleForm(true)
+		}
+	}
+
+	const handleRescheduleButtonClick = () => {
+		if (lessonsForReschedule.length === 1) {
+			// If only one lesson, directly select it
+			setSelectedRescheduleLesson(lessonsForReschedule[0])
+			setShowRescheduleForm(true)
+		} else {
+			// Show select dropdown
+			setShowRescheduleSelect(true)
+		}
+	}
 
   const handleLessonCancel = () => {
     refetchLessons()
@@ -203,19 +265,71 @@ export const ScheduleCellModal = ({
               defaultTeacherId={effectiveTeacherId ? parseInt(effectiveTeacherId, 10) : 0}
               defaultDate={defaultDate}
               defaultTime={defaultTime}
+							disableDate={true}
               onSuccess={handleCreateSuccess}
               onCancel={() => setShowCreateForm(false)}
             />
+					) : showRescheduleForm && selectedRescheduleLesson ? (
+						<RescheduleLessonForm
+							lesson={selectedRescheduleLesson}
+							teachers={teachers}
+							defaultDate={defaultDate}
+							defaultTime={defaultTime}
+							defaultTeacherId={effectiveTeacherId ? parseInt(effectiveTeacherId, 10) : 0}
+							onSuccess={handleRescheduleSuccess}
+							onCancel={() => {
+								setShowRescheduleForm(false)
+								setShowRescheduleSelect(false)
+								setSelectedRescheduleLesson(null)
+							}}
+						/>
           ) : (
             <>
               {filteredLessons.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-4">На это время нет занятий</p>
-                  {isAdmin && canAddLesson && (
-                    <Button onClick={() => setShowCreateForm(true)}>
-                      Добавить занятие
-                    </Button>
-                  )}
+											<div className="flex flex-col sm:flex-row gap-2 justify-center">
+												{isAdmin && canAddLesson && (
+													<Button onClick={() => setShowCreateForm(true)}>
+														Добавить занятие
+													</Button>
+												)}
+												{canShowRescheduleButton && canAddLesson && !showRescheduleSelect && (
+													<Button
+														onClick={handleRescheduleButtonClick}
+														className="bg-orange-500 hover:bg-orange-600 text-white"
+													>
+														Отработать занятие
+													</Button>
+												)}
+												{canShowRescheduleButton && canAddLesson && showRescheduleSelect && (
+													<Select onValueChange={handleRescheduleLessonSelect}>
+														<SelectTrigger className="w-full sm:w-[300px]">
+															<SelectValue placeholder="Выберите занятие для отработки" />
+														</SelectTrigger>
+														<SelectContent>
+															{lessonsForReschedule.map((lesson: Lesson) => {
+																const { hours: lessonHours, minutes: lessonMinutes } = getUTC3TimeString(lesson.date)
+																const date = new Date(lesson.date)
+																const utcYear = date.getUTCFullYear()
+																const utcMonth = date.getUTCMonth()
+																const utcDay = date.getUTCDate()
+																let utcHours = date.getUTCHours() + 3
+																if (utcHours >= 24) {
+																	utcHours -= 24
+																}
+																const dateStr = `${utcDay.toString().padStart(2, '0')}.${(utcMonth + 1).toString().padStart(2, '0')}.${utcYear}`
+																const timeStr = `${lessonHours.toString().padStart(2, '0')}:${lessonMinutes.toString().padStart(2, '0')}`
+																return (
+																	<SelectItem key={lesson.id} value={lesson.id.toString()}>
+																		{lesson.student.name} - {dateStr} {timeStr}
+																	</SelectItem>
+																)
+															})}
+														</SelectContent>
+													</Select>
+												)}
+											</div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -227,18 +341,53 @@ export const ScheduleCellModal = ({
                       onCancel={handleLessonCancel}
                     />
                   ))}
-                  {isAdmin && canAddLesson && (
-                    <div className="pt-4">
+												<div className="pt-4 space-y-2">
+													{isAdmin && canAddLesson && (
                       <Button onClick={() => setShowCreateForm(true)} className="w-full">
                         Добавить занятие
                       </Button>
-                    </div>
-                  )}
-                  {isAdmin && !canAddLesson && limitReachedMessage && (
-                    <div className="pt-4 text-center">
-                      <p className="text-sm text-muted-foreground">{limitReachedMessage}</p>
-                    </div>
-                  )}
+													)}
+													{canShowRescheduleButton && canAddLesson && !showRescheduleSelect && (
+														<Button
+															onClick={handleRescheduleButtonClick}
+															className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+														>
+															Отработать занятие
+														</Button>
+													)}
+													{canShowRescheduleButton && canAddLesson && showRescheduleSelect && (
+														<Select onValueChange={handleRescheduleLessonSelect}>
+															<SelectTrigger className="w-full">
+																<SelectValue placeholder="Выберите занятие для отработки" />
+															</SelectTrigger>
+															<SelectContent>
+																{lessonsForReschedule.map((lesson: Lesson) => {
+																	const { hours: lessonHours, minutes: lessonMinutes } = getUTC3TimeString(lesson.date)
+																	const date = new Date(lesson.date)
+																	const utcYear = date.getUTCFullYear()
+																	const utcMonth = date.getUTCMonth()
+																	const utcDay = date.getUTCDate()
+																	let utcHours = date.getUTCHours() + 3
+																	if (utcHours >= 24) {
+																		utcHours -= 24
+																	}
+																	const dateStr = `${utcDay.toString().padStart(2, '0')}.${(utcMonth + 1).toString().padStart(2, '0')}.${utcYear}`
+																	const timeStr = `${lessonHours.toString().padStart(2, '0')}:${lessonMinutes.toString().padStart(2, '0')}`
+																	return (
+																		<SelectItem key={lesson.id} value={lesson.id.toString()}>
+																			{lesson.student.name} - {dateStr} {timeStr}
+																		</SelectItem>
+																	)
+																})}
+															</SelectContent>
+														</Select>
+													)}
+													{isAdmin && !canAddLesson && limitReachedMessage && (
+														<div className="text-center">
+															<p className="text-sm text-muted-foreground">{limitReachedMessage}</p>
+														</div>
+													)}
+												</div>
                 </div>
               )}
             </>

@@ -612,56 +612,6 @@
         ]
       }
     },
-    "/lessons/single": {
-      "post": {
-        "operationId": "LessonController_createSingleLessonByAdmin",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SingleLessonInputDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Lesson created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LessonOutputDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Lesson already booked for this student at this time",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Plan not found"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a single lesson",
-        "tags": [
-          "Lessons"
-        ]
-      }
-    },
     "/lessons": {
       "get": {
         "operationId": "LessonController_findLessonsForPeriod",
@@ -715,6 +665,144 @@
           }
         ],
         "summary": "Get all lessons for a period for current teacher, or if current teacher is admin, get lessons by teacher ID in query or admin's lessons",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/rescheduled": {
+      "get": {
+        "operationId": "LessonController_findLessonsForReschedule",
+        "parameters": [
+          {
+            "name": "teacher_id",
+            "required": false,
+            "in": "query",
+            "description": "Teacher ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rescheduled lessons have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LessonOutputDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all rescheduled lessons for current teacher, or if current teacher is admin, get rescheduled lessons by teacher ID in query or admin's lessons",
+        "tags": [
+          "Lessons"
+        ]
+      },
+      "post": {
+        "operationId": "LessonController_createRescheduledLesson",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RescheduledLessonInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rescheduled lesson created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "You are not allowed to reschedule this lesson",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a rescheduled lesson",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/single": {
+      "post": {
+        "operationId": "LessonController_createSingleLessonByAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SingleLessonInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesson created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lesson already booked for this student at this time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Plan not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a single lesson",
         "tags": [
           "Lessons"
         ]
@@ -1402,44 +1490,6 @@
         "type": "object",
         "properties": {}
       },
-      "SingleLessonInputDto": {
-        "type": "object",
-        "properties": {
-          "plan_id": {
-            "type": "number",
-            "description": "Plan ID",
-            "example": 1
-          },
-          "student_id": {
-            "type": "number",
-            "description": "Student ID",
-            "example": 1
-          },
-          "teacher_id": {
-            "type": "number",
-            "description": "Teacher ID",
-            "example": 1
-          },
-          "start_date": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Start date",
-            "example": "2026-01-03T17:47:58.385Z"
-          },
-          "isFree": {
-            "type": "boolean",
-            "description": "Is free",
-            "example": true
-          }
-        },
-        "required": [
-          "plan_id",
-          "student_id",
-          "teacher_id",
-          "start_date",
-          "isFree"
-        ]
-      },
       "TeacherBasicOutputDto": {
         "type": "object",
         "properties": {
@@ -1487,7 +1537,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-03T17:47:58.401Z"
+            "example": "2026-01-04T14:01:10.887Z"
           },
           "status": {
             "type": "string",
@@ -1500,16 +1550,6 @@
             "example": "Comment",
             "nullable": true
           },
-          "payment_status": {
-            "type": "boolean",
-            "description": "Payment status",
-            "example": true
-          },
-          "is_paid": {
-            "type": "boolean",
-            "description": "Is paid",
-            "example": true
-          },
           "is_regular": {
             "type": "boolean",
             "description": "Is regular",
@@ -1518,6 +1558,11 @@
           "is_free": {
             "type": "boolean",
             "description": "Is free",
+            "example": true
+          },
+          "is_trial": {
+            "type": "boolean",
+            "description": "Is trial",
             "example": true
           },
           "rescheduled_lesson_id": {
@@ -1529,7 +1574,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-03T17:47:58.401Z",
+            "example": "2026-01-04T14:01:10.887Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1541,14 +1586,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-03T17:47:58.401Z",
+            "example": "2026-01-04T14:01:10.887Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-03T17:47:58.401Z"
+            "example": "2026-01-04T14:01:10.887Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -1566,16 +1611,79 @@
           "date",
           "status",
           "comment",
-          "payment_status",
-          "is_paid",
           "is_regular",
           "is_free",
+          "is_trial",
           "rescheduled_lesson_id",
           "rescheduled_lesson_date",
           "rescheduled_to_lesson_id",
           "rescheduled_to_lesson_date",
           "created_at",
           "teacher"
+        ]
+      },
+      "SingleLessonInputDto": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "number",
+            "description": "Plan ID",
+            "example": 1
+          },
+          "student_id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "Teacher ID",
+            "example": 1
+          },
+          "start_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Start date",
+            "example": "2026-01-04T14:01:10.870Z"
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "Is free",
+            "example": true
+          },
+          "isTrial": {
+            "type": "boolean",
+            "description": "Is trial",
+            "example": true
+          }
+        },
+        "required": [
+          "plan_id",
+          "student_id",
+          "teacher_id",
+          "start_date",
+          "isFree",
+          "isTrial"
+        ]
+      },
+      "RescheduledLessonInputDto": {
+        "type": "object",
+        "properties": {
+          "rescheduled_lesson_id": {
+            "type": "number",
+            "description": "Rescheduled lesson ID",
+            "example": 1
+          },
+          "start_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Rescheduled lesson date",
+            "example": "2026-01-04T14:01:10.906Z"
+          }
+        },
+        "required": [
+          "rescheduled_lesson_id",
+          "start_date"
         ]
       },
       "RegularLessonsInputDto": {

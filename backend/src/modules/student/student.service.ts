@@ -27,9 +27,6 @@ export class StudentService {
 		if (!student) {
 			throw new NotFoundException("Student not found");
 		}
-		if (student.deleted_at) {
-			throw new BadRequestException("Student already deleted");
-		}
 		return student;
 	}
 

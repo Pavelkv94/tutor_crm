@@ -18,19 +18,13 @@ import { GetAssignedLessonsSwagger } from 'src/core/decorators/swagger/lesson/ge
 import { ChangeTeacherDto } from './dto/change-teacher.dto';
 import { ChangeTeacherSwagger } from 'src/core/decorators/swagger/lesson/change-teacher-swagger.decorator';
 import { CancelLessonSwagger } from 'src/core/decorators/swagger/lesson/cancel-lesson-swagger.decorator';
-
+import { GetLessonsForRescheduleSwagger } from 'src/core/decorators/swagger/lesson/get-rescheduled-lessons-swagger.decorator';
+import { RescheduledLessonInputDto } from './dto/rescheduled-lesson.input.dto';
+import { CreateRescheduledLessonSwagger } from 'src/core/decorators/swagger/lesson/create-rescheduled-lesson-swagger.decorator';
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
 	constructor(private readonly lessonService: LessonService) { }
-
-	@CreateSingleLessonSwagger()
-	@Post('single')
-	@HttpCode(HttpStatus.CREATED)
-	@UseGuards(JwtAccessGuard, AdminAccessGuard)
-	async createSingleLessonByAdmin(@Body() singleLessonInputDto: SingleLessonInputDto) {
-		return await this.lessonService.createSingleLessonByAdmin(singleLessonInputDto);
-	}
 
 	@GetLessonsForPeriodSwagger()
 	@Get()
@@ -45,6 +39,38 @@ export class LessonController {
 			}
 			return await this.lessonService.findLessonsForPeriod(start_date, end_date, +teacher_id);
 		}
+	}
+
+	@GetLessonsForRescheduleSwagger()
+	@Get('rescheduled')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtAccessGuard)
+	async findLessonsForReschedule(@Query('teacher_id') teacher_id: string, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<LessonOutputDto[]> {
+		if (teacher.role !== TeacherRoleEnum.ADMIN) {
+			return await this.lessonService.findLessonsForReschedule(+teacher.id);
+		} else {
+			if (!teacher_id) {
+				return await this.lessonService.findLessonsForReschedule(+teacher.id);
+			}
+			return await this.lessonService.findLessonsForReschedule(+teacher_id);
+		}
+	}
+
+
+	@CreateSingleLessonSwagger()
+	@Post('single')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async createSingleLessonByAdmin(@Body() singleLessonInputDto: SingleLessonInputDto) {
+		return await this.lessonService.createSingleLessonByAdmin(singleLessonInputDto);
+	}
+
+	@CreateRescheduledLessonSwagger()
+	@Post('rescheduled')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(JwtAccessGuard)
+	async createRescheduledLesson(@Body() rescheduledLessonInputDto: RescheduledLessonInputDto, @ExtractTeacherFromRequest() teacher: JwtPayloadDto) {
+		return await this.lessonService.createRescheduledLesson(rescheduledLessonInputDto, teacher);
 	}
 
 	@CreateRegularLessonsSwagger()
@@ -73,7 +99,6 @@ export class LessonController {
 	async changeTeacher(@Param('id') id: string, @Body() changeTeacherDto: ChangeTeacherDto): Promise<void> {
 		await this.lessonService.changeTeacher(+id, changeTeacherDto);
 	}
-
 
 	@CancelLessonSwagger()
 	@Patch(':id/cancel')

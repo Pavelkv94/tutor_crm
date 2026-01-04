@@ -12,7 +12,7 @@ export class PlanRepository {
 
 	async createPlan(createPlanDto: CreatePlanInputDto): Promise<PlanOutputDto> {
 		const plan = await this.prisma.plan.create({
-			data: { ...createPlanDto, plan_name: `${createPlanDto.plan_type} ${createPlanDto.duration} min` },
+			data: { ...createPlanDto, plan_name: `${createPlanDto.plan_type} ${createPlanDto.duration} мин ${createPlanDto.plan_price === 0 ? ' (пробное)' : ''}` },
 		});
 		return this.mapPlanToView(plan);
 	}

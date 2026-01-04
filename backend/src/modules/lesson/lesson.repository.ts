@@ -1,5 +1,5 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { SingleLessonInputDto } from "./dto/single-lesson.input.dto";
 import { Lesson, LessonStatus, Student } from "@prisma/client";
 import { LessonOutputDto } from "./dto/lesson.output.dto";
@@ -13,15 +13,23 @@ import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto"
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
 
-	// async getLessonByStartDateAndStudentId(start_date: string, student_id: number): Promise<any> {
-	// 	const lesson = await this.prisma.lesson.findFirst({
-	// 		where: {
-	// 			start_date,
-	// 			student_id,
-	// 		},
-	// 	});
-	// 	return lesson;
-	// }
+	async findLessonsForReschedule(teacher_id: number): Promise<LessonOutputDto[]> {
+		const lessons = await this.prisma.lesson.findMany({
+			where: {
+				student: {
+					teacher_id,
+				},
+				status: LessonStatus.RESCHEDULED,
+				rescheduled_to_lesson_id: null
+			},
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+			},
+		});
+		return lessons.map(l => this.mapLessonToView(l));
+	}
 
 	async findLessonsByStartDate(start_date: Date, teacher_id: number): Promise<LessonOutputDto[]> {
 		const endDate = new Date(start_date.getTime() + 60 * 60 * 1000);
@@ -36,7 +44,6 @@ export class LessonRepository {
 				student: true,
 				teacher: true,
 				plan: true,
-				regular_lesson: true,
 			},
 		});
 		return lessons.map(l => this.mapLessonToView(l));
@@ -61,6 +68,7 @@ export class LessonRepository {
 	}
 
 	async createSingleLesson(newLesson: Lesson): Promise<LessonOutputDto> {
+		try {
 		const lesson = await this.prisma.lesson.create({
 			data: newLesson,
 			include: {
@@ -71,6 +79,17 @@ export class LessonRepository {
 			},
 		});
 		return this.mapLessonToView(lesson);
+		} catch (error) {
+			console.log(error);
+			throw new BadRequestException('Не удалось создать занятие');
+		}
+	}
+
+	async updateRescheduledLesson(rescheduled_lesson_id: number, createdLesson: LessonOutputDto): Promise<void> {
+		await this.prisma.lesson.update({
+			where: { id: rescheduled_lesson_id },
+			data: { rescheduled_to_lesson_id: createdLesson.id, rescheduled_to_lesson_date: createdLesson.date },
+		});
 	}
 
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
@@ -98,6 +117,9 @@ export class LessonRepository {
 		return await this.prisma.lesson.findMany({
 			where: {
 				date: mergedDate,
+				status: {
+					in: [LessonStatusEnum.PENDING_UNPAID, LessonStatusEnum.PENDING_PAID, LessonStatusEnum.COMPLETED_PAID, LessonStatusEnum.COMPLETED_UNPAID],
+				},
 			},
 			include: {
 				student: true,
@@ -149,14 +171,39 @@ export class LessonRepository {
 		return this.mapLessonToView(lesson);
 	}
 
-	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto): Promise<void> {
-		const data: { status?: LessonStatus } = {};
+	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto, rescheduled_lesson_id: number | null): Promise<void> {
+		const data: { status?: LessonStatus, rescheduled_lesson_id?: number | null, rescheduled_lesson_date?: string | null } = {};
+
+
+		if (cancelLessonDto.status === CancelationStatusEnum.RESCHEDULED && rescheduled_lesson_id) {
+			throw new BadRequestException('Нельзя перенести занятие, которое уже было перенесено. Нужно сперва отменить перенос занятия.');
+		}
+
 		if (cancelLessonDto.status === CancelationStatusEnum.CANCELLED) {
 			data.status = LessonStatus.CANCELLED;
+			data.rescheduled_lesson_id = null;
+			data.rescheduled_lesson_date = null;
+			if (rescheduled_lesson_id) {
+				const lessonForReschedule = await this.prisma.lesson.findUnique({
+					where: { id: rescheduled_lesson_id },
+				});
+				if (!lessonForReschedule) {
+					throw new NotFoundException('Занятие для переноса не найдено');
+				}
+				await this.prisma.lesson.update({
+					where: { id: rescheduled_lesson_id },
+					data: {
+						rescheduled_to_lesson_date: null,
+						rescheduled_to_lesson_id: null,
+					},
+				});
+			}
 		} else if (cancelLessonDto.status === CancelationStatusEnum.MISSED) {
 			data.status = LessonStatus.MISSED;
 		} else if (cancelLessonDto.status === CancelationStatusEnum.RESCHEDULED) {
 			data.status = LessonStatus.RESCHEDULED;
+			data.rescheduled_lesson_id = null;
+			data.rescheduled_lesson_date = null;
 		}
 
 		await this.prisma.lesson.update({
@@ -190,11 +237,10 @@ export class LessonRepository {
 			},
 			status: lesson.status as LessonStatusEnum,
 			comment: lesson.comment,
-			payment_status: lesson.payment_status,
 			created_at: lesson.created_at,
-			is_paid: lesson.is_paid,
 			is_regular: lesson.is_regular,
 			is_free: lesson.is_free,
+			is_trial: lesson.is_trial,
 			rescheduled_lesson_id: lesson.rescheduled_lesson_id,
 			rescheduled_lesson_date: lesson.rescheduled_lesson_date,
 			rescheduled_to_lesson_id: lesson.rescheduled_to_lesson_id,

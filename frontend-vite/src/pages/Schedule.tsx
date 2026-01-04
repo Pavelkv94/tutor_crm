@@ -18,6 +18,8 @@ import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
 import { getDaysInWeeks } from '@/utils/getDaysInWeeks'
 import { ScheduleCellModal } from '@/components/schedule/ScheduleCellModal'
+import { RescheduleCard } from '@/components/schedule/RescheduleCard'
+import { RescheduleLessonsModal } from '@/components/schedule/RescheduleLessonsModal'
 import type { Teacher, Lesson } from '@/types'
 
 export const Schedule = () => {
@@ -32,6 +34,7 @@ export const Schedule = () => {
     day: number
     hour: number
   } | null>(null)
+	const [showRescheduleModal, setShowRescheduleModal] = useState(false)
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', 'active'],
@@ -246,56 +249,64 @@ export const Schedule = () => {
   return (
     <div className="space-y-4 font-sans">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4">Расписание</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Расписание</h1>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end mb-6">
-          <div className="grid gap-2">
-            <Label htmlFor="year">Год</Label>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger id="year" className="w-[150px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="month">Месяц</Label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger id="month" className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {isAdmin && (
-            <div className="grid gap-2">
-              <Label htmlFor="teacher">Преподаватель</Label>
-              <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-                <SelectTrigger id="teacher" className="w-[200px]">
-                  <SelectValue placeholder="Выберите преподавателя" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeTeachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                      {teacher.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
+					<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end flex-1">
+						<div className="grid gap-2">
+							<Label htmlFor="year">Год</Label>
+							<Select value={selectedYear} onValueChange={setSelectedYear}>
+								<SelectTrigger id="year" className="w-[150px]">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{years.map((year) => (
+										<SelectItem key={year} value={year}>
+											{year}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="month">Месяц</Label>
+							<Select value={selectedMonth} onValueChange={setSelectedMonth}>
+								<SelectTrigger id="month" className="w-[180px]">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{months.map((month) => (
+										<SelectItem key={month.value} value={month.value}>
+											{month.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						{isAdmin && (
+							<div className="grid gap-2">
+								<Label htmlFor="teacher">Преподаватель</Label>
+								<Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+									<SelectTrigger id="teacher" className="w-[200px]">
+										<SelectValue placeholder="Выберите преподавателя" />
+									</SelectTrigger>
+									<SelectContent>
+										{activeTeachers.map((teacher) => (
+											<SelectItem key={teacher.id} value={teacher.id.toString()}>
+												{teacher.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+					</div>
+					<div className="w-full sm:w-auto">
+						<RescheduleCard
+							teacherId={isAdmin ? selectedTeacherId : undefined}
+							onClick={() => setShowRescheduleModal(true)}
+						/>
+					</div>
+				</div>
       </div>
 
       {/* Status Legend */}
@@ -312,6 +323,26 @@ export const Schedule = () => {
               <span className="text-xs text-gray-700">{getStatusLabel(status)}</span>
             </div>
           ))}
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 border-2 rounded"
+              style={{
+                borderColor: '#1e40af',
+                backgroundColor: 'transparent',
+              }}
+            />
+            <span className="text-xs text-gray-700">Бесплатное занятие</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 border-2 rounded"
+              style={{
+                borderColor: '#f9c600',
+                backgroundColor: 'transparent',
+              }}
+            />
+            <span className="text-xs text-gray-700">Пробное занятие</span>
+          </div>
         </div>
       </div>
 
@@ -322,14 +353,24 @@ export const Schedule = () => {
           <div className="bg-gray-100 border-r-2 border-gray-800 h-[24px] text-center font-bold text-xs flex items-center justify-center">
             Время
           </div>
-          {weekDays.map((day, index) => (
-            <div
-              key={index}
-              className="bg-yellow-100 border-r border-gray-500 last:border-r-0 h-[24px] text-center font-semibold text-xs flex items-center justify-center"
-            >
-              {day}
-            </div>
-          ))}
+          {weekDays.map((day, index) => {
+            // Check if any day in any week at this column index is today
+            const isCurrentDayColumn = weeks.some(week => {
+              const dayNumber = week[index]
+              return dayNumber !== null && dayNumber !== undefined && isToday(dayNumber)
+            })
+            
+            return (
+              <div
+                key={index}
+                className={`bg-yellow-100 border-r border-gray-500 last:border-r-0 h-[24px] text-center font-semibold text-xs flex items-center justify-center ${
+                  isCurrentDayColumn ? 'border-l-4 border-l-purple-500 border-r-4 border-r-purple-500' : ''
+                }`}
+              >
+                {day}
+              </div>
+            )
+          })}
         </div>
 
         {/* Weeks */}
@@ -341,20 +382,23 @@ export const Schedule = () => {
             {/* Week Header with Day Numbers */}
             <div className="grid grid-cols-[80px_repeat(7,1fr)] bg-gray-50 border-b border-gray-500">
               <div className="bg-gray-200 border-r-2 border-gray-800 h-[24px]"></div>
-              {week.map((day, dayIndex) => (
-                <div
-                  key={dayIndex}
-                  className={`border-r border-gray-500 last:border-r-0 h-[24px] text-center font-bold text-xs flex items-center justify-center ${
-                    day
-                      ? isToday(day)
-                        ? 'bg-purple-400 text-white'
-                        : 'bg-white text-black'
-                      : 'bg-gray-300 text-gray-500'
-                  }`}
-                >
-                  {day || ''}
-                </div>
-              ))}
+              {week.map((day, dayIndex) => {
+                const isCurrentDay = day !== null && isToday(day)
+                return (
+                  <div
+                    key={dayIndex}
+                    className={`border-r border-gray-500 last:border-r-0 h-[24px] text-center font-bold text-xs flex items-center justify-center ${
+                      day
+                        ? isCurrentDay
+                          ? 'bg-purple-400 text-white border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
+                          : 'bg-white text-black'
+                        : 'bg-gray-300 text-gray-500'
+                    }`}
+                  >
+                    {day || ''}
+                  </div>
+                )
+              })}
             </div>
 
             {/* Hour Rows */}
@@ -373,6 +417,9 @@ export const Schedule = () => {
                   const weekDayName = weekDays[dayIndex]
                   const cellLessons = getLessonsForCell(day, hour)
                   const hasLessons = cellLessons.length > 0
+                  const isCurrentDay = day !== null && isToday(day)
+                  const hasTrialLesson = cellLessons.some((lesson) => lesson.is_trial)
+                  const hasFreeLesson = cellLessons.some((lesson) => lesson.is_free)
                   
                   const tooltipText = day
                     ? `${weekDayName}, ${day} ${months[parseInt(selectedMonth, 10) - 1]?.label} ${selectedYear}, ${hour}`
@@ -380,15 +427,27 @@ export const Schedule = () => {
                   
                   const is13Hour = hour === '13:00'
                   
-                  const cellClassName = `border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col ${
-                    day
-                      ? is13Hour
-                        ? 'bg-[#88f1ec] hover:bg-[#7ae0d9] cursor-pointer'
-                        : hasLessons
-                        ? 'cursor-pointer'
-                        : 'bg-white hover:bg-blue-50 cursor-pointer'
-                      : 'bg-gray-300 cursor-not-allowed'
-                  }`
+                  // Build cell className with proper border handling
+                  let cellClassName = 'border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col'
+                  
+                  // Apply trial lesson border (2px #f9c600) - takes precedence over free lesson and current day border
+                  if (hasTrialLesson) {
+                    cellClassName += ' border-2'
+                  } else if (hasFreeLesson) {
+                    // Apply free lesson border (2px dark blue)
+                    cellClassName += ' border-2'
+                  } else if (isCurrentDay) {
+                    cellClassName += ' border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
+                  }
+                  
+                  // Add background and cursor styles
+                  cellClassName += day
+                    ? is13Hour
+                      ? ' bg-[#88f1ec] hover:bg-[#7ae0d9] cursor-pointer'
+                      : hasLessons
+                      ? ' cursor-pointer'
+                      : ' bg-white hover:bg-blue-50 cursor-pointer'
+                    : ' bg-gray-300 cursor-not-allowed'
 
                   if (!day) {
                     return (
@@ -414,7 +473,17 @@ export const Schedule = () => {
                   return (
                     <Tooltip key={dayIndex}>
                       <TooltipTrigger asChild>
-                        <div className={cellClassName} onClick={handleCellClick}>
+                        <div 
+                          className={cellClassName} 
+                          onClick={handleCellClick}
+                          style={
+                            hasTrialLesson 
+                              ? { borderColor: '#f9c600' } 
+                              : hasFreeLesson 
+                              ? { borderColor: '#1e40af' } 
+                              : undefined
+                          }
+                        >
                           {hasLessons && (
                             <div className={`flex flex-col ${cellLessons.length === 1 ? 'h-full' : ''}`}>
                               {cellLessons.map((lesson) => (
@@ -471,6 +540,13 @@ export const Schedule = () => {
           teacherId={isAdmin ? selectedTeacherId : undefined}
         />
       )}
+
+			{/* Reschedule Lessons Modal */}
+			<RescheduleLessonsModal
+				open={showRescheduleModal}
+				onOpenChange={setShowRescheduleModal}
+				teacherId={isAdmin ? selectedTeacherId : undefined}
+			/>
     </div>
   )
 }

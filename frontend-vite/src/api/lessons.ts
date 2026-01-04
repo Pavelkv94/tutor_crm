@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput } from '@/types'
+import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput } from '@/types'
 
 export const lessonsApi = {
   getLessonsForPeriod: async (
@@ -70,6 +70,18 @@ export const lessonsApi = {
     }
     
     await apiClient.patch(`/lessons/${lessonId}/cancel`, cancelData)
+  },
+  getLessonsForReschedule: async (teacherId?: string): Promise<Lesson[]> => {
+    const params: Record<string, string> = {}
+    if (teacherId) {
+      params.teacher_id = teacherId
+    }
+    const response = await apiClient.get<Lesson[]>('/lessons/rescheduled', { params })
+    return response.data
+  },
+  createRescheduledLesson: async (data: RescheduledLessonInput): Promise<Lesson> => {
+    const response = await apiClient.post<Lesson>('/lessons/rescheduled', data)
+    return response.data
   },
 }
 

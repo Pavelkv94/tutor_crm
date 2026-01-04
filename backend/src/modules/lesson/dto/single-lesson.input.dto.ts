@@ -45,27 +45,12 @@ export class SingleLessonInputDto {
 	@IsNotEmpty()
 	isFree: boolean;
 
+	@ApiProperty({
+		description: "Is trial",
+		example: true,
+	})
 
-
-
-
-
-
-	// @IsString()
-	// @IsNotEmpty()
-	// @ToUTC()
-	// corrected_time: string;
-
-	// @IsEnum(LessonInputStatusDto)
-	// @IsNotEmpty()
-	// status: LessonInputStatusDto;
-
-	// @IsInt()
-	// @IsOptional()
-	// rescheduled_lesson_id: number | null;
-
-	// @IsString()
-	// @IsOptional()
-	// @ToUTC()
-	// rescheduled_lesson_date: string | null;
+	@IsBoolean()
+	@IsNotEmpty()
+	isTrial: boolean;
 }

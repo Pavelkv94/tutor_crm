@@ -26,7 +26,7 @@ export const Students = () => {
   const [assignLessonsDialogOpen, setAssignLessonsDialogOpen] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
-  const [showAllStudents, setShowAllStudents] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'active' | 'deleted'>('active')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -47,8 +47,6 @@ export const Students = () => {
       }
     }
   }, [isAdmin, user?.id, teachers, selectedTeacherId])
-
-	const filter = showAllStudents ? 'all' : 'active'
 
 	const { data: students = [], isLoading: isStudentsLoading } = useQuery({
     queryKey: ['students', selectedTeacherId, filter],
@@ -127,16 +125,17 @@ export const Students = () => {
           </div>
         )}
         <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="show-all-students"
-            checked={showAllStudents}
-            onChange={(e) => setShowAllStudents(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300"
-          />
-          <Label htmlFor="show-all-students" className="cursor-pointer">
-            Показать всех учеников
-          </Label>
+          <Label htmlFor="student-filter">Фильтр:</Label>
+          <Select value={filter} onValueChange={(value: 'all' | 'active' | 'deleted') => setFilter(value)}>
+            <SelectTrigger id="student-filter" className="w-[180px]">
+              <SelectValue placeholder="Выберите фильтр" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все</SelectItem>
+              <SelectItem value="active">Активные</SelectItem>
+              <SelectItem value="deleted">Удаленные</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

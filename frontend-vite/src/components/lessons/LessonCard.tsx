@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,6 +40,37 @@ const getUTC3TimeString = (utcDate: string): string => {
   const hoursStr = hours.toString().padStart(2, '0')
   const minutesStr = utcMinutes.toString().padStart(2, '0')
   return `${hoursStr}:${minutesStr}`
+}
+
+// Format UTC+0 date to UTC+3 date and time string
+const formatUTC3DateTime = (utcDate: string): string => {
+	const date = new Date(utcDate)
+	const utcYear = date.getUTCFullYear()
+	const utcMonth = date.getUTCMonth()
+	const utcDay = date.getUTCDate()
+	let utcHours = date.getUTCHours()
+	const utcMinutes = date.getUTCMinutes()
+
+	// Add 3 hours for UTC+3
+	utcHours += 3
+
+	// Handle day overflow
+	let day = utcDay
+	let hours = utcHours
+	if (hours >= 24) {
+		hours -= 24
+		day += 1
+	}
+
+	const months = [
+		'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
+		'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
+	]
+
+	const hoursStr = hours.toString().padStart(2, '0')
+	const minutesStr = utcMinutes.toString().padStart(2, '0')
+
+	return `${day} ${months[utcMonth]} ${utcYear}, ${hoursStr}:${minutesStr}`
 }
 
 // Get status label and color
@@ -203,6 +233,9 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
   const inactiveStatuses = ['MISSED', 'RESCHEDULED', 'CANCELLED']
   const isLessonInactive = inactiveStatuses.includes(lesson.status)
 
+	// Check if lesson is already rescheduled (has rescheduled_lesson_id)
+	const isAlreadyRescheduled = lesson.rescheduled_lesson_id !== null
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -240,10 +273,15 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Статус</Label>
-              <div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-sm font-semibold ${statusInfo.color}`}>
                   {statusInfo.label}
                 </span>
+								{lesson.is_trial && (
+									<span className="text-xs px-2 py-0.5 rounded font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
+										Пробное
+									</span>
+								)}
                 {lesson.is_free && (
                   <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">
                     Бесплатное
@@ -252,6 +290,28 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
               </div>
             </div>
           </div>
+
+					{/* Rescheduling Info */}
+					{(lesson.rescheduled_to_lesson_date || lesson.rescheduled_lesson_date) && (
+						<div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+							{lesson.rescheduled_to_lesson_date && (
+								<div className="mb-2">
+									<Label className="text-sm font-medium text-blue-700">Перенесено на:</Label>
+									<p className="text-sm text-blue-900 font-semibold mt-1">
+										{formatUTC3DateTime(lesson.rescheduled_to_lesson_date)}
+									</p>
+								</div>
+							)}
+							{lesson.rescheduled_lesson_date && (
+								<div>
+									<Label className="text-sm font-medium text-blue-700">Отработка занятия:</Label>
+									<p className="text-sm text-blue-900 font-semibold mt-1">
+										{formatUTC3DateTime(lesson.rescheduled_lesson_date)}
+									</p>
+								</div>
+							)}
+						</div>
+					)}
 
           {/* Comment Section - Display when lesson is cancelled and has a comment */}
           {isLessonInactive && lesson.comment && (
@@ -337,6 +397,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       <Checkbox
                         id="rescheduled"
                         checked={rescheduled}
+													disabled={isAlreadyRescheduled}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             handleCheckboxChange('rescheduled')
@@ -347,7 +408,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       />
                       <Label
                         htmlFor="rescheduled"
-                        className="text-sm font-normal cursor-pointer"
+													className={`text-sm font-normal ${isAlreadyRescheduled ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer'}`}
                       >
                         Перенос
                       </Label>

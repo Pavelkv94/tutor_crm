@@ -126,14 +126,15 @@ model Lesson {
 	date  DateTime @db.Timestamptz
 	is_regular Boolean @default(false)
 
-	payment_status Boolean @default(false)
-  created_at  DateTime @default(now())
-	is_paid Boolean @default(false)
 	is_free Boolean @default(false)
+	is_trial Boolean @default(false)
+
 	rescheduled_lesson_id Int?
 	rescheduled_lesson_date DateTime?
 	rescheduled_to_lesson_id Int?
 	rescheduled_to_lesson_date DateTime?
+
+  created_at  DateTime @default(now())
 
 	regular_lesson_id Int?
 
@@ -146,7 +147,6 @@ model Lesson {
 	regular_lesson RegularLesson? @relation(fields: [regular_lesson_id], references: [id])
 
 	@@map("lesson")
-	@@unique([student_id, date, teacher_id])
 }
 
 model Plan {

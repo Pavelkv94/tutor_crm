@@ -17,6 +17,7 @@ import { ChangeTeacherDto } from './dto/change-teacher.dto';
 import { TeacherService } from '../teacher/teacher.service';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { TeacherRoleEnum } from '../teacher/dto/teacherRole';
+import { RescheduledLessonInputDto } from './dto/rescheduled-lesson.input.dto';
 
 @Injectable()
 export class LessonService {
@@ -29,7 +30,7 @@ export class LessonService {
 	) { }
 
 	async createSingleLessonByAdmin(singleLessonInputDto: SingleLessonInputDto): Promise<LessonOutputDto> {
-		const { plan_id, start_date, student_id, teacher_id, isFree } = singleLessonInputDto;
+		const { plan_id, start_date, student_id, teacher_id, isFree, isTrial } = singleLessonInputDto;
 
 		const date = new Date(start_date);
 		const plan = await this.planService.findById(plan_id);
@@ -54,9 +55,10 @@ export class LessonService {
 		if (lessonAlreadyBooked.filter(el => el.student.id === student_id).length > 0) {
 			throw new BadRequestException(`Это время уже назначено у ${lessonAlreadyBooked[0].student.name}: ${date.toLocaleDateString()}`);
 		}
-		if (lessonAlreadyBooked.length > 0 && lessonAlreadyBooked[0].plan_id !== plan_id) {
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== plan_id) {
 			throw new BadRequestException(`Не совпадает тарифный план: ${date.toLocaleDateString()}`);
 		}
+
 		const newLesson = {
 			student_id,
 			teacher_id,
@@ -65,8 +67,55 @@ export class LessonService {
 			is_free: isFree,
 			is_regular: false,
 			status: LessonInputStatusEnum.PENDING_UNPAID,
+			is_trial: isTrial,
 		}
 		return await this.lessonRepository.createSingleLesson(newLesson as Lesson);
+	}
+
+	async createRescheduledLesson(rescheduledLessonInputDto: RescheduledLessonInputDto, teacher: JwtPayloadDto): Promise<LessonOutputDto> {
+		const { rescheduled_lesson_id, teacher_id, start_date } = rescheduledLessonInputDto;
+
+		const lesson = await this.lessonRepository.findById(rescheduled_lesson_id);
+		if (!lesson) {
+			throw new NotFoundException('Урок не найден');
+		}
+		if (lesson.is_trial) {
+			throw new BadRequestException('Пробное занятие не может быть перенесено');
+		}
+		if (teacher.role !== TeacherRoleEnum.ADMIN && lesson.student.teacher_id !== +teacher.id) {
+			throw new BadRequestException('Вы не можете перенести это занятие');
+		}
+
+		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDate(new Date(start_date));
+		if (lessonAlreadyBooked.length > 1) {
+			throw new BadRequestException(`Максимальное количество уроков в это время: ${new Date(start_date).toLocaleDateString()}`);
+		}
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+			throw new BadRequestException(`Это время занято индивидуальным занятием у ${lessonAlreadyBooked[0].student.name}: ${new Date(start_date).toLocaleDateString()}`);
+		}
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== lesson.plan.id) {
+			throw new BadRequestException(`Не совпадает тарифный план: ${new Date(start_date).toLocaleDateString()}`);
+		}
+		if (lessonAlreadyBooked.filter(el => el.student.id === lesson.student.id).length > 0) {
+			throw new BadRequestException(`Это время уже назначено у ${lessonAlreadyBooked[0].student.name}: ${new Date(start_date).toLocaleDateString()}`);
+		}
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].rescheduled_lesson_id === null) {
+			throw new BadRequestException(`Нельзя поставить отработку занятия вместе с другим занятием`);
+		}
+
+		const newLesson = {
+			student_id: lesson.student.id,
+			teacher_id: teacher_id || lesson.teacher.id,
+			plan_id: lesson.plan.id,
+			date: new Date(start_date),
+			is_regular: false,
+			status: LessonInputStatusEnum.PENDING_UNPAID,
+			rescheduled_lesson_id: lesson.id,
+			rescheduled_lesson_date: lesson.date,
+		}
+		const createdLesson = await this.lessonRepository.createSingleLesson(newLesson as Lesson);
+		await this.lessonRepository.updateRescheduledLesson(lesson.id, createdLesson);
+		return createdLesson;
 	}
 
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
@@ -77,6 +126,10 @@ export class LessonService {
 		return await this.lessonRepository.findLessonsByStartDate(start_date, teacher_id);
 	}
 
+	async findLessonsForReschedule(teacher_id: number): Promise<LessonOutputDto[]> {
+		return await this.lessonRepository.findLessonsForReschedule(teacher_id);
+	}
+
 	async createRegularLessons(regularLessonsInputDto: RegularLessonsInputDto, student_id: number): Promise<RegularLessonOutputDto[]> {
 		const { lessons } = regularLessonsInputDto;
 		const regularLessons: RegularLessonOutputDto[] = [];
@@ -84,7 +137,7 @@ export class LessonService {
 			const { plan_id, start_time, week_day, start_period_date, end_period_date, teacher_id } = lesson;
 			const plan = await this.planService.findById(plan_id);
 			if (!plan) {
-				throw new NotFoundException('Plan not found');
+				throw new NotFoundException('План не найден');
 			}
 			const regularLesson: RegularLessonOutputDto = await this.lessonRegularRepository.createRegularLesson(lesson, student_id);
 			regularLessons.push(regularLesson);
@@ -165,7 +218,7 @@ export class LessonService {
 		if (teacher.role !== TeacherRoleEnum.ADMIN && lesson.student.teacher_id !== +teacher.id) {
 			throw new BadRequestException('You are not allowed to cancel this lesson');
 		}
-		await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto);
+		await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto, lesson.rescheduled_lesson_id);
 	}
 
 

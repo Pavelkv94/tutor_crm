@@ -129,26 +129,27 @@ export const StudentsTable = ({
             sortedStudents.map((student) => {
               const isDeleted = !!student.deleted_at
               return (
-                <TableRow
-                  key={student.id}
-                  className={cn(isDeleted && 'opacity-50')}
-                >
-                  <TableCell className="font-medium">{student.name}</TableCell>
-                  <TableCell>{student.class}</TableCell>
-                  <TableCell>
+                <TableRow key={student.id}>
+                  <TableCell className={cn("font-medium", isDeleted && "opacity-50")}>
+                    {student.name}
+                  </TableCell>
+                  <TableCell className={cn(isDeleted && "opacity-50")}>
+                    {student.class}
+                  </TableCell>
+                  <TableCell className={cn(isDeleted && "opacity-50")}>
                     {format(new Date(student.birth_date), 'MMM dd, yyyy')}
                   </TableCell>
                   {showBalance && (
-                    <TableCell>
+                    <TableCell className={cn(isDeleted && "opacity-50")}>
                       {student.balance !== undefined ? student.balance : '-'}
                     </TableCell>
                   )}
-                  <TableCell>
+                  <TableCell className={cn(isDeleted && "opacity-50")}>
                     {student.created_at
                       ? format(new Date(student.created_at), 'MMM dd, yyyy')
                       : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={cn(isDeleted && "opacity-50")}>
                     {student.deleted_at
                       ? format(new Date(student.deleted_at), 'MMM dd, yyyy')
                       : '-'}
