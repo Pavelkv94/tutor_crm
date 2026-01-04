@@ -16,7 +16,7 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
 
   async validate(payload: JwtPayloadDto) {
     if (!payload || !payload.id) {
-      throw new UnauthorizedException('Invalid token payload');
+      throw new UnauthorizedException('Неверная полезная нагрузка токена');
     }
 
     return {

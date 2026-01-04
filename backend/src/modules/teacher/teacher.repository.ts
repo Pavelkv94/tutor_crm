@@ -72,7 +72,7 @@ export class TeacherRepository {
 			where: { id }
 		});
 		if (!teacher) {
-			throw new NotFoundException("Teacher not found");
+			throw new NotFoundException("Преподаватель не найден");
 		}
 		await this.prisma.teacher.update({
 			where: { id },

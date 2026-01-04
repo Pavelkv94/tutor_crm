@@ -8,11 +8,11 @@ export class AdminAccessGuard implements CanActivate {
 		const user = request.user;
 
 		if (!user) {
-			throw new UnauthorizedException('User not authenticated');
+			throw new UnauthorizedException('Пользователь не аутентифицирован');
 		}
 
 		if (user.role !== TeacherRoleEnum.ADMIN) {
-			throw new UnauthorizedException('Access denied. Admin role required.');
+			throw new UnauthorizedException('Доступ запрещен. Требуется роль администратора.');
 		}
 
 		return true;

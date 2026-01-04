@@ -52,7 +52,7 @@ export class AuthService {
 
 		const teacher = await this.teacherService.getTeacherByLogin(registerDto.login);
 		if (teacher) {
-			throw new BadRequestException("Admin already exists");
+			throw new BadRequestException("Администратор уже существует");
 		}
 		return {
 			message: "Admin registered successfully",
@@ -62,11 +62,11 @@ export class AuthService {
 	async validateUser(loginDto: LoginInputDto) {
 		const teacher = await this.teacherService.getTeacherByLogin(loginDto.login);
 		if (!teacher) {
-			throw new UnauthorizedException("User not found");
+			throw new UnauthorizedException("Пользователь не найден");
 		}
 		const isPasswordValid = await this.bcryptService.checkPassword(loginDto.password, teacher.password);
 		if (!isPasswordValid) {
-			throw new UnauthorizedException("Invalid password");
+			throw new UnauthorizedException("Неверный пароль");
 		}
 		return teacher;
 	}

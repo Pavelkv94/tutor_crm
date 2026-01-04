@@ -37,14 +37,14 @@ export class LessonService {
 		const date = new Date(start_date);
 		const plan = await this.planService.findById(plan_id);
 		if (!plan) {
-			throw new NotFoundException('Plan not found');
+			throw new NotFoundException('План не найден');
 		}
 		if (plan.deleted_at) {
-			throw new BadRequestException('Plan already deleted');
+			throw new BadRequestException('План уже удален');
 		}
 		const student = await this.studentService.findById(student_id);
 		if (!student) {
-			throw new NotFoundException('Student not found');
+			throw new NotFoundException('Студент не найден');
 		}
 
 		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDate(date);
@@ -213,10 +213,10 @@ export class LessonService {
 	async changeTeacher(lessonId: number, changeTeacherDto: ChangeTeacherDto): Promise<void> {
 		const teacher = await this.teacherService.getTeacherById(changeTeacherDto.teacher_id);
 		if (!teacher) {
-			throw new NotFoundException('Teacher not found');
+			throw new NotFoundException('Преподаватель не найден');
 		}
 		if (teacher.deleted_at) {
-			throw new BadRequestException('Teacher is deleted');
+			throw new BadRequestException('Преподаватель удален');
 		}
 		await this.lessonRepository.changeTeacher(lessonId, changeTeacherDto.teacher_id);
 	}
@@ -224,20 +224,20 @@ export class LessonService {
 	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto, teacher: JwtPayloadDto): Promise<void> {
 		const lesson = await this.lessonRepository.findById(lessonId);
 		if (!lesson) {
-			throw new NotFoundException('Lesson not found');
+			throw new NotFoundException('Урок не найден');
 		}
 		if (lesson.status === LessonStatusEnum.CANCELLED || lesson.status === LessonStatusEnum.MISSED || lesson.status === LessonStatusEnum.RESCHEDULED) {
-			throw new BadRequestException('Lesson already cancelled');
+			throw new BadRequestException('Урок уже отменен');
 		}
 		const existingTeacher = await this.teacherService.getTeacherById(+teacher.id);
 		if (!existingTeacher) {
-			throw new NotFoundException('Teacher not found');
+			throw new NotFoundException('Преподаватель не найден');
 		}
 		if (existingTeacher.deleted_at) {
-			throw new BadRequestException('Teacher is deleted');
+			throw new BadRequestException('Преподаватель удален');
 		}
 		if (teacher.role !== TeacherRoleEnum.ADMIN && lesson.student.teacher_id !== +teacher.id) {
-			throw new BadRequestException('You are not allowed to cancel this lesson');
+			throw new BadRequestException('Вы не можете отменить этот урок');
 		}
 		await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto, lesson.rescheduled_lesson_id);
 	}
@@ -245,7 +245,7 @@ export class LessonService {
 	async deleteLesson(lessonId: number): Promise<void> {
 		const lesson = await this.lessonRepository.findById(lessonId);
 		if (!lesson) {
-			throw new NotFoundException('Lesson not found');
+			throw new NotFoundException('Урок не найден');
 		}
 		await this.lessonRepository.deleteLesson(lessonId);
 	}
@@ -253,7 +253,7 @@ export class LessonService {
 	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
 		const lesson = await this.lessonRepository.findById(lessonId);
 		if (!lesson) {
-			throw new NotFoundException('Lesson not found');
+			throw new NotFoundException('Урок не найден');
 		}
 		if (lesson.is_trial) {
 			throw new BadRequestException('Пробное занятие не может быть изменено');

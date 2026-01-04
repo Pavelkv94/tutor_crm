@@ -5,6 +5,7 @@ import { StudentRepository } from './student.repository';
 import { StudentOutputDto, StudentExtendedOutputDto } from './dto/student.output.dto';
 import { TeacherService } from '../teacher/teacher.service';
 import { FilterStudentQuery } from './dto/filter.query.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class StudentService {
@@ -13,7 +14,7 @@ export class StudentService {
 	async create(createStudentDto: CreateStudentDto): Promise<StudentOutputDto> {
 		const teacher = await this.teacherService.getTeacherById(createStudentDto.teacher_id);
 		if (!teacher) {
-			throw new NotFoundException("Teacher not found");
+			throw new NotFoundException("Преподаватель не найден");
 		}
 		return await this.studentRepository.create(createStudentDto);
 	}
@@ -25,7 +26,7 @@ export class StudentService {
 	async findById(id: number): Promise<StudentExtendedOutputDto> {
 		const student = await this.studentRepository.getStudent(id);
 		if (!student) {
-			throw new NotFoundException("Student not found");
+			throw new NotFoundException("Студент не найден");
 		}
 		return student;
 	}
@@ -33,14 +34,14 @@ export class StudentService {
 	async update(id: number, updateStudentDto: UpdateStudentDto): Promise<void> {
 		const student = await this.studentRepository.getStudent(id);
 		if (!student) {
-			throw new NotFoundException("Student not found");
+			throw new NotFoundException("Студент не найден");
 		}
 		if (student.deleted_at) {
-			throw new BadRequestException("Student already deleted");
+			throw new BadRequestException("Студент уже удален");
 		}
 		const isUpdated = await this.studentRepository.updateStudent(id, updateStudentDto);
 		if (!isUpdated) {
-			throw new NotFoundException("Student not found");
+			throw new NotFoundException("Студент не найден");
 		}
 	}
 
@@ -78,14 +79,20 @@ export class StudentService {
 	async remove(id: number): Promise<void> {
 		const student = await this.studentRepository.getStudent(id);
 		if (!student) {
-			throw new NotFoundException("Student not found");
+			throw new NotFoundException("Студент не найден");
 		}
 		if (student.deleted_at) {
-			throw new BadRequestException("Student already deleted");
+			throw new BadRequestException("Студент уже удален");
 		}
 		const isDeleted = await this.studentRepository.deleteStudent(id);
 		if (!isDeleted) {
-			throw new NotFoundException("Student not found");
+			throw new NotFoundException("Студент не найден");
 		}
+	}
+
+
+	@Cron('0 15 30 8 *') // 30 августа в 15:00
+	async updateStudentClass() {
+		await this.studentRepository.updateStudentClass();
 	}
 }

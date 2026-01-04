@@ -18,7 +18,7 @@ export class CredentialsStrategy extends PassportStrategy(Strategy, 'credentials
 		const teacher = await this.authService.validateUser(loginDto);
 
 		if (!teacher) {
-			throw new UnauthorizedException('Invalid credentials');
+			throw new UnauthorizedException('Неверные учетные данные');
 		}
 		
 		return teacher;

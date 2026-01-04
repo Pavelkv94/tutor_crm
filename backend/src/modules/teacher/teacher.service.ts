@@ -27,7 +27,7 @@ export class TeacherService {
 	async createTeacher(createTeacherDto: CreateTeacherDto): Promise<TeacherOutputDto> {
 		const existingTeacher = await this.teacherRepository.getTeacherByLogin(createTeacherDto.login);
 		if (existingTeacher) {
-			throw new BadRequestException("Teacher already exists");
+			throw new BadRequestException("Преподаватель уже существует");
 		}
 		const passwordHash = await this.bcryptService.generateHash(createTeacherDto.password);
 		return await this.teacherRepository.createTeacher({
@@ -39,10 +39,10 @@ export class TeacherService {
 	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
 		const teacher = await this.teacherRepository.getTeacherById(id);
 		if (!teacher) {
-			throw new NotFoundException("Teacher not found");
+			throw new NotFoundException("Преподаватель не найден");
 		}
 		if (teacher.deleted_at) {
-			throw new BadRequestException("Teacher is deleted");
+			throw new BadRequestException("Преподаватель удален");
 		}
 		await this.teacherRepository.updateTeacher(teacher.id, updateTeacherDto);
 	}
@@ -50,10 +50,10 @@ export class TeacherService {
 	async deleteTeacher(id: number): Promise<void> {
 		const teacher = await this.teacherRepository.getTeacherById(id);
 		if (!teacher) {
-			throw new NotFoundException("Teacher not found");
+			throw new NotFoundException("Преподаватель не найден");
 		}
 		if (teacher.deleted_at) {
-			throw new BadRequestException("Teacher already deleted");
+			throw new BadRequestException("Преподаватель уже удален");
 		}
 		await this.teacherRepository.deleteTeacher(teacher.id);
 	}

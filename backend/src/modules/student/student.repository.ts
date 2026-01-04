@@ -67,6 +67,17 @@ export class StudentRepository {
 		return result !== null;
 	}
 
+	async updateStudentClass(): Promise<void> {
+		// Increment class for students with class < 11
+		await this.prisma.student.updateMany({
+			where: {
+				deleted_at: null,
+				class: { lt: 11 }
+			},
+			data: { class: { increment: 1 } },
+		});
+	}
+
 	private mapStudentToView(student: Student): StudentOutputDto {
 		return {
 			id: student.id,

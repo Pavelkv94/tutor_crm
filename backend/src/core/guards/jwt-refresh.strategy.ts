@@ -29,7 +29,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     const teacher = await this.teacherService.getTeacherById(Number(payload.id));
 
 		if (!teacher) {
-      throw new UnauthorizedException("Teacher not found");
+      throw new UnauthorizedException("Преподаватель не найден");
     }
 
     return teacher;

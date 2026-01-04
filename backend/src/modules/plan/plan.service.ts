@@ -23,10 +23,10 @@ export class PlanService {
   async remove(id: number): Promise<boolean> {
 		const plan = await this.planRepository.getPlanById(id);
 		if (!plan) {
-			throw new NotFoundException("Plan not found");
+			throw new NotFoundException("План не найден");
 		}
 		if (plan.deleted_at) {
-			throw new BadRequestException("Plan already deleted");
+			throw new BadRequestException("План уже удален");
 		}
     return await this.planRepository.deletePlan(id);
   }

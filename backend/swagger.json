@@ -670,6 +670,64 @@
         ]
       }
     },
+    "/lessons/student/{student_id}": {
+      "get": {
+        "operationId": "LessonController_findLessonsForPeriodAndStudent",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": true,
+            "in": "path",
+            "description": "Student ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Start date",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "description": "End date",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lessons have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentLessonsOutputDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all lessons for a period for a student",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
     "/lessons/rescheduled": {
       "get": {
         "operationId": "LessonController_findLessonsForReschedule",
@@ -1010,6 +1068,141 @@
           "Lessons"
         ]
       }
+    },
+    "/lessons/{id}/free": {
+      "patch": {
+        "operationId": "LessonController_manageFreeLessonStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManageFreeLessonStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Free lesson status managed successfully"
+          },
+          "400": {
+            "description": "Lesson not found or is deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manage free lesson status",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/lessons/{id}": {
+      "delete": {
+        "operationId": "LessonController_deleteLesson",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Lesson has been successfully deleted"
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all assigned lessons for a date for current teacher",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/reports/schedule/download": {
+      "get": {
+        "operationId": "ReportsController_downloadSchedule",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/reports/students/download": {
+      "get": {
+        "operationId": "ReportsController_downloadStudents",
+        "parameters": [
+          {
+            "name": "filter",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
     }
   },
   "info": {
@@ -1342,8 +1535,7 @@
             "example": 1
           },
           "birth_date": {
-            "format": "date-time",
-            "type": "string",
+            "type": "object",
             "description": "The birth date of the student",
             "example": "2000-01-01T00:00:00.000Z"
           },
@@ -1379,8 +1571,7 @@
             "example": 1
           },
           "birth_date": {
-            "format": "date-time",
-            "type": "string",
+            "type": "object",
             "description": "The birth date of the student",
             "example": "2000-01-01"
           },
@@ -1430,8 +1621,7 @@
             "example": 1
           },
           "birth_date": {
-            "format": "date-time",
-            "type": "string",
+            "type": "object",
             "description": "The birth date of the student",
             "example": "2000-01-01"
           },
@@ -1537,7 +1727,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-04T16:03:56.034Z"
+            "example": "2026-01-04T20:45:49.444Z"
           },
           "status": {
             "type": "string",
@@ -1574,7 +1764,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T16:03:56.034Z",
+            "example": "2026-01-04T20:45:49.444Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1586,14 +1776,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-04T16:03:56.034Z",
+            "example": "2026-01-04T20:45:49.444Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-04T16:03:56.034Z"
+            "example": "2026-01-04T20:45:49.444Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -1622,6 +1812,43 @@
           "teacher"
         ]
       },
+      "StudentLessonsOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Student name",
+            "example": "John Doe"
+          },
+          "class": {
+            "type": "number",
+            "description": "Student class",
+            "example": 1
+          },
+          "canceled_lessons": {
+            "type": "number",
+            "description": "Canceled lessons",
+            "example": 1
+          },
+          "missed_lessons": {
+            "type": "number",
+            "description": "Missed lessons",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class",
+          "canceled_lessons",
+          "missed_lessons"
+        ]
+      },
       "SingleLessonInputDto": {
         "type": "object",
         "properties": {
@@ -1644,7 +1871,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-01-04T16:03:56.023Z"
+            "example": "2026-01-04T20:45:49.433Z"
           },
           "isFree": {
             "type": "boolean",
@@ -1678,7 +1905,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T16:03:56.050Z"
+            "example": "2026-01-04T20:45:49.459Z"
           }
         },
         "required": [
@@ -1706,6 +1933,19 @@
       "CancelLessonDto": {
         "type": "object",
         "properties": {}
+      },
+      "ManageFreeLessonStatusDto": {
+        "type": "object",
+        "properties": {
+          "isFree": {
+            "type": "boolean",
+            "description": "Is free",
+            "example": true
+          }
+        },
+        "required": [
+          "isFree"
+        ]
       }
     }
   }
