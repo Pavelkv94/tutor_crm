@@ -11,7 +11,6 @@
 // 	findReport(@Param('studentId') studentId: string, @Query('start_date') start_date: string, @Query('end_date') end_date: string) {
 // 		return this.reportsService.findReport(+studentId, start_date, end_date);
 // 	}
-
 // 	@Post('send-report')
 // 	sendReport(@Body() sendReportDto: SendReportDto) {
 // 		return this.reportsService.sendReport(sendReportDto);

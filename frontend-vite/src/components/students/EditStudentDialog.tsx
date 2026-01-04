@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -21,20 +21,27 @@ import {
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
-import type { CreateStudentInput } from '@/types'
+import type { UpdateStudentInput } from '@/types'
 
-interface CreateStudentDialogProps {
+interface EditStudentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  studentId: number | null
 }
 
-export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogProps) => {
+export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudentDialogProps) => {
   const [name, setName] = useState('')
   const [studentClass, setStudentClass] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
-  const { isAdmin, user } = useAuth()
+  const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
+
+  const { data: student } = useQuery({
+    queryKey: ['student', studentId],
+    queryFn: () => studentsApi.getById(studentId!),
+    enabled: !!studentId && open,
+  })
 
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers', 'active'],
@@ -44,12 +51,22 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
 
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
 
-  const isFormValid = name.trim() !== '' && studentClass.trim() !== '' && (!isAdmin || teacherId !== '')
+  useEffect(() => {
+    if (student) {
+      setName(student.name)
+      setStudentClass(student.class.toString())
+      setBirthDate(student.birth_date ? student.birth_date.split('T')[0] : '')
+      if (student.teacher_id) {
+        setTeacherId(student.teacher_id.toString())
+      }
+    }
+  }, [student])
 
-  const createMutation = useMutation({
-    mutationFn: (data: CreateStudentInput) => studentsApi.create(data),
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateStudentInput) => studentsApi.update(studentId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['student', studentId] })
       onOpenChange(false)
       setName('')
       setStudentClass('')
@@ -58,43 +75,59 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
     },
   })
 
+  useEffect(() => {
+    if (!open) {
+      setName('')
+      setStudentClass('')
+      setBirthDate('')
+      setTeacherId('')
+    }
+  }, [open])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !studentClass) return
-    if (isAdmin && !teacherId) return
 
-    const data: CreateStudentInput = {
+    const data: UpdateStudentInput = {
       name,
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : null,
-      teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
     }
 
-    createMutation.mutate(data)
+    // Only include teacher_id if admin and it's provided
+    if (isAdmin && teacherId) {
+      data.teacher_id = parseInt(teacherId, 10)
+    }
+
+    updateMutation.mutate(data)
+  }
+
+  if (!student) {
+    return null
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Создать ученика</DialogTitle>
-          <DialogDescription>Добавить нового ученика в систему.</DialogDescription>
+          <DialogTitle>Редактировать ученика</DialogTitle>
+          <DialogDescription>Изменить информацию об ученике.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Имя</Label>
+              <Label htmlFor="edit-name">Имя</Label>
               <Input
-                id="name"
+                id="edit-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="class">Класс</Label>
+              <Label htmlFor="edit-class">Класс</Label>
               <Input
-                id="class"
+                id="edit-class"
                 type="number"
                 min="1"
                 value={studentClass}
@@ -103,9 +136,9 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="birthDate">Дата рождения</Label>
+              <Label htmlFor="edit-birthDate">Дата рождения</Label>
               <Input
-                id="birthDate"
+                id="edit-birthDate"
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
@@ -113,8 +146,8 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
             </div>
             {isAdmin && (
               <div className="grid gap-2">
-                <Label htmlFor="teacher">Преподаватель</Label>
-                <Select value={teacherId} onValueChange={setTeacherId} required>
+                <Label htmlFor="edit-teacher">Преподаватель</Label>
+                <Select value={teacherId} onValueChange={setTeacherId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Выберите преподавателя" />
                   </SelectTrigger>
@@ -133,8 +166,8 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Отмена
             </Button>
-            <Button type="submit" disabled={createMutation.isPending || !isFormValid}>
-              {createMutation.isPending ? 'Создание...' : 'Создать'}
+            <Button type="submit" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
             </Button>
           </DialogFooter>
         </form>
@@ -142,3 +175,4 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
     </Dialog>
   )
 }
+

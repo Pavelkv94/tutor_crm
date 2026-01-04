@@ -108,9 +108,9 @@ export const RegularLessonCard = ({
                 <SelectValue placeholder="Выберите тариф" />
               </SelectTrigger>
               <SelectContent>
-                {plans.filter((plan) => !plan.deleted_at).map((plan) => (
+                {plans.filter((plan) => !plan.deleted_at && plan.plan_price > 0).map((plan) => (
                   <SelectItem key={plan.id} value={plan.id.toString()}>
-                    {plan.plan_name} - {plan.duration}мин
+                    {plan.plan_name}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -9,6 +9,7 @@ import { Plan } from "@prisma/client";
 import { RegularLessonOutputDto } from "./dto/regular-lesson.output.dto";
 import { Teacher } from "@prisma/client";
 import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto";
+import { ManageFreeLessonStatusDto } from "./dto/manage-free-lesson.input.dto";
 @Injectable()
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
@@ -30,6 +31,29 @@ export class LessonRepository {
 		});
 		return lessons.map(l => this.mapLessonToView(l));
 	}
+
+	async findLessonsForPeriodAndStudent(student_id: number, start_date: string, end_date: string): Promise<LessonOutputDto[]> {
+		const startDate = startOfDay(parseISO(start_date));
+		const endDate = endOfDay(parseISO(end_date));
+		const lessons = await this.prisma.lesson.findMany({
+			where: {
+				date: { gte: startDate, lte: endDate },
+				student: {
+					id: student_id,
+				},
+			},
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+			},
+			orderBy: {
+				date: 'asc',
+			},
+		});
+		return lessons.map(l => this.mapLessonToView(l));
+	}
+
 
 	async findLessonsByStartDate(start_date: Date, teacher_id: number): Promise<LessonOutputDto[]> {
 		const endDate = new Date(start_date.getTime() + 60 * 60 * 1000);
@@ -75,7 +99,6 @@ export class LessonRepository {
 				student: true,
 				teacher: true,
 				plan: true,
-				regular_lesson: true,
 			},
 		});
 		return this.mapLessonToView(lesson);
@@ -95,7 +118,6 @@ export class LessonRepository {
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
 		const startDate = startOfDay(parseISO(start_date));
 		const endDate = endOfDay(parseISO(end_date));
-
 		const lessons = await this.prisma.lesson.findMany({
 			where: {
 				date: { gte: startDate, lte: endDate },
@@ -107,7 +129,9 @@ export class LessonRepository {
 				student: true,
 				teacher: true,
 				plan: true,
-				regular_lesson: true,
+			},
+			orderBy: {
+				date: 'asc',
 			},
 		});
 		return lessons.map(l => this.mapLessonToView(l));
@@ -162,7 +186,6 @@ export class LessonRepository {
 				student: true,
 				teacher: true,
 				plan: true,
-				regular_lesson: true,
 			},
 		});
 		if (!lesson) {
@@ -211,6 +234,20 @@ export class LessonRepository {
 			data: { ...data, comment: cancelLessonDto.comment },
 		});
 
+	}
+
+	async deleteLesson(lessonId: number): Promise<void> {
+		await this.prisma.lesson.delete({
+			where: { id: lessonId },
+		});
+	}
+
+
+	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
+		await this.prisma.lesson.update({
+			where: { id: lessonId },
+			data: { is_free: manageFreeLessonStatusDto.isFree },
+		});
 	}
 
 	private mapLessonToView(lesson: Lesson & { student: Student } & { plan: Plan } & { teacher: Teacher }): LessonOutputDto {

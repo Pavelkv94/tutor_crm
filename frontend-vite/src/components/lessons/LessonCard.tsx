@@ -12,6 +12,15 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { lessonsApi } from '@/api/lessons'
 import type { Lesson, Teacher, CancelLessonInput } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -107,6 +116,10 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
   const [isSubmittingChangeTeacher, setIsSubmittingChangeTeacher] = useState(false)
+  const [isSubmittingFreeStatus, setIsSubmittingFreeStatus] = useState(false)
+  const [isDeletingLesson, setIsDeletingLesson] = useState(false)
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('')
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleCancelClick = () => {
@@ -226,6 +239,86 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
     setError(null)
   }
 
+  const handleToggleFreeStatus = async () => {
+    setIsSubmittingFreeStatus(true)
+    setError(null)
+
+    try {
+      await lessonsApi.manageFreeLessonStatus(lesson.id, !lesson.is_free)
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+    } catch (err: unknown) {
+      console.error('Error toggling free status:', err)
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string | string[] } } }
+        const message = axiosError.response?.data?.message
+        if (Array.isArray(message)) {
+          setError(message.join(', '))
+        } else if (typeof message === 'string') {
+          setError(message)
+        } else {
+          setError('Не удалось изменить статус занятия. Пожалуйста, попробуйте снова.')
+        }
+      } else {
+        setError('Не удалось изменить статус занятия. Пожалуйста, попробуйте снова.')
+      }
+    } finally {
+      setIsSubmittingFreeStatus(false)
+    }
+  }
+
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true)
+    setDeleteConfirmationText('')
+    setError(null)
+  }
+
+  const handleDeleteSubmit = async () => {
+    if (deleteConfirmationText.trim().toLowerCase() !== 'delete lesson') {
+      return
+    }
+
+    setIsDeletingLesson(true)
+    setError(null)
+
+    try {
+      await lessonsApi.deleteLesson(lesson.id)
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      
+      setIsDeleteDialogOpen(false)
+      setDeleteConfirmationText('')
+      onCancel()
+    } catch (err: unknown) {
+      console.error('Error deleting lesson:', err)
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string | string[] } } }
+        const message = axiosError.response?.data?.message
+        if (Array.isArray(message)) {
+          setError(message.join(', '))
+        } else if (typeof message === 'string') {
+          setError(message)
+        } else {
+          setError('Не удалось удалить занятие. Пожалуйста, попробуйте снова.')
+        }
+      } else {
+        setError('Не удалось удалить занятие. Пожалуйста, попробуйте снова.')
+      }
+    } finally {
+      setIsDeletingLesson(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false)
+    setDeleteConfirmationText('')
+    setError(null)
+  }
+
+  const isDeleteConfirmationValid = deleteConfirmationText.trim().toLowerCase() === 'delete lesson'
+
   const timeString = getUTC3TimeString(lesson.date)
   const statusInfo = getStatusInfo(lesson.status)
   
@@ -325,9 +418,26 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
           {isAdmin && !isCancelling && (
             <div className="space-y-2">
               {!isChangingTeacher ? (
-                <Button variant="outline" onClick={handleChangeTeacherClick} className="w-full">
-                  Изменить преподавателя
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleChangeTeacherClick} className={lesson.is_trial ? "w-full" : "flex-1"}>
+                    Изменить преподавателя
+                  </Button>
+                  {!lesson.is_trial && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleToggleFreeStatus} 
+                      disabled={isSubmittingFreeStatus}
+                      className="flex-1"
+                    >
+                      {isSubmittingFreeStatus 
+                        ? 'Сохранение...' 
+                        : lesson.is_free 
+                          ? 'Убрать бесплатное' 
+                          : 'Сделать бесплатным'
+                      }
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-2 border p-4 rounded-lg">
                   <Label htmlFor="teacher-select">Выберите преподавателя</Label>
@@ -372,14 +482,25 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
           {!isChangingTeacher && (
             <div className="space-y-2">
               {!isCancelling ? (
-                <Button 
-                  variant="destructive" 
-                  onClick={handleCancelClick} 
-                  disabled={isLessonInactive}
-                  className="w-full"
-                >
-                  Отменить занятие
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleCancelClick} 
+                    disabled={isLessonInactive}
+                    className="flex-1"
+                  >
+                    Отменить занятие
+                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleDeleteClick}
+                      className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      Удалить занятие
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-4 border p-4 rounded-lg">
                   <div className="space-y-2">
@@ -468,6 +589,54 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
               )}
             </div>
           )}
+
+          {/* Delete Lesson Dialog */}
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Удалить занятие</DialogTitle>
+                <DialogDescription>
+                  Это действие нельзя отменить. Это полностью удалит занятие из системы.
+                  <br />
+                  <br />
+                  Для подтверждения введите <strong>delete lesson</strong> в поле ниже:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirmation">Подтверждение</Label>
+                  <Input
+                    id="delete-confirmation"
+                    value={deleteConfirmationText}
+                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                    placeholder="delete lesson"
+                    className="w-full"
+                  />
+                </div>
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteCancel}
+                  disabled={isDeletingLesson}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteSubmit}
+                  disabled={!isDeleteConfirmationValid || isDeletingLesson}
+                >
+                  {isDeletingLesson ? 'Удаление...' : 'Удалить занятие'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>

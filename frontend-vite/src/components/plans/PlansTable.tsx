@@ -83,12 +83,13 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
                   <TableCell className="text-right">
                     {!isDeleted && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         onClick={() => onDelete(plan.id)}
                         disabled={isDeleting}
+                        className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </TableCell>

@@ -12,18 +12,20 @@ import {
 import { Label } from '@/components/ui/label'
 import { StudentsTable } from '@/components/students/StudentsTable'
 import { CreateStudentDialog } from '@/components/students/CreateStudentDialog'
+import { EditStudentDialog } from '@/components/students/EditStudentDialog'
 import { DeleteStudentDialog } from '@/components/students/DeleteStudentDialog'
-import { StudentInfoDialog } from '@/components/students/StudentInfoDialog'
 import { AssignRegularLessonsDialog } from '@/components/students/AssignRegularLessonsDialog'
+import { StudentReportDialog } from '@/components/students/StudentReportDialog'
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
 
 export const Students = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [infoDialogOpen, setInfoDialogOpen] = useState(false)
   const [assignLessonsDialogOpen, setAssignLessonsDialogOpen] = useState(false)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [filter, setFilter] = useState<'all' | 'active' | 'deleted'>('active')
@@ -74,14 +76,30 @@ export const Students = () => {
     }
   }
 
-  const handleInfoClick = (id: number) => {
+  const handleEditClick = (id: number) => {
     setSelectedStudentId(id)
-    setInfoDialogOpen(true)
+    setEditDialogOpen(true)
   }
 
   const handleAssignLessonsClick = (id: number) => {
     setSelectedStudentId(id)
     setAssignLessonsDialogOpen(true)
+  }
+
+  const handleReportClick = (id: number) => {
+    setSelectedStudentId(id)
+    setReportDialogOpen(true)
+  }
+
+  const handleDownloadClick = async () => {
+    try {
+      await studentsApi.downloadStudents(
+        filter,
+        isAdmin ? selectedTeacherId : undefined
+      )
+    } catch (error) {
+      console.error('Failed to download students:', error)
+    }
   }
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) || null
@@ -133,9 +151,17 @@ export const Students = () => {
             <SelectContent>
               <SelectItem value="all">Все</SelectItem>
               <SelectItem value="active">Активные</SelectItem>
-              <SelectItem value="deleted">Удаленные</SelectItem>
+              <SelectItem value="deleted">Архивные</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex items-end">
+          <Button 
+            onClick={handleDownloadClick} 
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            Скачать
+          </Button>
         </div>
       </div>
 
@@ -147,8 +173,9 @@ export const Students = () => {
         <StudentsTable
           students={students}
           onDelete={handleDeleteClick}
-          onInfo={handleInfoClick}
+          onEdit={handleEditClick}
           onAssignLessons={handleAssignLessonsClick}
+          onReport={handleReportClick}
           isDeleting={deleteMutation.isPending}
           showBalance={isAdmin}
           showActions={isAdmin}
@@ -156,6 +183,11 @@ export const Students = () => {
       )}
 
       <CreateStudentDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <EditStudentDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        studentId={selectedStudentId}
+      />
       <DeleteStudentDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -163,14 +195,14 @@ export const Students = () => {
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteMutation.isPending}
       />
-      <StudentInfoDialog
-        open={infoDialogOpen}
-        onOpenChange={setInfoDialogOpen}
-        studentId={selectedStudentId}
-      />
       <AssignRegularLessonsDialog
         open={assignLessonsDialogOpen}
         onOpenChange={setAssignLessonsDialogOpen}
+        studentId={selectedStudentId}
+      />
+      <StudentReportDialog
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
         studentId={selectedStudentId}
       />
     </div>

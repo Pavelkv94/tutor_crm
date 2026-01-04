@@ -18,6 +18,8 @@ import { TeacherService } from '../teacher/teacher.service';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { TeacherRoleEnum } from '../teacher/dto/teacherRole';
 import { RescheduledLessonInputDto } from './dto/rescheduled-lesson.input.dto';
+import { ManageFreeLessonStatusDto } from './dto/manage-free-lesson.input.dto';
+import { StudentLessonsOutputDto } from './dto/student-lessons.output.dto';
 
 @Injectable()
 export class LessonService {
@@ -130,6 +132,25 @@ export class LessonService {
 		return await this.lessonRepository.findLessonsForReschedule(teacher_id);
 	}
 
+	async findLessonsForPeriodAndStudent(student_id: number, start_date: string, end_date: string, teacher: JwtPayloadDto): Promise<StudentLessonsOutputDto> {
+		const student = await this.studentService.findById(student_id);
+		if (!student) {
+			throw new NotFoundException('Студент не найден');
+		}
+		if (teacher.role !== TeacherRoleEnum.ADMIN && student.teacher_id !== +teacher.id) {
+			throw new BadRequestException('Вы не можете получить уроки для этого студента');
+		}
+		const lessons = await this.lessonRepository.findLessonsForPeriodAndStudent(student_id, start_date, end_date);
+		const studentLessonsOutput: StudentLessonsOutputDto = {
+			id: student.id,
+			name: student.name,
+			class: student.class,
+			canceled_lessons: lessons.filter(lesson => lesson.status === LessonStatusEnum.CANCELLED).length,
+			missed_lessons: lessons.filter(lesson => lesson.status === LessonStatusEnum.MISSED).length,
+		}
+		return studentLessonsOutput;
+	}
+
 	async createRegularLessons(regularLessonsInputDto: RegularLessonsInputDto, student_id: number): Promise<RegularLessonOutputDto[]> {
 		const { lessons } = regularLessonsInputDto;
 		const regularLessons: RegularLessonOutputDto[] = [];
@@ -221,6 +242,24 @@ export class LessonService {
 		await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto, lesson.rescheduled_lesson_id);
 	}
 
+	async deleteLesson(lessonId: number): Promise<void> {
+		const lesson = await this.lessonRepository.findById(lessonId);
+		if (!lesson) {
+			throw new NotFoundException('Lesson not found');
+		}
+		await this.lessonRepository.deleteLesson(lessonId);
+	}
+
+	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
+		const lesson = await this.lessonRepository.findById(lessonId);
+		if (!lesson) {
+			throw new NotFoundException('Lesson not found');
+		}
+		if (lesson.is_trial) {
+			throw new BadRequestException('Пробное занятие не может быть изменено');
+		}
+		await this.lessonRepository.manageFreeLessonStatus(lessonId, manageFreeLessonStatusDto);
+	}
 
 	private getDatesForWeekDay(weekDay: WeekDay, startDate: string, endDate: string): Date[] {
 		// Parse ISO dates (already in UTC)

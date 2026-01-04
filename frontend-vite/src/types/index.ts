@@ -21,6 +21,7 @@ export interface Student {
   birth_date: string
   created_at: string
   deleted_at: string | null
+  teacher_id?: number | null
 }
 
 export interface StudentExtended extends Student {
@@ -33,8 +34,15 @@ export interface StudentExtended extends Student {
 export interface CreateStudentInput {
   name: string
   class: number
-  birth_date: string
+  birth_date: string | null
   teacher_id: number
+}
+
+export interface UpdateStudentInput {
+  name?: string
+  class?: number
+  birth_date?: string
+  teacher_id?: number
 }
 
 export interface Plan {
@@ -147,5 +155,13 @@ export interface RescheduledLessonInput {
   rescheduled_lesson_id: number
   teacher_id?: number | null
   start_date: string
+}
+
+export interface StudentLessonsOutput {
+  id: number
+  name: string
+  class: number
+  canceled_lessons: number
+  missed_lessons: number
 }
 

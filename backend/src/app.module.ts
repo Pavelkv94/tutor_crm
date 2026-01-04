@@ -6,6 +6,7 @@ import { TeacherModule } from './modules/teacher/teacher.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StudentModule } from './modules/student/student.module';
 import { LessonModule } from './modules/lesson/lesson.module';
+import { ReportsModule } from './modules/reports/reports.module';
 @Module({
 	imports: [
 		CoreModule,
@@ -19,7 +20,8 @@ import { LessonModule } from './modules/lesson/lesson.module';
 		TeacherModule,
 		PlanModule,
 		StudentModule,
-		LessonModule
+		LessonModule,
+		ReportsModule,
 	],
 	controllers: [],
 	providers: [],

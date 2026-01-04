@@ -77,7 +77,7 @@ export const Teachers = () => {
             <SelectContent>
               <SelectItem value="all">Все</SelectItem>
               <SelectItem value="active">Активные</SelectItem>
-              <SelectItem value="deleted">Удаленные</SelectItem>
+              <SelectItem value="deleted">Архивные</SelectItem>
             </SelectContent>
           </Select>
         </div>

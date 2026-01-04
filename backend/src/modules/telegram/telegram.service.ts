@@ -130,18 +130,18 @@ export class TelegramService extends Telegraf {
 		const todayMonth = today.getMonth() + 1; // месяцы от 0
 		const todayDate = today.getDate();
 
-		const studentsWithBirthday = allStudents.filter(student => {
-			const birthDate = new Date(student.birth_date);
-			return (
-				birthDate.getMonth() + 1 === todayMonth &&
-				birthDate.getDate() === todayDate
-			);
-		});
+		// const studentsWithBirthday = allStudents.filter(student => {
+		// 	const birthDate = new Date(student.birth_date);
+		// 	return (
+		// 		birthDate.getMonth() + 1 === todayMonth &&
+		// 		birthDate.getDate() === todayDate
+		// 	);
+		// });
 
-		if (studentsWithBirthday.length > 0) {
-			const message = this.createBirthdayReminderMessage(studentsWithBirthday);
-			await this.telegram.sendMessage(this.configService.get<string>('ADMIN_TG_ID') as string, message);
-		}
+		// if (studentsWithBirthday.length > 0) {
+		// 	const message = this.createBirthdayReminderMessage(studentsWithBirthday);
+		// 	await this.telegram.sendMessage(this.configService.get<string>('ADMIN_TG_ID') as string, message);
+		// }
 	}
 
 	private createBirthdayReminderMessage(students: any[]): string {

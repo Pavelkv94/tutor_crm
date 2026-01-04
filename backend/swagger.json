@@ -1537,7 +1537,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-04T14:01:10.887Z"
+            "example": "2026-01-04T16:03:56.034Z"
           },
           "status": {
             "type": "string",
@@ -1574,7 +1574,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T14:01:10.887Z",
+            "example": "2026-01-04T16:03:56.034Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1586,14 +1586,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-04T14:01:10.887Z",
+            "example": "2026-01-04T16:03:56.034Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-04T14:01:10.887Z"
+            "example": "2026-01-04T16:03:56.034Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -1644,7 +1644,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-01-04T14:01:10.870Z"
+            "example": "2026-01-04T16:03:56.023Z"
           },
           "isFree": {
             "type": "boolean",
@@ -1678,7 +1678,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T14:01:10.906Z"
+            "example": "2026-01-04T16:03:56.050Z"
           }
         },
         "required": [

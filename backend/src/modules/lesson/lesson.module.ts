@@ -10,5 +10,6 @@ import { TeacherModule } from '../teacher/teacher.module';
 	imports: [PlanModule, StudentModule, TeacherModule],
   controllers: [LessonController],
 	providers: [LessonService, LessonRepository, LessonRegularRepository],
+	exports: [LessonService],
 })
 export class LessonModule {}

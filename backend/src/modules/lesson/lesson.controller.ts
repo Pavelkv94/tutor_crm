@@ -21,6 +21,12 @@ import { CancelLessonSwagger } from 'src/core/decorators/swagger/lesson/cancel-l
 import { GetLessonsForRescheduleSwagger } from 'src/core/decorators/swagger/lesson/get-rescheduled-lessons-swagger.decorator';
 import { RescheduledLessonInputDto } from './dto/rescheduled-lesson.input.dto';
 import { CreateRescheduledLessonSwagger } from 'src/core/decorators/swagger/lesson/create-rescheduled-lesson-swagger.decorator';
+import { ManageFreeLessonStatusDto } from './dto/manage-free-lesson.input.dto';
+import { FreeLessonSwagger } from 'src/core/decorators/swagger/lesson/free-lesson-swagger.decorator';
+import { DeleteLessonSwagger } from 'src/core/decorators/swagger/lesson/delete-lesson-swagger.decorator';
+import { GetLessonsForPeriodAndStudentSwagger } from '../../core/decorators/swagger/lesson/get-lessons-for-period-and-student-swagger.decorator';
+import { StudentLessonsOutputDto } from './dto/student-lessons.output.dto';
+
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
@@ -39,6 +45,14 @@ export class LessonController {
 			}
 			return await this.lessonService.findLessonsForPeriod(start_date, end_date, +teacher_id);
 		}
+	}
+
+	@GetLessonsForPeriodAndStudentSwagger()
+	@Get('student/:student_id')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtAccessGuard)
+	async findLessonsForPeriodAndStudent(@Param('student_id') student_id: string, @Query('start_date') start_date: string, @Query('end_date') end_date: string, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<StudentLessonsOutputDto> {
+		return await this.lessonService.findLessonsForPeriodAndStudent(+student_id, start_date, end_date, teacher);
 	}
 
 	@GetLessonsForRescheduleSwagger()
@@ -106,5 +120,21 @@ export class LessonController {
 	@UseGuards(JwtAccessGuard)
 	async cancelLesson(@Param('id') id: string, @Body() cancelLessonDto: CancelLessonDto, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<void> {
 		await this.lessonService.cancelLesson(+id, cancelLessonDto, teacher);
+	}
+
+	@FreeLessonSwagger()
+	@Patch(':id/free')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async manageFreeLessonStatus(@Param('id') id: string, @Body() manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
+		await this.lessonService.manageFreeLessonStatus(+id, manageFreeLessonStatusDto);
+	}
+
+	@DeleteLessonSwagger()
+	@Delete(':id')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async deleteLesson(@Param('id') id: string): Promise<void> {
+		await this.lessonService.deleteLesson(+id);
 	}
 }

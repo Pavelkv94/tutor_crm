@@ -20,6 +20,7 @@ import { getDaysInWeeks } from '@/utils/getDaysInWeeks'
 import { ScheduleCellModal } from '@/components/schedule/ScheduleCellModal'
 import { RescheduleCard } from '@/components/schedule/RescheduleCard'
 import { RescheduleLessonsModal } from '@/components/schedule/RescheduleLessonsModal'
+import { Button } from '@/components/ui/button'
 import type { Teacher, Lesson } from '@/types'
 
 export const Schedule = () => {
@@ -71,15 +72,6 @@ export const Schedule = () => {
     { value: '12', label: 'Декабрь' },
   ]
 
-  // Calculate start and end dates for the selected month
-  const getMonthDates = (year: number, month: number) => {
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0)
-    return {
-      start: startDate.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0],
-    }
-  }
 
   // Fetch lessons when filters change
   const { data: lessons } = useQuery({
@@ -246,10 +238,49 @@ export const Schedule = () => {
     'CANCELLED',
   ]
 
+  // Calculate start and end dates for download
+  const getMonthDates = (year: number, month: number) => {
+    // Use UTC methods to avoid timezone conversion issues
+    const startDate = new Date(Date.UTC(year, month - 1, 1))
+    const endDate = new Date(Date.UTC(year, month, 0))
+    
+    // Format as YYYY-MM-DD using UTC methods
+    const formatDate = (date: Date) => {
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    
+    return {
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+    }
+  }
+
+  const handleDownloadSchedule = async () => {
+    try {
+      const { start, end } = getMonthDates(
+        parseInt(selectedYear, 10),
+        parseInt(selectedMonth, 10)
+      )
+
+      await lessonsApi.downloadSchedule(
+        start,
+        end,
+        isAdmin ? selectedTeacherId : undefined
+      )
+    } catch (error) {
+      console.error('Failed to download schedule:', error)
+    }
+  }
+
   return (
     <div className="space-y-4 font-sans">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Расписание</h1>
+        <div className="mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold">Расписание</h1>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end mb-6">
 					<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end flex-1">
 						<div className="grid gap-2">
@@ -299,6 +330,14 @@ export const Schedule = () => {
 								</Select>
 							</div>
 						)}
+						<div className="flex items-end">
+							<Button 
+								onClick={handleDownloadSchedule} 
+								className="bg-green-600 hover:bg-green-700 text-white"
+							>
+								Скачать расписание
+							</Button>
+						</div>
 					</div>
 					<div className="w-full sm:w-auto">
 						<RescheduleCard

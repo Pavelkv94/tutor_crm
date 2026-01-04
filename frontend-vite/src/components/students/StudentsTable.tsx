@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { ArrowUpDown, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Trash2, Pencil } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -16,8 +16,9 @@ import type { Student } from '@/types'
 interface StudentsTableProps {
   students: Student[]
   onDelete: (id: number) => void
-  onInfo: (id: number) => void
+  onEdit: (id: number) => void
   onAssignLessons: (id: number) => void
+  onReport: (id: number) => void
   isDeleting: boolean
   showBalance?: boolean
   showActions?: boolean
@@ -29,8 +30,9 @@ type SortDirection = 'asc' | 'desc'
 export const StudentsTable = ({
   students,
   onDelete,
-  onInfo,
+  onEdit,
   onAssignLessons,
+  onReport,
   isDeleting,
   showBalance = false,
   showActions = false,
@@ -60,8 +62,9 @@ export const StudentsTable = ({
       aValue = a.class
       bValue = b.class
     } else {
-      aValue = new Date(a.birth_date).getTime()
-      bValue = new Date(b.birth_date).getTime()
+      // Handle null birth_date - put null dates at the end
+      aValue = a.birth_date ? new Date(a.birth_date).getTime() : Number.MAX_SAFE_INTEGER
+      bValue = b.birth_date ? new Date(b.birth_date).getTime() : Number.MAX_SAFE_INTEGER
     }
 
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
@@ -137,7 +140,9 @@ export const StudentsTable = ({
                     {student.class}
                   </TableCell>
                   <TableCell className={cn(isDeleted && "opacity-50")}>
-                    {format(new Date(student.birth_date), 'MMM dd, yyyy')}
+                    {student.birth_date
+                      ? format(new Date(student.birth_date), 'MMM dd, yyyy')
+                      : '-'}
                   </TableCell>
                   {showBalance && (
                     <TableCell className={cn(isDeleted && "opacity-50")}>
@@ -159,10 +164,10 @@ export const StudentsTable = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onInfo(student.id)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600"
+                        onClick={() => onReport(student.id)}
+                        className="border-orange-500 text-orange-500 hover:bg-orange-50 hover:text-orange-600"
                       >
-                        Информация
+                        Отчет
                       </Button>
                       {showActions && (
                         <Button
@@ -170,20 +175,31 @@ export const StudentsTable = ({
                           size="sm"
                           onClick={() => onAssignLessons(student.id)}
                           disabled={isDeleted}
-                          className="bg-green-500 hover:bg-green-600 text-white hover:text-white border-green-500 hover:border-green-600 disabled:opacity-50"
+                          className="border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 disabled:opacity-50"
                         >
                           Регулярные занятия
                         </Button>
                       )}
                       {showActions && !isDeleted && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(student.id)}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => onEdit(student.id)}
+                            className="border-purple-500 text-purple-500 hover:bg-purple-50 hover:text-purple-600"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => onDelete(student.id)}
+                            disabled={isDeleting}
+                            className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>

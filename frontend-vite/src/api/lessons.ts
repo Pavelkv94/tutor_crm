@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput } from '@/types'
+import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput, StudentLessonsOutput } from '@/types'
 
 export const lessonsApi = {
   getLessonsForPeriod: async (
@@ -71,6 +71,9 @@ export const lessonsApi = {
     
     await apiClient.patch(`/lessons/${lessonId}/cancel`, cancelData)
   },
+  manageFreeLessonStatus: async (lessonId: number, isFree: boolean): Promise<void> => {
+    await apiClient.patch(`/lessons/${lessonId}/free`, { isFree })
+  },
   getLessonsForReschedule: async (teacherId?: string): Promise<Lesson[]> => {
     const params: Record<string, string> = {}
     if (teacherId) {
@@ -81,6 +84,62 @@ export const lessonsApi = {
   },
   createRescheduledLesson: async (data: RescheduledLessonInput): Promise<Lesson> => {
     const response = await apiClient.post<Lesson>('/lessons/rescheduled', data)
+    return response.data
+  },
+  downloadSchedule: async (
+    startDate: string,
+    endDate: string,
+    teacherId?: string
+  ): Promise<void> => {
+    const params: Record<string, string> = {
+      start_date: startDate,
+      end_date: endDate,
+    }
+    if (teacherId) {
+      params.teacher_id = teacherId
+    }
+    const response = await apiClient.get('/reports/schedule/download', {
+      params,
+      responseType: 'blob',
+    })
+    
+    // Create a blob URL and trigger download
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Extract filename from Content-Disposition header or use default
+    const contentDisposition = response.headers['content-disposition']
+    let fileName = `schedule_${startDate}_${endDate}.xlsx`
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/i)
+      if (fileNameMatch) {
+        fileName = decodeURIComponent(fileNameMatch[1])
+      }
+    }
+    
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+  deleteLesson: async (lessonId: number): Promise<void> => {
+    await apiClient.delete(`/lessons/${lessonId}`)
+  },
+  getStudentLessonsReport: async (
+    studentId: number,
+    startDate: string,
+    endDate: string
+  ): Promise<StudentLessonsOutput> => {
+    const params: Record<string, string> = {
+      start_date: startDate,
+      end_date: endDate,
+    }
+    const response = await apiClient.get<StudentLessonsOutput>(`/lessons/student/${studentId}`, { params })
     return response.data
   },
 }

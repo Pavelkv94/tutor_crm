@@ -15,7 +15,7 @@ export class StudentRepository {
 		const student = await this.prisma.student.create({
 			data: {
 				...createStudentDto,
-				birth_date: new Date(createStudentDto.birth_date),
+				birth_date: createStudentDto.birth_date ? new Date(createStudentDto.birth_date) : null,
 			},
 		});
 		return this.mapStudentToView(student);

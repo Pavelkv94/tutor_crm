@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 
@@ -18,8 +18,8 @@ export class CreateStudentDto {
 	@ApiProperty({ description: 'The birth date of the student', example: new Date('2000-01-01') })
 	@Type(() => Date)
 	@IsDate()
-	@IsNotEmpty()
-	birth_date: Date;
+	@IsOptional()
+	birth_date: Date | null;
 
 	@ApiProperty({ description: 'The teacher id of the student', example: 1 })
 	@IsInt()

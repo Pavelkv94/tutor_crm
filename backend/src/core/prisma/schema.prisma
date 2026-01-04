@@ -38,7 +38,7 @@ model Student {
   id         Int        @id @default(autoincrement())
   name       String
   class      Int
-  birth_date DateTime
+  birth_date DateTime?
 	balance    Int @default(0)
 	notifyAboutBirthday Boolean @default(true)
 	notifyAboutLessons Boolean @default(true)

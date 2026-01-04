@@ -85,18 +85,20 @@ export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps
                     {!isDeleted && (
                       <div className="flex justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
                           onClick={() => onEdit(teacher.id)}
+                          className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
                           onClick={() => onDelete(teacher.id)}
+                          className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
