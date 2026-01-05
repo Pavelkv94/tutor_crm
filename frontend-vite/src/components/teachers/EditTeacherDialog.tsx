@@ -36,7 +36,8 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
   useEffect(() => {
     if (teacher) {
       setName(teacher.name)
-      setTelegramLink(teacher.telegram_link || '')
+      // telegram_link is no longer in the Teacher type, but we still allow editing it
+      setTelegramLink('')
       setTimezone(teacher.timezone)
     }
   }, [teacher])

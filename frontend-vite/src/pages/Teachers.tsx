@@ -14,14 +14,19 @@ import { TeachersTable } from '@/components/teachers/TeachersTable'
 import { CreateTeacherDialog } from '@/components/teachers/CreateTeacherDialog'
 import { EditTeacherDialog } from '@/components/teachers/EditTeacherDialog'
 import { DeleteTeacherDialog } from '@/components/teachers/DeleteTeacherDialog'
+import { GenerateTelegramLinkDialog } from '@/components/teachers/GenerateTelegramLinkDialog'
 import { teachersApi } from '@/api/teachers'
+import { telegramApi } from '@/api/telegram'
 import type { Teacher } from '@/types'
 
 export const Teachers = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false)
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null)
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'deleted'>('all')
   const queryClient = useQueryClient()
 
@@ -39,6 +44,16 @@ export const Teachers = () => {
     },
   })
 
+  const generateLinkMutation = useMutation({
+    mutationFn: (teacherId: number) =>
+      telegramApi.generateTelegramLink({ teacher_id: teacherId, student_id: null }),
+    onSuccess: (data) => {
+      setGeneratedLink(data.link)
+      setGenerateLinkDialogOpen(true)
+      setCopied(false)
+    },
+  })
+
   const handleEdit = (id: number) => {
     setSelectedTeacherId(id)
     setEditDialogOpen(true)
@@ -53,6 +68,15 @@ export const Teachers = () => {
     if (selectedTeacherId !== null) {
       deleteMutation.mutate(selectedTeacherId)
     }
+  }
+
+  const handleGenerateTelegramLink = (id: number) => {
+    generateLinkMutation.mutate(id)
+  }
+
+  const handleCopy = () => {
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const selectedTeacher = teachers.find((t) => t.id === selectedTeacherId) || null
@@ -92,6 +116,7 @@ export const Teachers = () => {
           teachers={teachers}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onGenerateTelegramLink={handleGenerateTelegramLink}
         />
       )}
 
@@ -107,6 +132,13 @@ export const Teachers = () => {
         teacher={selectedTeacher}
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteMutation.isPending}
+      />
+      <GenerateTelegramLinkDialog
+        open={generateLinkDialogOpen}
+        onOpenChange={setGenerateLinkDialogOpen}
+        link={generatedLink}
+        onCopy={handleCopy}
+        copied={copied}
       />
     </div>
   )

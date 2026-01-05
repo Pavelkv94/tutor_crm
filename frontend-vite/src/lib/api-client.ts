@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken, setAccessToken, removeAccessToken } from './token-utils'
+import { showErrorToast } from './toast'
 import type { ApiError } from '@/types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -90,6 +91,23 @@ apiClient.interceptors.response.use(
         isRefreshing = false
         window.location.href = '/login'
         return Promise.reject(refreshError)
+      }
+    }
+
+    // Show toast notification for error responses (400, 404, 500, etc.)
+    // Skip 401 errors as they are handled above
+    if (error.response?.status && error.response.status !== 401) {
+      const apiError = error.response.data
+      if (apiError) {
+        showErrorToast(apiError)
+      } else {
+        // Fallback for errors without proper API error format
+        const statusText = error.response.statusText || 'Ошибка'
+        showErrorToast({
+          statusCode: error.response.status,
+          path: originalRequest?.url || '',
+          message: statusText,
+        })
       }
     }
 

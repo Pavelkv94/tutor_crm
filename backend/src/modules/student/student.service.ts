@@ -23,6 +23,10 @@ export class StudentService {
 		return await this.studentRepository.getStudentsByTeacherId(teacher_id, filter);
 	}
 
+	async findAllActiveWithBirthdays(): Promise<any[]> {
+		return await this.studentRepository.getActiveStudentsWithBirthdays();
+	}
+
 	async findById(id: number): Promise<StudentExtendedOutputDto> {
 		const student = await this.studentRepository.getStudent(id);
 		if (!student) {
@@ -44,24 +48,6 @@ export class StudentService {
 			throw new NotFoundException("Студент не найден");
 		}
 	}
-
-	// async pay(id: number, sum: number) {
-	// 	const student = await this.prisma.student.update({
-	// 		where: { id },
-	// 		data: { balance: { increment: sum } },
-	// 	});
-
-	// 	const lessons = await this.prisma.lesson.findMany({
-	// 		where: {
-	// 			student_id: id,
-	// 			is_regular: true,
-	// 			is_paid: false,
-	// 		}, // может ли быть кейс у одного ребенка разные планы?
-	// 	});
-
-	// 	return true
-	// }
-
 
 	// async getTelegramLink(id: number): Promise<{ link: string }> {
 	// 	const uuid = randomUUID()

@@ -160,6 +160,7 @@ export class LessonRepository {
 			},
 			where: {
 				status: LessonStatus.PENDING_UNPAID,
+				date: { lt: now },
 			},
 		});
 		await this.prisma.lesson.updateMany({
@@ -168,6 +169,7 @@ export class LessonRepository {
 			},
 			where: {
 				status: LessonStatus.PENDING_PAID,
+				date: { lt: now },
 			},
 		});
 	}

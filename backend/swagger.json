@@ -1203,6 +1203,99 @@
           "Reports"
         ]
       }
+    },
+    "/telegram/generate-telegram-link": {
+      "post": {
+        "operationId": "TelegramController_generateTelegramLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramLinkInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Telegram link has been successfully generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramLinkOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate a telegram link for a teacher",
+        "tags": [
+          "Telegram"
+        ]
+      }
+    },
+    "/telegram/send-lessons-cost-to-admin": {
+      "post": {
+        "operationId": "TelegramController_sendLessonsCostToAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonsCostFiltersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lessons cost has been successfully sent to admin."
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send lessons cost to admin",
+        "tags": [
+          "Telegram"
+        ]
+      }
     }
   },
   "info": {
@@ -1324,11 +1417,6 @@
             "description": "The login of the teacher",
             "example": "john.doe"
           },
-          "telegram_id": {
-            "type": "object",
-            "description": "The telegram id of the teacher",
-            "example": "1234567890"
-          },
           "role": {
             "type": "string",
             "description": "The role of the teacher",
@@ -1338,11 +1426,6 @@
             "type": "string",
             "description": "The timezone of the teacher",
             "example": "BY"
-          },
-          "telegram_link": {
-            "type": "object",
-            "description": "The telegram link of the teacher",
-            "example": "https://t.me/john.doe"
           },
           "deleted_at": {
             "type": "object",
@@ -1354,18 +1437,33 @@
             "type": "string",
             "description": "The created at of the teacher",
             "example": "2026-01-01T00:00:00.000Z"
+          },
+          "telegrams": {
+            "description": "The telegrams of the teacher",
+            "example": [
+              {
+                "id": 1,
+                "telegram_id": "1234567890",
+                "username": "john.doe",
+                "first_name": "John",
+                "type": "STUDENT"
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
           "id",
           "name",
           "login",
-          "telegram_id",
           "role",
           "timezone",
-          "telegram_link",
           "deleted_at",
-          "created_at"
+          "created_at",
+          "telegrams"
         ]
       },
       "CreateTeacherDto": {
@@ -1727,7 +1825,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-04T20:45:49.444Z"
+            "example": "2026-01-05T14:32:25.484Z"
           },
           "status": {
             "type": "string",
@@ -1764,7 +1862,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T20:45:49.444Z",
+            "example": "2026-01-05T14:32:25.484Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1776,14 +1874,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-04T20:45:49.444Z",
+            "example": "2026-01-05T14:32:25.484Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-04T20:45:49.444Z"
+            "example": "2026-01-05T14:32:25.484Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -1871,7 +1969,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-01-04T20:45:49.433Z"
+            "example": "2026-01-05T14:32:25.472Z"
           },
           "isFree": {
             "type": "boolean",
@@ -1905,7 +2003,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-04T20:45:49.459Z"
+            "example": "2026-01-05T14:32:25.499Z"
           }
         },
         "required": [
@@ -1945,6 +2043,63 @@
         },
         "required": [
           "isFree"
+        ]
+      },
+      "TelegramLinkInputDto": {
+        "type": "object",
+        "properties": {
+          "teacher_id": {
+            "type": "object",
+            "description": "The teacher id",
+            "example": 1
+          },
+          "student_id": {
+            "type": "object",
+            "description": "The student id",
+            "example": 1
+          }
+        },
+        "required": [
+          "teacher_id",
+          "student_id"
+        ]
+      },
+      "TelegramLinkOutputDto": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string",
+            "description": "The link to the telegram bot",
+            "example": "https://t.me/teacher_bot?start=1234567890"
+          }
+        },
+        "required": [
+          "link"
+        ]
+      },
+      "LessonsCostFiltersDto": {
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "number",
+            "description": "The student id",
+            "example": 1
+          },
+          "start_date": {
+            "type": "string",
+            "description": "The start date",
+            "example": "2024-01-01"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "The end date",
+            "example": "2024-01-01"
+          }
+        },
+        "required": [
+          "student_id",
+          "start_date",
+          "end_date"
         ]
       }
     }

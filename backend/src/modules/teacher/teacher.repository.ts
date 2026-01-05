@@ -1,5 +1,5 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
-import { Teacher, TeacherRole } from "@prisma/client";
+import { Teacher, TeacherRole, Telegram } from "@prisma/client";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { TeacherOutputDto } from "./dto/teacher.output.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.input.dto";
@@ -7,6 +7,7 @@ import { Timezone } from "./dto/teacher.output.dto";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
 import { FilterTeacherQuery } from "./dto/filter.query.dto";
 import { Prisma } from "@prisma/client";
+import { TelegramUserEnum } from "../telegram/dto/telegram-user.enum";
 
 @Injectable()
 export class TeacherRepository {
@@ -14,7 +15,10 @@ export class TeacherRepository {
 
 	async getTeacherById(id: number): Promise<TeacherOutputDto | null> {
 		const teacher = await this.prisma.teacher.findUnique({
-			where: { id }
+			where: { id },
+			include: {
+				telegrams: true,
+			}
 		});
 		if (!teacher) {
 			return null;
@@ -35,12 +39,11 @@ export class TeacherRepository {
 				id: true,
 				name: true,
 				login: true,
-				telegram_id: true,
 				role: true,
 				timezone: true,
-				telegram_link: true,
 				deleted_at: true,
 				created_at: true,
+				telegrams: true,
 			},
 			orderBy: [{ deleted_at: 'desc' }, { name: 'asc' }],
 		});
@@ -62,6 +65,9 @@ export class TeacherRepository {
 			data: {
 				...createTeacherDto,
 				role: TeacherRole.TEACHER,
+			},
+			include: {
+				telegrams: true,
 			},
 		});
 		return this.mapTeacherToView(teacher);
@@ -89,17 +95,22 @@ export class TeacherRepository {
 		});
 	}
 
-	private mapTeacherToView(teacher: Teacher): TeacherOutputDto {
+	private mapTeacherToView(teacher: Teacher & { telegrams: Telegram[] }): TeacherOutputDto {
 		return {
 			id: teacher.id,
 			name: teacher.name,
 			login: teacher.login,
-			telegram_id: teacher.telegram_id || null,
 			role: teacher.role,
 			timezone: teacher.timezone as Timezone,
-			telegram_link: teacher.telegram_link || null,
-			deleted_at: teacher.deleted_at || null,
+			deleted_at: teacher.deleted_at ?? null,
 			created_at: teacher.created_at,
+			telegrams: teacher.telegrams.map((telegram) => ({
+				id: telegram.id,
+				telegram_id: telegram.telegram_id,
+				username: telegram.username ?? "",
+				first_name: telegram.first_name ?? "",
+				type: telegram.type as TelegramUserEnum,
+			})),
 		};
 	}
 }

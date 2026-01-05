@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { ArrowUpDown, Trash2, Pencil } from 'lucide-react'
+import { Cake } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -47,6 +48,13 @@ export const StudentsTable = ({
       setSortField(field)
       setSortDirection('asc')
     }
+  }
+
+  const isBirthdayToday = (birthDate: string | null | undefined): boolean => {
+    if (!birthDate) return false
+    const today = new Date()
+    const birth = new Date(birthDate)
+    return birth.getMonth() === today.getMonth() && birth.getDate() === today.getDate()
   }
 
   const sortedStudents = [...students].sort((a, b) => {
@@ -131,10 +139,16 @@ export const StudentsTable = ({
           ) : (
             sortedStudents.map((student) => {
               const isDeleted = !!student.deleted_at
+              const hasBirthdayToday = isBirthdayToday(student.birth_date)
               return (
                 <TableRow key={student.id}>
                   <TableCell className={cn("font-medium", isDeleted && "opacity-50")}>
-                    {student.name}
+                    <div className="flex items-center gap-2">
+                      {hasBirthdayToday && (
+                        <Cake className="h-4 w-4 text-pink-500" title="День рождения сегодня!" />
+                      )}
+                      {student.name}
+                    </div>
                   </TableCell>
                   <TableCell className={cn(isDeleted && "opacity-50")}>
                     {student.class}

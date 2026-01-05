@@ -1,4 +1,4 @@
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, Link } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   Table,
@@ -16,9 +16,10 @@ interface TeachersTableProps {
   teachers: Teacher[]
   onEdit: (id: number) => void
   onDelete: (id: number) => void
+  onGenerateTelegramLink: (id: number) => void
 }
 
-export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps) => {
+export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLink }: TeachersTableProps) => {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -26,7 +27,6 @@ export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps
           <TableRow>
             <TableHead>Имя</TableHead>
             <TableHead>Логин</TableHead>
-            <TableHead>Telegram ID</TableHead>
             <TableHead>Ссылка Telegram</TableHead>
             <TableHead>Часовой пояс</TableHead>
             <TableHead>Роль</TableHead>
@@ -38,13 +38,16 @@ export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps
         <TableBody>
           {teachers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 Преподаватели не найдены
               </TableCell>
             </TableRow>
           ) : (
             teachers.map((teacher) => {
               const isDeleted = !!teacher.deleted_at
+              const telegramLink = teacher.telegrams?.[0]?.username
+                ? `https://t.me/${teacher.telegrams[0].username}`
+                : null
               return (
                 <TableRow
                   key={teacher.id}
@@ -52,16 +55,15 @@ export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps
                 >
                   <TableCell className="font-medium">{teacher.name}</TableCell>
                   <TableCell>{teacher.login}</TableCell>
-                  <TableCell>{teacher.telegram_id || '-'}</TableCell>
                   <TableCell>
-                    {teacher.telegram_link ? (
+                    {telegramLink ? (
                       <a
-                        href={teacher.telegram_link}
+                        href={telegramLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
                       >
-                        {teacher.telegram_link}
+                        {telegramLink}
                       </a>
                     ) : (
                       '-'
@@ -84,6 +86,15 @@ export const TeachersTable = ({ teachers, onEdit, onDelete }: TeachersTableProps
                   <TableCell className="text-right">
                     {!isDeleted && (
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => onGenerateTelegramLink(teacher.id)}
+                          className="border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600"
+                          title="Сгенерировать ссылку Telegram"
+                        >
+                          <Link className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"

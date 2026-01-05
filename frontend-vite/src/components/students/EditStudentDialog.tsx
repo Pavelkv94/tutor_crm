@@ -41,6 +41,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
     queryKey: ['student', studentId],
     queryFn: () => studentsApi.getById(studentId!),
     enabled: !!studentId && open,
+    refetchOnMount: true,
   })
 
   const { data: teachers = [] } = useQuery({
@@ -52,15 +53,17 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
 
   useEffect(() => {
-    if (student) {
+    if (student && open) {
       setName(student.name)
       setStudentClass(student.class.toString())
       setBirthDate(student.birth_date ? student.birth_date.split('T')[0] : '')
       if (student.teacher_id) {
         setTeacherId(student.teacher_id.toString())
+      } else {
+        setTeacherId('')
       }
     }
-  }, [student])
+  }, [student, open, studentId])
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateStudentInput) => studentsApi.update(studentId!, data),
@@ -68,10 +71,6 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['student', studentId] })
       onOpenChange(false)
-      setName('')
-      setStudentClass('')
-      setBirthDate('')
-      setTeacherId('')
     },
   })
 

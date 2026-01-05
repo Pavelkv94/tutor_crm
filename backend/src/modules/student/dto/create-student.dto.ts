@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 
@@ -13,6 +13,8 @@ export class CreateStudentDto {
 	@ApiProperty({ description: 'The class of the student', example: 1 })
 	@IsInt()
 	@IsNotEmpty()
+	@Min(1)
+	@Max(11)
 	class: number;
 
 	@ApiProperty({ description: 'The birth date of the student', example: new Date('2000-01-01') })

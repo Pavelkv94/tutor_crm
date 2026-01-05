@@ -151,6 +151,19 @@ export class LessonService {
 		return studentLessonsOutput;
 	}
 
+	async findPendingUnpaidLessonsForPeriodAndStudent(student_id: number, start_date: string, end_date: string, teacher: JwtPayloadDto): Promise<LessonOutputDto[]> {
+		const student = await this.studentService.findById(student_id);
+		if (!student) {
+			throw new NotFoundException('Студент не найден');
+		}
+		if (teacher.role !== TeacherRoleEnum.ADMIN && student.teacher_id !== +teacher.id) {
+			throw new BadRequestException('Вы не можете получить уроки для этого студента');
+		}
+		const lessons = await this.lessonRepository.findLessonsForPeriodAndStudent(student_id, start_date, end_date);
+		const pendingUnpaidLessons = lessons.filter(lesson => lesson.status === LessonStatusEnum.PENDING_UNPAID && lesson.is_trial === false);
+		return pendingUnpaidLessons;
+	}
+
 	async createRegularLessons(regularLessonsInputDto: RegularLessonsInputDto, student_id: number): Promise<RegularLessonOutputDto[]> {
 		const { lessons } = regularLessonsInputDto;
 		const regularLessons: RegularLessonOutputDto[] = [];

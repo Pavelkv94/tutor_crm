@@ -53,6 +53,26 @@ export class StudentRepository {
 		return this.mapStudentToExtendedView(student);
 	}
 
+	async getActiveStudentsWithBirthdays(): Promise<StudentOutputDto[]> {
+		const students = await this.prisma.student.findMany({
+			where: {
+				deleted_at: null, birth_date: { not: null }, teacher: {
+					telegrams: {
+						some: {}
+					}
+				}
+			},
+			include: {
+				teacher: {
+					include: {
+						telegrams: true,
+					},
+				},
+			},
+		});
+		return students;
+	}
+
 	async updateStudent(id: number, updateStudentDto: UpdateStudentDto): Promise<boolean> {
 		const updateData: any = { ...updateStudentDto };
 		if (updateStudentDto.birth_date) {

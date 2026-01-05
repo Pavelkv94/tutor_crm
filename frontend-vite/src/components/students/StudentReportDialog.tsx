@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { lessonsApi } from '@/api/lessons'
+import { telegramApi } from '@/api/telegram'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface StudentReportDialogProps {
   open: boolean
@@ -23,6 +25,8 @@ export const StudentReportDialog = ({
   onOpenChange,
   studentId,
 }: StudentReportDialogProps) => {
+  const { isAdmin } = useAuth()
+
   // Get current month dates as default
   const getDefaultDates = () => {
     const now = new Date()
@@ -46,11 +50,27 @@ export const StudentReportDialog = ({
     enabled: !!studentId && shouldFetch && !!startDate && !!endDate,
   })
 
+  const sendLessonsCostMutation = useMutation({
+    mutationFn: (data: { student_id: number; start_date: string; end_date: string }) =>
+      telegramApi.sendLessonsCostToAdmin(data),
+  })
+
   const handleGetInfo = () => {
     if (!startDate || !endDate) {
       return
     }
     setShouldFetch(true)
+  }
+
+  const handleSendLessonsCostToAdmin = () => {
+    if (!studentId || !startDate || !endDate) {
+      return
+    }
+    sendLessonsCostMutation.mutate({
+      student_id: studentId,
+      start_date: startDate,
+      end_date: endDate,
+    })
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -60,6 +80,7 @@ export const StudentReportDialog = ({
       const { firstDay: fd, lastDay: ld } = getDefaultDates()
       setStartDate(fd)
       setEndDate(ld)
+      sendLessonsCostMutation.reset()
     }
     onOpenChange(newOpen)
   }
@@ -109,6 +130,17 @@ export const StudentReportDialog = ({
             {isLoading ? 'Загрузка...' : 'Получить информацию'}
           </Button>
 
+          {isAdmin && (
+            <Button
+              onClick={handleSendLessonsCostToAdmin}
+              disabled={!startDate || !endDate || sendLessonsCostMutation.isPending}
+              variant="outline"
+              className="w-full border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+            >
+              {sendLessonsCostMutation.isPending ? 'Отправка...' : 'Отправить мне отчет по оплатам'}
+            </Button>
+          )}
+
           {isLoading && (
             <div className="py-4 text-center text-muted-foreground">
               Загрузка данных...
@@ -119,6 +151,22 @@ export const StudentReportDialog = ({
             <div className="py-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">
                 Не удалось загрузить данные отчета
+              </p>
+            </div>
+          )}
+
+          {sendLessonsCostMutation.isError && (
+            <div className="py-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">
+                Не удалось отправить отчет по оплатам
+              </p>
+            </div>
+          )}
+
+          {sendLessonsCostMutation.isSuccess && (
+            <div className="py-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-600">
+                Отчет по оплатам успешно отправлен
               </p>
             </div>
           )}

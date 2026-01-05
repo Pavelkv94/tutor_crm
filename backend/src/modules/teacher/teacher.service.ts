@@ -7,6 +7,8 @@ import { BcryptService } from "../auth/bcrypt.service";
 import { Teacher } from "@prisma/client";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
 import { FilterTeacherQuery } from "./dto/filter.query.dto";
+import { TelegramLinkOutputDto } from "../telegram/dto/telegram-link.output.dto";
+import { randomUUID } from "crypto";
 
 @Injectable()
 export class TeacherService {

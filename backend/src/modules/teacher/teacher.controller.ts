@@ -13,6 +13,8 @@ import { JwtAccessGuard } from "src/core/guards/jwt-access.guard";
 import { AdminAccessGuard } from "src/core/guards/admin-access.guard";
 import { UpdateTeacherDto } from "./dto/update-teacher.input.dto";
 import { FilterTeacherQuery } from "./dto/filter.query.dto";
+import { TelegramLinkOutputDto } from "../telegram/dto/telegram-link.output.dto";
+import { GenerateTelegramLinkSwagger } from "../../core/decorators/swagger/telegram/generate-telegram-link-swagger.decorator";
 
 
 @ApiTags('Teachers')

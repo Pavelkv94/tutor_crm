@@ -8,6 +8,7 @@ import { Students } from '@/pages/Students'
 import { Plans } from '@/pages/Plans'
 import { Teachers } from '@/pages/Teachers'
 import { Schedule } from '@/pages/Schedule'
+import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +69,7 @@ function App() {
             <Route path="/" element={<Navigate to="/students" replace />} />
             <Route path="*" element={<Navigate to="/students" replace />} />
           </Routes>
+          <Toaster />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

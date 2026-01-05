@@ -63,14 +63,21 @@ export interface CreatePlanInput {
   plan_type: 'INDIVIDUAL' | 'PAIR'
 }
 
+export interface Telegram {
+  id: number
+  telegram_id: string
+  username: string | null
+  first_name: string | null
+  type: string
+}
+
 export interface Teacher {
   id: number
   name: string
   login: string
-  telegram_id: string | null
   role: string
   timezone: 'BY' | 'PL'
-  telegram_link: string | null
+  telegrams: Telegram[]
   deleted_at: string | null
   created_at: string
 }

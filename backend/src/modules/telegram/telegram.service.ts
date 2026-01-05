@@ -1,10 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Ctx, Start, Update } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
-import { ConfigService } from '@nestjs/config';
 import { TELEGRAM_MESSAGES } from './telegram.messages';
-import { PrismaService } from 'src/core/prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { TelegramLinkInputDto } from './dto/telegram-link.input.dto';
+import { TeacherService } from '../teacher/teacher.service';
+import { TelegramUserEnum } from './dto/telegram-user.enum';
+import { randomUUID } from 'crypto';
+import { StudentService } from '../student/student.service';
+import { TelegramRepository } from './telegram.repository';
+import { CoreEnvConfig } from 'src/core/core.config';
+import { TelegramLinkOutputDto } from './dto/telegram-link.output.dto';
+import { TokenDataInputDto } from './dto/token-data.input.dto';
+import { TelegramInputDto } from './dto/telegram.input.dto';
+import { LessonsCostFiltersDto } from './dto/lessons-cost-filter.input.dto';
+import { LessonService } from '../lesson/lesson.service';
+import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
+import { LessonStatusEnum } from '../lesson/dto/lesson-status.enum';
 
 @Update()
 @Injectable()
@@ -12,11 +24,14 @@ export class TelegramService extends Telegraf {
 	private _token: string;
 
 	constructor(
-		private readonly prismaService: PrismaService,
-		private readonly configService: ConfigService
+		private readonly configService: CoreEnvConfig,
+		private readonly teacherService: TeacherService,
+		private readonly studentService: StudentService,
+		private readonly telegramRepository: TelegramRepository,
+		private readonly lessonService: LessonService
 	) {
-		super(configService.get<string>('TELEGRAM_BOT_TOKEN') as string);
-		this._token = configService.get<string>('TELEGRAM_BOT_TOKEN') as string;
+		super(configService.telegramBotToken);
+		this._token = configService.telegramBotToken;
 	}
 
 	@Start()
@@ -26,157 +41,207 @@ export class TelegramService extends Telegraf {
 		const token = ctx.message?.text?.split(' ')[1];
 		const chatId = ctx.message?.chat?.id;
 		console.log(chatId);
-		if (!username) {
-			await ctx.replyWithHTML(TELEGRAM_MESSAGES.welcome);
-		}
-
+		console.log(username);
+		console.log(firstName);
+		console.log(token);
+		console.log(this.configService.telegramAdminId);
+		if (!token && chatId !== +this.configService.telegramAdminId) {
+			await ctx.replyWithHTML(TELEGRAM_MESSAGES.welcomeUnauthorized);
+			return;
+		}	
 		if (token) {
-			const authToken = await this.prismaService.telegramToken.findUnique({
-				where: { token: token }
-			});
-
-			await ctx.reply(TELEGRAM_MESSAGES.welcome);
-
-			if (!authToken) {
+			const tokenData = await this.telegramRepository.getTelegramTokenByToken(token);
+			if (!tokenData) {
 				await ctx.reply(TELEGRAM_MESSAGES.invalidToken);
 				return;
 			}
-
-			const hasExpired = authToken && new Date(authToken.expired_at) < new Date();
-			if (hasExpired) {
+			const now = new Date();
+			if (tokenData && tokenData.expired_at < now) {
 				await ctx.reply(TELEGRAM_MESSAGES.tokenExpired);
 				return;
 			}
 
-			const existingTelegram = await this.prismaService.telegram.findUnique({
-				where: { telegram_id: chatId.toString() }
-			});
 
+			const existingTelegram = await this.telegramRepository.findTelegramByTelegramId(chatId.toString());
 			if (existingTelegram) {
 				await ctx.reply(TELEGRAM_MESSAGES.telegramAlreadyConnected);
 				return;
+			} else {
+				await ctx.reply(TELEGRAM_MESSAGES.welcomeAuthorized);
 			}
 
-			await this.connectTelegram(authToken.student_id, chatId, username, firstName);
+			const telegramData: TelegramInputDto = {
+				telegram_id: chatId.toString(),
+				username: username,
+				first_name: firstName,
+				type: tokenData.type as TelegramUserEnum,
+				student_id: tokenData.student_id,
+				teacher_id: tokenData.teacher_id,
+			}
 
-			await this.prismaService.telegramToken.delete({
-				where: { id: authToken.id }
-			});
+			await this.telegramRepository.createTelegramUser(telegramData);
+
+			await this.telegramRepository.deleteTelegramToken(tokenData.id);
 		}
-		if (chatId === this.configService.get<string>('ADMIN_TG_ID') as string) {
-			await ctx.reply(TELEGRAM_MESSAGES.adminWelcome);
-		}
+
 	}
 
 	async sendMessageToAdmin(message: string) {
-		await this.telegram.sendMessage(this.configService.get<string>('ADMIN_TG_ID') as string, message);
-	}
-
-	private async connectTelegram(studentId: number, chatId: string, username: string, firstName: string) {
-		await this.prismaService.student.update({
-			where: { id: studentId },
-			data: {
-				telegrams: {
-					create: {
-						telegram_id: chatId.toString(),
-						username: username,
-						first_name: firstName
-					}
-				}
-			}
-		});
-	}
-
-	private async sendMessageToTelegram(studentId: number, message: string) {
-		try {
-			// Получаем telegram данные студента
-			const student = await this.prismaService.student.findUnique({
-				where: { id: studentId },
-				include: {
-					telegrams: true
-				}
-			});
-
-			if (!student || !student.telegrams || student.telegrams.length === 0) {
-				console.warn(`No telegram connection found for student ${studentId}`);
-				return;
-			}
-
-			// Отправляем сообщение каждому telegram аккаунту студента
-			const sendPromises = student.telegrams.map(async (telegram) => {
-				try {
-					await this.telegram.sendMessage(telegram.telegram_id, message);
-				} catch (error) {
-					console.error(`Failed to send message to telegram ${telegram.telegram_id}:`, error);
-				}
-			});
-
-			await Promise.all(sendPromises);
-		} catch (error) {
-			console.error(`Error sending notification to student ${studentId}:`, error);
-			throw error;
+		const admin = await this.telegramRepository.findTelegramByTelegramId(this.configService.telegramAdminId.toString());
+		if (!admin) {
+			throw new NotFoundException("Администратор не найден");
 		}
+		await this.telegram.sendMessage(admin.telegram_id, message);
+	}
+
+	async sendMessageToUser(userTelegramId: string, message: string) {
+		const user = await this.telegramRepository.findTelegramByTelegramId(userTelegramId);
+		if (!user) {
+			console.error(`User not found: ${userTelegramId}`);
+			return;
+		}
+		await this.telegram.sendMessage(user.telegram_id, message);
+	}
+
+	async generateTelegramLink(telegramLinkInputDto: TelegramLinkInputDto): Promise<TelegramLinkOutputDto> {
+		if (!telegramLinkInputDto.teacher_id && !telegramLinkInputDto.student_id) {
+			throw new BadRequestException("Необходимо указать teacher_id или student_id");
+		}
+		if (telegramLinkInputDto.teacher_id) {
+			const teacher = await this.teacherService.getTeacherById(telegramLinkInputDto.teacher_id);
+			if (!teacher) {
+				throw new NotFoundException("Преподаватель не найден");
+			}
+			if (teacher.deleted_at) {
+				throw new BadRequestException("Преподаватель удален");
+			}
+		} else if (telegramLinkInputDto.student_id) {
+			const student = await this.studentService.findById(telegramLinkInputDto.student_id);
+			if (!student) {
+				throw new NotFoundException("Студент не найден");
+			}
+			if (student.deleted_at) {
+				throw new BadRequestException("Студент удален");
+			}
+		}
+
+		const uuid = randomUUID()
+		const expiredAt = new Date(Date.now() + 1000 * 60 * 24); // 24 часа
+
+		const telegramTokenData: TokenDataInputDto = {
+			token: uuid as string,
+			expired_at: expiredAt,
+			teacher_id: telegramLinkInputDto.teacher_id || null,
+			student_id: telegramLinkInputDto.student_id || null,
+			type: telegramLinkInputDto.teacher_id ? TelegramUserEnum.TEACHER : TelegramUserEnum.STUDENT,
+		}
+
+		const telegramToken = await this.telegramRepository.createTelegramToken(telegramTokenData);
+
+
+
+		return { link: `https://t.me/${this.configService.telegramBotName}?start=${telegramToken.token}` };
+	}
+
+	// async sendLessonsInfoToAdmin(lessons: LessonOutputDto[]) {
+	// const admin = await this.telegramRepository.findTelegramByTelegramId(this.configService.telegramAdminId.toString());
+	// if (!admin) {
+	// 	throw new NotFoundException("Администратор не найден");
+	// }
+	// await this.telegram.sendMessage(admin.telegram_id, message);
+	// }
+
+	private formatDateToRussian(dateString: string): string {
+		const date = new Date(dateString);
+		const day = date.getDate();
+		const months = [
+			'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+			'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+		];
+		const month = months[date.getMonth()];
+		const year = date.getFullYear();
+		return `${day} ${month} ${year}`;
+	}
+
+	async sendLessonsCostToAdmin(dto: LessonsCostFiltersDto, teacher: JwtPayloadDto): Promise<void> {
+		const { student_id, start_date, end_date } = dto;
+
+		const student = await this.studentService.findById(student_id);
+		if (!student) {
+			throw new NotFoundException("Студент не найден");
+		}
+
+		const pendingUnpaidLessons = await this.lessonService.findPendingUnpaidLessonsForPeriodAndStudent(student_id, start_date, end_date, teacher);
+
+		if (pendingUnpaidLessons.length === 0) {
+			throw new BadRequestException("По заданному периоду нет ожидающих оплату уроков");
+		}
+		const report = {
+			start_date: start_date,
+			end_date: end_date,
+			student_name: student.name,
+			student_class: student.class,
+			pending_lessons_count: pendingUnpaidLessons.length,
+			pending_free_lessons_count: pendingUnpaidLessons.filter(lesson => lesson.is_free).length,
+			pending_unpaid_lessons_count: pendingUnpaidLessons.filter(lesson => !lesson.is_free).length,
+			pending_unpaid_lessons_cost: pendingUnpaidLessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0),
+			plan_currency: pendingUnpaidLessons[0].plan.plan_currency,
+		}
+
+		const formattedStartDate = this.formatDateToRussian(report.start_date);
+		const formattedEndDate = this.formatDateToRussian(report.end_date);
+
+		const message = `
+📅 Период: ${formattedStartDate} - ${formattedEndDate}
+👤 Ученик: ${student.name} ${student.class}кл
+📚 Количество всех уроков: ${report.pending_lessons_count}
+🎁 Из них количество бесплатных уроков: ${report.pending_free_lessons_count}
+💳 Количество ожидающих оплату уроков: ${report.pending_unpaid_lessons_count}
+💰 Стоимость ожидающих оплату уроков: ${report.pending_unpaid_lessons_cost} ${report.plan_currency}.
+		`
+		await this.sendMessageToAdmin(message);
+
 	}
 
 	@Cron(CronExpression.EVERY_DAY_AT_9AM)
 	async birthdayRemind() {
-		const allStudents = await this.prismaService.student.findMany({
-			where: {
-				deleted_at: null,
-			},
-		});
-
+		const allStudents = await this.studentService.findAllActiveWithBirthdays();
 		const today = new Date();
 		const todayMonth = today.getMonth() + 1; // месяцы от 0
 		const todayDate = today.getDate();
 
-		// const studentsWithBirthday = allStudents.filter(student => {
-		// 	const birthDate = new Date(student.birth_date);
-		// 	return (
-		// 		birthDate.getMonth() + 1 === todayMonth &&
-		// 		birthDate.getDate() === todayDate
-		// 	);
-		// });
+		const studentsWithBirthday = allStudents.filter(student => {
+			const birthDate = new Date(student.birth_date as Date);
+			return (
+				birthDate.getMonth() + 1 === todayMonth &&
+				birthDate.getDate() === todayDate
+			);
+		});
 
-		// if (studentsWithBirthday.length > 0) {
-		// 	const message = this.createBirthdayReminderMessage(studentsWithBirthday);
-		// 	await this.telegram.sendMessage(this.configService.get<string>('ADMIN_TG_ID') as string, message);
-		// }
+		if (studentsWithBirthday.length > 0) {
+			for (const student of studentsWithBirthday) {
+				const message = this.createBirthdayReminderMessage(student);
+				await this.sendMessageToUser(student.teacher.telegrams[0].telegram_id, message);
+			}
+		}
 	}
 
-	private createBirthdayReminderMessage(students: any[]): string {
+	private createBirthdayReminderMessage(student: any): string {
 		const reminderEmoji = '📅';
 		const cakeEmoji = '🎂';
 		const bellEmoji = '🔔';
 		const noteEmoji = '📝';
 
-		if (students.length === 1) {
-			const student = students[0];
-			const age = this.calculateAge(student.birth_date);
-			return `
-${bellEmoji} BIRTHDAY REMINDER ${bellEmoji}
+		const age = this.calculateAge(student.birth_date);
 
-${reminderEmoji} ${student.name} has a birthday today!
-${cakeEmoji} They are turning ${age} years old
-
-${noteEmoji} Don't forget to wish them a happy birthday!
-		`.trim();
-		} else {
-			const studentsList = students.map(student => {
-				const age = this.calculateAge(student.birth_date);
-				return `• ${student.name} ${student.class}кл (${age} years old)`;
-			}).join('\n');
-
-			return `
-${bellEmoji} BIRTHDAY REMINDER ${bellEmoji}
-
-${reminderEmoji} Birthdays today:
-
-${studentsList}
-
-${noteEmoji} Don't forget to wish them all happy birthdays!
-		`.trim();
-		}
+		return `
+		${bellEmoji} НАПОМИНАНИЕ О ДНЕ РОЖДЕНИЯ ${bellEmoji}
+		
+		${reminderEmoji} У ${student.name} сегодня день рождения!
+		${cakeEmoji} Исполняется ${age}!
+		
+		${noteEmoji} Не забудьте поздравить с Днем рождения!
+			`.trim();
 	}
 
 	private calculateAge(birthDate: Date): number {

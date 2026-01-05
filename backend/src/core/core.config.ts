@@ -28,6 +28,16 @@ export class CoreEnvConfig {
 	telegramBotToken: string;
 
 	@IsNotEmpty({
+		message: "Set Env variable TELEGRAM_BOT_NAME, example: test_bot",
+	})
+	telegramBotName: string;
+
+	@IsNotEmpty({
+		message: "Set Env variable TELEGRAM_ADMIN_ID, example: 1234567890",
+	})
+	telegramAdminId: string;
+
+	@IsNotEmpty({
 		message: "Set Env variable REFRESH_SECRET_KEY, example: 1234567890",
 	})
 	refreshSecretKey: string;
@@ -62,6 +72,8 @@ export class CoreEnvConfig {
 		this.databaseUrl = this.configService.get<string>("DATABASE_URL");
 		this.port = this.configService.get<number>("PORT");
 		this.telegramBotToken = this.configService.get<string>("TELEGRAM_BOT_TOKEN");
+		this.telegramBotName = this.configService.get<string>("TELEGRAM_BOT_NAME");
+		this.telegramAdminId = this.configService.get<string>("TELEGRAM_ADMIN_ID");
 		this.refreshSecretKey = this.configService.get<string>("REFRESH_SECRET_KEY");
 		this.refreshExpiresIn = this.configService.get<string>("REFRESH_EXPIRES_IN");
 		this.accessSecretKey = this.configService.get<string>("ACCESS_SECRET_KEY");
