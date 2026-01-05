@@ -18,7 +18,7 @@ export class TelegramRepository {
 		const tokenData = await this.prisma.telegramToken.findUnique({
 			where: { token },
 		});
-		if (!token) {
+		if (!tokenData) {
 			return null;
 		}
 		return tokenData;

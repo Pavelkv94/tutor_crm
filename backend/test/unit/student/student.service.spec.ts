@@ -106,7 +106,7 @@ describe('StudentService', () => {
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(null);
 
 			await expect(service.create(createStudentDto)).rejects.toThrow(NotFoundException);
-			await expect(service.create(createStudentDto)).rejects.toThrow('Teacher not found');
+			await expect(service.create(createStudentDto)).rejects.toThrow('Преподаватель не найден');
 		});
 	});
 
@@ -139,18 +139,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'getStudent').mockResolvedValue(null);
 
 			await expect(service.findById(1)).rejects.toThrow(NotFoundException);
-			await expect(service.findById(1)).rejects.toThrow('Student not found');
-		});
-
-		it('should throw BadRequestException if student is deleted', async () => {
-			const deletedStudent = {
-				...mockStudentExtended,
-				deleted_at: new Date(),
-			};
-			jest.spyOn(repository, 'getStudent').mockResolvedValue(deletedStudent as any);
-
-			await expect(service.findById(1)).rejects.toThrow(BadRequestException);
-			await expect(service.findById(1)).rejects.toThrow('Student already deleted');
+			await expect(service.findById(1)).rejects.toThrow('Студент не найден');
 		});
 	});
 
@@ -174,7 +163,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'getStudent').mockResolvedValue(null);
 
 			await expect(service.update(1, updateStudentDto)).rejects.toThrow(NotFoundException);
-			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Student not found');
+			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Студент не найден');
 		});
 
 		it('should throw BadRequestException if student is deleted', async () => {
@@ -185,7 +174,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'getStudent').mockResolvedValue(deletedStudent as any);
 
 			await expect(service.update(1, updateStudentDto)).rejects.toThrow(BadRequestException);
-			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Student already deleted');
+			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Студент уже удален');
 		});
 
 		it('should throw NotFoundException if update fails', async () => {
@@ -193,7 +182,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'updateStudent').mockResolvedValue(false);
 
 			await expect(service.update(1, updateStudentDto)).rejects.toThrow(NotFoundException);
-			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Student not found');
+			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Студент не найден');
 		});
 	});
 
@@ -212,7 +201,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'getStudent').mockResolvedValue(null);
 
 			await expect(service.remove(1)).rejects.toThrow(NotFoundException);
-			await expect(service.remove(1)).rejects.toThrow('Student not found');
+			await expect(service.remove(1)).rejects.toThrow('Студент не найден');
 		});
 
 		it('should throw BadRequestException if student is deleted', async () => {
@@ -223,7 +212,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'getStudent').mockResolvedValue(deletedStudent as any);
 
 			await expect(service.remove(1)).rejects.toThrow(BadRequestException);
-			await expect(service.remove(1)).rejects.toThrow('Student already deleted');
+			await expect(service.remove(1)).rejects.toThrow('Студент уже удален');
 		});
 
 		it('should throw NotFoundException if delete fails', async () => {
@@ -231,7 +220,7 @@ describe('StudentService', () => {
 			jest.spyOn(repository, 'deleteStudent').mockResolvedValue(false);
 
 			await expect(service.remove(1)).rejects.toThrow(NotFoundException);
-			await expect(service.remove(1)).rejects.toThrow('Student not found');
+			await expect(service.remove(1)).rejects.toThrow('Студент не найден');
 		});
 	});
 });

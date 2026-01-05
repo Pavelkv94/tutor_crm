@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService } from '../helpers/test-utils';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
 import { TeacherRole } from '@prisma/client';
 import { BcryptService } from '../../src/modules/auth/bcrypt.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -65,7 +65,7 @@ describe('TeacherController (e2e)', () => {
 			});
 		}
 		if (app) {
-			await app.close();
+			await closeTestApp(app);
 		}
 	});
 
@@ -319,7 +319,7 @@ describe('TeacherController (e2e)', () => {
 			});
 			expect(updatedTeacher).toBeDefined();
 			expect(updatedTeacher?.name).toBe(updateData.name);
-			expect(updatedTeacher?.telegram_link).toBe(updateData.telegram_link);
+			expect(updatedTeacher?.timezone).toBe(updateData.timezone);
 		});
 
 		it('should return 401 without token', async () => {

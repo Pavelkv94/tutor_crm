@@ -37,6 +37,7 @@ describe('TeacherService', () => {
 		deleted_at: null,
 		created_at: new Date(),
 		role: TeacherRole.TEACHER,
+		telegrams: [],
 	};
 
 	beforeEach(async () => {
@@ -147,7 +148,7 @@ describe('TeacherService', () => {
 			jest.spyOn(repository, 'getTeacherByLogin').mockResolvedValue(mockTeacher);
 
 			await expect(service.createTeacher(createTeacherDto)).rejects.toThrow(BadRequestException);
-			await expect(service.createTeacher(createTeacherDto)).rejects.toThrow('Teacher already exists');
+			await expect(service.createTeacher(createTeacherDto)).rejects.toThrow('Преподаватель уже существует');
 			expect(bcryptService.generateHash).not.toHaveBeenCalled();
 			expect(repository.createTeacher).not.toHaveBeenCalled();
 		});
@@ -174,7 +175,7 @@ describe('TeacherService', () => {
 			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(null);
 
 			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow(NotFoundException);
-			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Teacher not found');
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Преподаватель не найден');
 		});
 
 		it('should throw BadRequestException if teacher is deleted', async () => {
@@ -185,7 +186,7 @@ describe('TeacherService', () => {
 			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(deletedTeacher as any);
 
 			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow(BadRequestException);
-			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Teacher is deleted');
+			await expect(service.updateTeacher(1, updateTeacherDto)).rejects.toThrow('Преподаватель удален');
 		});
 	});
 
@@ -204,7 +205,7 @@ describe('TeacherService', () => {
 			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(null);
 
 			await expect(service.deleteTeacher(1)).rejects.toThrow(NotFoundException);
-			await expect(service.deleteTeacher(1)).rejects.toThrow('Teacher not found');
+			await expect(service.deleteTeacher(1)).rejects.toThrow('Преподаватель не найден');
 		});
 
 		it('should throw BadRequestException if teacher already deleted', async () => {
@@ -215,7 +216,7 @@ describe('TeacherService', () => {
 			jest.spyOn(repository, 'getTeacherById').mockResolvedValue(deletedTeacher as any);
 
 			await expect(service.deleteTeacher(1)).rejects.toThrow(BadRequestException);
-			await expect(service.deleteTeacher(1)).rejects.toThrow('Teacher already deleted');
+			await expect(service.deleteTeacher(1)).rejects.toThrow('Преподаватель уже удален');
 		});
 	});
 });

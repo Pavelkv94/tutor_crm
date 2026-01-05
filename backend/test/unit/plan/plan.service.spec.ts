@@ -122,7 +122,7 @@ describe('PlanService', () => {
 			jest.spyOn(repository, 'getPlanById').mockResolvedValue(null);
 
 			await expect(service.remove(1)).rejects.toThrow(NotFoundException);
-			await expect(service.remove(1)).rejects.toThrow('Plan not found');
+			await expect(service.remove(1)).rejects.toThrow('План не найден');
 		});
 
 		it('should throw BadRequestException if plan is deleted', async () => {
@@ -133,7 +133,7 @@ describe('PlanService', () => {
 			jest.spyOn(repository, 'getPlanById').mockResolvedValue(deletedPlan as any);
 
 			await expect(service.remove(1)).rejects.toThrow(BadRequestException);
-			await expect(service.remove(1)).rejects.toThrow('Plan already deleted');
+			await expect(service.remove(1)).rejects.toThrow('План уже удален');
 		});
 	});
 });

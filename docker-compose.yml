@@ -10,7 +10,13 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - ADMIN_TG_ID=${ADMIN_TG_ID}
+      - TELEGRAM_ADMIN_ID=${TELEGRAM_ADMIN_ID}
+      - TELEGRAM_BOT_NAME=${TELEGRAM_BOT_NAME}
+      - REFRESH_SECRET_KEY=${REFRESH_SECRET_KEY}
+      - REFRESH_EXPIRES_IN=${REFRESH_EXPIRES_IN}
+      - ACCESS_SECRET_KEY=${ACCESS_SECRET_KEY}
+      - ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}
+      - ADMIN_REGISTRATION_SECRET_KEY=${ADMIN_REGISTRATION_SECRET_KEY}
     networks:
       - tutor_network
 
@@ -20,16 +26,32 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_API_URL: http://192.168.18.100:5008/api
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - tutor_backend
     ports:
       - 3008:3000
-    environment:
-      - VITE_API_URL=http://192.168.18.100:5008/api
     networks:
       - tutor_network
+
+  tutor_postgres:
+    image: postgres:latest
+    container_name: tutor_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5436:5432"
+    volumes:
+      - tutor_postgres:/var/lib/postgresql/data
+    networks:
+      - tutor_network
+
+volumes:
+  tutor_postgres:
 
 networks:
   tutor_network:

@@ -147,6 +147,7 @@ describe('LessonService', () => {
 			teacher_id: 1,
 			start_date: new Date(),
 			isFree: false,
+			isTrial: false,
 		};
 
 		it('should create single lesson successfully', async () => {
@@ -168,7 +169,7 @@ describe('LessonService', () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(null);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(NotFoundException);
-			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('Plan not found');
+			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('План не найден');
 		});
 
 		it('should throw BadRequestException if plan is deleted', async () => {
@@ -176,7 +177,7 @@ describe('LessonService', () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(deletedPlan as any);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(BadRequestException);
-			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('Plan already deleted');
+			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('План уже удален');
 		});
 
 		it('should throw NotFoundException if student not found', async () => {
@@ -184,7 +185,7 @@ describe('LessonService', () => {
 			jest.spyOn(studentService, 'findById').mockResolvedValue(null as any);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(NotFoundException);
-			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('Student not found');
+			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow('Студент не найден');
 		});
 
 		it('should throw BadRequestException if too many lessons at same time', async () => {
@@ -286,7 +287,7 @@ describe('LessonService', () => {
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(null);
 
 			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow(NotFoundException);
-			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Teacher not found');
+			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Преподаватель не найден');
 		});
 
 		it('should throw BadRequestException if teacher is deleted', async () => {
@@ -294,7 +295,7 @@ describe('LessonService', () => {
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(deletedTeacher as any);
 
 			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow(BadRequestException);
-			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Teacher is deleted');
+			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Преподаватель удален');
 		});
 	});
 
@@ -312,21 +313,22 @@ describe('LessonService', () => {
 		};
 
 		it('should cancel lesson successfully', async () => {
-			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLesson as any);
+			const mockLessonWithRescheduled = { ...mockLesson, rescheduled_lesson_id: null };
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLessonWithRescheduled as any);
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(mockTeacher as any);
 			jest.spyOn(lessonRepository, 'cancelLesson').mockResolvedValue(undefined);
 
 			await service.cancelLesson(1, cancelLessonDto, teacherPayload);
 
 			expect(lessonRepository.findById).toHaveBeenCalledWith(1);
-			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, cancelLessonDto);
+			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, cancelLessonDto, null);
 		});
 
 		it('should throw NotFoundException if lesson not found', async () => {
 			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(null);
 
 			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow(NotFoundException);
-			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Lesson not found');
+			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Урок не найден');
 		});
 
 		it('should throw BadRequestException if lesson already cancelled', async () => {
@@ -337,7 +339,7 @@ describe('LessonService', () => {
 			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(cancelledLesson as any);
 
 			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow(BadRequestException);
-			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Lesson already cancelled');
+			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Урок уже отменен');
 		});
 
 		it('should throw BadRequestException if teacher tries to cancel lesson for another teacher\'s student', async () => {
@@ -349,7 +351,7 @@ describe('LessonService', () => {
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(mockTeacher as any);
 
 			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow(BadRequestException);
-			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('You are not allowed to cancel this lesson');
+			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Вы не можете отменить этот урок');
 		});
 
 		it('should allow admin to cancel any lesson', async () => {

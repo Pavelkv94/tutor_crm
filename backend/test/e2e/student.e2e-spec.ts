@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService } from '../helpers/test-utils';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
 import { TeacherRole } from '@prisma/client';
 import { BcryptService } from '../../src/modules/auth/bcrypt.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -89,7 +89,7 @@ describe('StudentController (e2e)', () => {
 			});
 		}
 		if (app) {
-			await app.close();
+			await closeTestApp(app);
 		}
 	});
 
@@ -306,7 +306,6 @@ describe('StudentController (e2e)', () => {
 					login: `other_teacher_${Date.now()}`,
 					password: passwordHash,
 					name: 'Other Teacher',
-					telegram_id: `111222333${Date.now()}`,
 					role: TeacherRole.TEACHER,
 				},
 			});

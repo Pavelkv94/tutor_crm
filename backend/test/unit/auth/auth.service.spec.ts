@@ -138,7 +138,7 @@ describe('AuthService', () => {
 			jest.spyOn(teacherService, 'getTeacherByLogin').mockResolvedValue(mockTeacher);
 
 			await expect(service.registerAdmin(registerDto)).rejects.toThrow(BadRequestException);
-			await expect(service.registerAdmin(registerDto)).rejects.toThrow('Admin already exists');
+			await expect(service.registerAdmin(registerDto)).rejects.toThrow('Администратор уже существует');
 		});
 	});
 
@@ -168,7 +168,7 @@ describe('AuthService', () => {
 			jest.spyOn(teacherService, 'getTeacherByLogin').mockResolvedValue(null);
 
 			await expect(service.validateUser(loginDto)).rejects.toThrow(UnauthorizedException);
-			await expect(service.validateUser(loginDto)).rejects.toThrow('User not found');
+			await expect(service.validateUser(loginDto)).rejects.toThrow('Пользователь не найден');
 		});
 
 		it('should throw UnauthorizedException with wrong password', async () => {
@@ -181,7 +181,7 @@ describe('AuthService', () => {
 			jest.spyOn(bcryptService, 'checkPassword').mockResolvedValue(false);
 
 			await expect(service.validateUser(loginDto)).rejects.toThrow(UnauthorizedException);
-			await expect(service.validateUser(loginDto)).rejects.toThrow('Invalid password');
+			await expect(service.validateUser(loginDto)).rejects.toThrow('Неверный пароль');
 		});
 	});
 });
