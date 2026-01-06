@@ -14,13 +14,16 @@ async function bootstrap() {
 	app.useGlobalPipes(new ValidationPipe());
 	app.useGlobalFilters(new SimpleExeptionFilter());
 
-	const config = new DocumentBuilder()
-		.setTitle('School API')
-		.setDescription('The School API description')
-		.setVersion('1.0')
-		.build();
-	const documentFactory = () => SwaggerModule.createDocument(app, config);
-	SwaggerModule.setup('api/swagger', app, documentFactory);
+	// Only enable Swagger in non-production environments
+	if (process.env.NODE_ENV !== 'production') {
+		const config = new DocumentBuilder()
+			.setTitle('School API')
+			.setDescription('The School API description')
+			.setVersion('1.0')
+			.build();
+		const documentFactory = () => SwaggerModule.createDocument(app, config);
+		SwaggerModule.setup('api/swagger', app, documentFactory);
+	}
 
 	// Parse comma-separated origins from environment variable
 	const origins = process.env.ORIGIN_URLS
