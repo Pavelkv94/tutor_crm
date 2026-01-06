@@ -20,22 +20,21 @@ ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 # Production stage
-# FROM nginx:alpine AS runner
+FROM nginx:alpine AS runner
 
 # Copy built files from builder stage
-# COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 3000
 
 # Health check
-# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  # CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
 # Start nginx
-# CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]
 
-CMD ["npm", "run", "start"]
