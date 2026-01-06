@@ -48,7 +48,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - tutor_postgres:/var/lib/postgresql/data
+      - tutor_postgres:/var/lib/postgresql
     networks:
       - tutor_network
 
