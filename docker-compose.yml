@@ -28,8 +28,8 @@ services:
     build:
       context: ./frontend-vite
       dockerfile: Dockerfile
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     depends_on:
       - tutor_backend
     ports:
