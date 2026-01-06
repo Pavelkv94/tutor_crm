@@ -38,7 +38,7 @@ services:
       - tutor_network
 
   tutor_postgres:
-    image: postgres:latest
+    image: postgres:17
     container_name: tutor_postgres
     restart: unless-stopped
     environment:
@@ -48,7 +48,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - tutor_postgres:/var/lib/postgresql
+      - tutor_postgres:/var/lib/postgresql/data
     networks:
       - tutor_network
 
