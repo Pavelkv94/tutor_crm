@@ -6,6 +6,7 @@ import { StudentOutputDto, StudentExtendedOutputDto } from "./dto/student.output
 import { UpdateStudentDto } from "./dto/update-student.dto";
 import { FilterStudentQuery } from "./dto/filter.query.dto";
 import { Prisma } from "@prisma/client";
+import { Timezone } from "../teacher/dto/teacher.output.dto";
 
 @Injectable()
 export class StudentRepository {
@@ -53,7 +54,7 @@ export class StudentRepository {
 		return this.mapStudentToExtendedView(student);
 	}
 
-	async getActiveStudentsWithBirthdays(): Promise<StudentOutputDto[]> {
+	async getActiveStudentsWithBirthdays(): Promise<any> {
 		const students = await this.prisma.student.findMany({
 			where: {
 				deleted_at: null, birth_date: { not: null }, teacher: {
@@ -107,6 +108,7 @@ export class StudentRepository {
 			created_at: student.created_at,
 			deleted_at: student.deleted_at || null,
 			teacher_id: student.teacher_id || null,
+			timezone: student.timezone as Timezone,
 		};
 	}
 

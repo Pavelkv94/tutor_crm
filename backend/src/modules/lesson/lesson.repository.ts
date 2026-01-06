@@ -1,6 +1,5 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { SingleLessonInputDto } from "./dto/single-lesson.input.dto";
 import { Lesson, LessonStatus, Student } from "@prisma/client";
 import { LessonOutputDto } from "./dto/lesson.output.dto";
 import { LessonStatusEnum } from "./dto/lesson-status.enum";
@@ -10,6 +9,7 @@ import { RegularLessonOutputDto } from "./dto/regular-lesson.output.dto";
 import { Teacher } from "@prisma/client";
 import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto";
 import { ManageFreeLessonStatusDto } from "./dto/manage-free-lesson.input.dto";
+import { Timezone } from "../teacher/dto/teacher.output.dto";
 @Injectable()
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
@@ -263,6 +263,7 @@ export class LessonRepository {
 				created_at: lesson.student.created_at,
 				deleted_at: lesson.student.deleted_at,
 				teacher_id: lesson.student.teacher_id || null,
+				timezone: lesson.student.timezone as Timezone,
 			},
 			plan: {
 				id: lesson.plan.id,

@@ -34,6 +34,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [studentClass, setStudentClass] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
+  const [timezone, setTimezone] = useState<'BY' | 'PL' | ''>('')
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
 
@@ -62,6 +63,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       } else {
         setTeacherId('')
       }
+      setTimezone(student.timezone || '')
     }
   }, [student, open, studentId])
 
@@ -80,6 +82,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setStudentClass('')
       setBirthDate('')
       setTeacherId('')
+      setTimezone('')
     }
   }, [open])
 
@@ -90,7 +93,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
     const data: UpdateStudentInput = {
       name,
       class: parseInt(studentClass, 10),
-      birth_date: birthDate ? new Date(birthDate).toISOString() : null,
+      birth_date: birthDate ? new Date(birthDate).toISOString() : undefined,
+      timezone: timezone ? (timezone as 'BY' | 'PL') : null,
     }
 
     // Only include teacher_id if admin and it's provided
@@ -160,6 +164,19 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                 </Select>
               </div>
             )}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-timezone">Часовой пояс</Label>
+              <Select value={timezone || 'none'} onValueChange={(value: 'BY' | 'PL' | 'none') => setTimezone(value === 'none' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите часовой пояс (необязательно)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Не выбрано</SelectItem>
+                  <SelectItem value="BY">BY</SelectItem>
+                  <SelectItem value="PL">PL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Timezone } from "../../teacher/dto/teacher.output.dto";
 
 
 export class CreateStudentDto {
@@ -27,4 +28,9 @@ export class CreateStudentDto {
 	@IsInt()
 	@IsNotEmpty()
 	teacher_id: number;
+
+	@ApiProperty({ description: 'The timezone of the student', example: 'BY' })
+	@IsEnum(Timezone)
+	@IsOptional()
+	timezone: Timezone;
 }

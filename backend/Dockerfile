@@ -8,10 +8,12 @@ RUN yarn install
 
 COPY . .
 
-RUN yarn prisma:generate
+# Generate Prisma client using environment variables (not .env.development.local)
+RUN npx prisma generate --schema=src/core/prisma/schema.prisma
 
 RUN yarn build
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "yarn prisma:deploy && yarn start:prod"]
+# Use environment variables directly, not .env.development.local
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=src/core/prisma/schema.prisma && yarn start:prod"]

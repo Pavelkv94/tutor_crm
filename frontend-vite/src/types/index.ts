@@ -22,6 +22,7 @@ export interface Student {
   created_at: string
   deleted_at: string | null
   teacher_id?: number | null
+  timezone?: 'BY' | 'PL' | null
 }
 
 export interface StudentExtended extends Student {
@@ -36,6 +37,7 @@ export interface CreateStudentInput {
   class: number
   birth_date: string | null
   teacher_id: number
+  timezone?: 'BY' | 'PL' | null
 }
 
 export interface UpdateStudentInput {
@@ -43,6 +45,7 @@ export interface UpdateStudentInput {
   class?: number
   birth_date?: string
   teacher_id?: number
+  timezone?: 'BY' | 'PL' | null
 }
 
 export interface Plan {
@@ -86,7 +89,6 @@ export interface CreateTeacherInput {
   name: string
   login: string
   password: string
-  telegram_link?: string | null
   timezone: 'BY' | 'PL'
 }
 

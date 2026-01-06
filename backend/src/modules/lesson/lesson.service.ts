@@ -199,7 +199,6 @@ export class LessonService {
 
 				// Check if lesson already exists
 				const existingLessons = await this.lessonRepository.findExistingLessonsByDate(mergedDate);
-				//todo проверить статусы занятий
 				if (existingLessons.length > 1) {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);

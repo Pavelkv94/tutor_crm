@@ -27,14 +27,6 @@ export class CreateTeacherDto {
 	})
 	name: string;
 
-	@IsString()
-	@IsOptional()
-	@ApiProperty({
-		description: "The telegram link of the teacher",
-		example: "https://t.me/teacher123",
-	})
-	telegram_link: string | null;
-
 	@IsEnum(Timezone)
 	@IsNotEmpty()
 	@ApiProperty({

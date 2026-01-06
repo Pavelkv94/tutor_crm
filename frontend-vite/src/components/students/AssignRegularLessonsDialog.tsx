@@ -31,18 +31,6 @@ const convertTimeToUTC3 = (timeString: string): string => {
   return date.toISOString()
 }
 
-// Convert date to UTC+3 ISO string format
-const convertDateToUTC3 = (dateString: string): string => {
-  const date = new Date(dateString)
-  // Get date components in local time
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  // Create date string in UTC+3 timezone (midnight UTC+3)
-  const utc3Date = new Date(`${year}-${month}-${day}T00:00:00+03:00`)
-  return utc3Date.toISOString()
-}
-
 const createEmptyLesson = (): RegularLessonInput => {
   const today = new Date()
   const year = today.getFullYear()

@@ -38,6 +38,19 @@ export class TeacherService {
 		});
 	}
 
+	async createAdmin(createAdminDto: { login: string, password: string, name: string }): Promise<void> {
+		const existingAdmin = await this.teacherRepository.getTeacherByLogin(createAdminDto.login);
+		if (existingAdmin) {
+			throw new BadRequestException("Администратор уже существует");
+		}
+		const passwordHash = await this.bcryptService.generateHash(createAdminDto.password);
+		await this.teacherRepository.createAdmin({
+			login: createAdminDto.login,
+			name: createAdminDto.name,
+			password: passwordHash,
+		});
+	}
+
 	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
 		const teacher = await this.teacherRepository.getTeacherById(id);
 		if (!teacher) {

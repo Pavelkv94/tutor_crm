@@ -17,6 +17,7 @@ import { LessonsCostFiltersDto } from './dto/lessons-cost-filter.input.dto';
 import { LessonService } from '../lesson/lesson.service';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { LessonStatusEnum } from '../lesson/dto/lesson-status.enum';
+import { LessonOutputDto } from '../lesson/dto/lesson.output.dto';
 
 @Update()
 @Injectable()
@@ -48,7 +49,7 @@ export class TelegramService extends Telegraf {
 		if (!token && chatId !== +this.configService.telegramAdminId) {
 			await ctx.replyWithHTML(TELEGRAM_MESSAGES.welcomeUnauthorized);
 			return;
-		}	
+		}
 		if (token) {
 			const tokenData = await this.telegramRepository.getTelegramTokenByToken(token);
 			if (!tokenData) {
@@ -143,14 +144,6 @@ export class TelegramService extends Telegraf {
 		return { link: `https://t.me/${this.configService.telegramBotName}?start=${telegramToken.token}` };
 	}
 
-	// async sendLessonsInfoToAdmin(lessons: LessonOutputDto[]) {
-	// const admin = await this.telegramRepository.findTelegramByTelegramId(this.configService.telegramAdminId.toString());
-	// if (!admin) {
-	// 	throw new NotFoundException("Администратор не найден");
-	// }
-	// await this.telegram.sendMessage(admin.telegram_id, message);
-	// }
-
 	private formatDateToRussian(dateString: string): string {
 		const date = new Date(dateString);
 		const day = date.getDate();
@@ -177,8 +170,7 @@ export class TelegramService extends Telegraf {
 			throw new BadRequestException("По заданному периоду нет ожидающих оплату уроков");
 		}
 		const report = {
-			start_date: start_date,
-			end_date: end_date,
+			requested_month: new Date(start_date).getMonth() + 1,
 			student_name: student.name,
 			student_class: student.class,
 			pending_lessons_count: pendingUnpaidLessons.length,
@@ -188,17 +180,51 @@ export class TelegramService extends Telegraf {
 			plan_currency: pendingUnpaidLessons[0].plan.plan_currency,
 		}
 
-		const formattedStartDate = this.formatDateToRussian(report.start_date);
-		const formattedEndDate = this.formatDateToRussian(report.end_date);
+		const currencySymbol = report.plan_currency === "USD" ? "$" : report.plan_currency === "EUR" ? "€" : report.plan_currency === "PLN" ? "zł" : "р";
+		const lessonsMessageList = pendingUnpaidLessons.map((lesson: LessonOutputDto) => {
+			return `${lesson.date.toLocaleDateString('ru-RU', { day: '2-digit', timeZone: 'Europe/Minsk' })} ${lesson.date.toLocaleDateString('ru-RU', { month: 'long', timeZone: 'Europe/Minsk' })} (${lesson.date.toLocaleDateString('ru-RU', { weekday: 'long', timeZone: 'Europe/Minsk' })}) ${lesson.date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' })}  ${lesson.is_free ? "(бесплатно)" : ""}`;
+		});
 
+		const groupedLessonsByPlan = pendingUnpaidLessons.reduce((acc, lesson) => { const key = lesson.plan.id; if (!acc[key]) acc[key] = []; acc[key].push(lesson); return acc; }, {});
+
+		const lessonsResultMessage = Object.values(groupedLessonsByPlan)
+			.filter((lessons: LessonOutputDto[]) => lessons.length > 0)
+			.map((lessons: LessonOutputDto[]) => {
+				const plan = lessons[0].plan;
+				return `🔸${lessons.length} урок(ов) ${(plan?.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре")} × ${plan?.plan_price}р = ${lessons.length * (plan?.plan_price ?? 0)}р`;
+			});
+
+		const monthsOnRus = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРАТ", "ДЕКАБРЬ"];
+		const currentMonth = monthsOnRus[report.requested_month - 1];
 		const message = `
-📅 Период: ${formattedStartDate} - ${formattedEndDate}
-👤 Ученик: ${student.name} ${student.class}кл
-📚 Количество всех уроков: ${report.pending_lessons_count}
-🎁 Из них количество бесплатных уроков: ${report.pending_free_lessons_count}
-💳 Количество ожидающих оплату уроков: ${report.pending_unpaid_lessons_count}
-💰 Стоимость ожидающих оплату уроков: ${report.pending_unpaid_lessons_cost} ${report.plan_currency}.
-		`
+📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]})
+
+${lessonsMessageList.join('\n')}
+
+${lessonsResultMessage.join('\n')}
+
+📌 Итого: ${pendingUnpaidLessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}${currencySymbol}
+
+💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и  отправить чек для подтверждения 😊
+				
+`
+
+		//  ${lessons.join('\n')}
+
+		//  ${lessonsResultMessage.join('\n')}
+		// 📌 Итого: ${report.lessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}р
+
+		// 💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и  отправить чек для подтверждения 😊
+		//  		`
+
+		// // 		const message = `
+		// 📅 Период: ${formattedStartDate} - ${formattedEndDate}
+		// 👤 Ученик: ${student.name} ${student.class}кл
+		// 📚 Количество всех уроков: ${report.pending_lessons_count}
+		// 🎁 Из них количество бесплатных уроков: ${report.pending_free_lessons_count}
+		// 💳 Количество ожидающих оплату уроков: ${report.pending_unpaid_lessons_count}
+		// 💰 Стоимость ожидающих оплату уроков: ${report.pending_unpaid_lessons_cost} ${report.plan_currency}.
+		// 		`
 		await this.sendMessageToAdmin(message);
 
 	}
@@ -259,6 +285,46 @@ export class TelegramService extends Telegraf {
 		return age;
 	}
 
+	// 	async sendReport(sendReportDto: SendReportDto) {
+	// 		const { studentId, start_date, end_date } = sendReportDto;
+
+	// 		const report = await this.buildReportMessage(studentId, start_date, end_date);
+
+	// 		const monthsOnRus = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"];
+	// 		const currentMonth = monthsOnRus[new Date().getMonth()];
+
+	// 		const lessons = report.lessons.map((lesson: any) => {
+	// 			return `${lesson.corrected_time.toLocaleDateString('ru-RU', { day: '2-digit', timeZone: 'Europe/Minsk' })} ${lesson.corrected_time.toLocaleDateString('ru-RU', { month: 'long', timeZone: 'Europe/Minsk' })} (${lesson.corrected_time.toLocaleDateString('ru-RU', { weekday: 'long', timeZone: 'Europe/Minsk' })}) ${lesson.corrected_time.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' })}`;
+	// 		});
+
+	// 		const plans = await this.prisma.plan.findMany();
+
+	// 		const groupedLessonsByPlan = plans.map(plan => {
+	// 			return report.lessons.filter((lesson: any) => lesson.plan_id === plan.id);
+	// 		}); // [[], [], []]
+
+	// 		const lessonsResultMessage = groupedLessonsByPlan
+	// 			.filter(lessons => lessons.length > 0)
+	// 			.map(lessons => {
+	// 				const plan = plans.find(plan => plan.id === lessons[0].plan_id);
+	// 				return `🔸${lessons.length} урок(ов) ${(plan?.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре")} × ${plan?.plan_price}р = ${lessons.length * (plan?.plan_price ?? 0)}р`;
+	// 			});
+
+	// 		const message = `
+	// 		📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]})
+
+	// ${lessons.join('\n')}
+
+	// ${lessonsResultMessage.join('\n')}
+	// 📌 Итого: ${report.lessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}р
+
+	// 💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и  отправить чек для подтверждения 😊
+	// 		`
+	// 		await this.telegramService.sendMessageToAdmin(message);
+
+	// 		return report;
+	// 	}
+	//!
 	// @Cron(CronExpression.EVERY_10_SECONDS)
 	// async sendNotificationAboutLesson() {
 	// 	const currentMoment = new Date();

@@ -30,7 +30,6 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
   const [name, setName] = useState('')
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [telegramLink, setTelegramLink] = useState('')
   const [timezone, setTimezone] = useState<'BY' | 'PL'>('BY')
   const queryClient = useQueryClient()
 
@@ -42,7 +41,6 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       setName('')
       setLogin('')
       setPassword('')
-      setTelegramLink('')
       setTimezone('BY')
     },
   })
@@ -55,7 +53,6 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       name,
       login,
       password,
-      telegram_link: telegramLink || null,
       timezone,
     }
 
@@ -97,15 +94,6 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="telegramLink">Ссылка Telegram (необязательно)</Label>
-              <Input
-                id="telegramLink"
-                value={telegramLink}
-                onChange={(e) => setTelegramLink(e.target.value)}
-                placeholder="https://t.me/username"
               />
             </div>
             <div className="grid gap-2">

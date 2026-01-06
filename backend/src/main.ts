@@ -22,12 +22,18 @@ async function bootstrap() {
 	const documentFactory = () => SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('api/swagger', app, documentFactory);
 
+	// Parse comma-separated origins from environment variable
+	const origins = process.env.ORIGIN_URLS
+		? process.env.ORIGIN_URLS.split(',').map((url) => url.trim())
+		: [];
+
 	app.enableCors({
-		origin: 'http://localhost:5173', // Your Vite dev server URL
+		origin: origins.length > 0 ? origins : true, // Array of allowed origins
 		credentials: true, // Allow cookies
 		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
-	}); app.setGlobalPrefix('api');
+	});
+	app.setGlobalPrefix('api');
 
 	await app.listen(process.env.PORT ?? 5000, () => {
 		console.log(`Server is running on port ${process.env.PORT ?? 5000}`);

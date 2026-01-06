@@ -118,7 +118,7 @@ export const StudentsTable = ({
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </TableHead>
-            {showBalance && <TableHead>Баланс</TableHead>}
+            {showBalance && <TableHead>Часовой пояс</TableHead>}
             <TableHead>Дата создания</TableHead>
             <TableHead>Дата архивации</TableHead>
             <TableHead className="text-right">Действия</TableHead>
@@ -145,7 +145,9 @@ export const StudentsTable = ({
                   <TableCell className={cn("font-medium", isDeleted && "opacity-50")}>
                     <div className="flex items-center gap-2">
                       {hasBirthdayToday && (
-                        <Cake className="h-4 w-4 text-pink-500" title="День рождения сегодня!" />
+                        <div title="День рождения сегодня!">
+                          <Cake className="h-4 w-4 text-pink-500" />
+                        </div>
                       )}
                       {student.name}
                     </div>
@@ -160,7 +162,7 @@ export const StudentsTable = ({
                   </TableCell>
                   {showBalance && (
                     <TableCell className={cn(isDeleted && "opacity-50")}>
-                      {student.balance !== undefined ? student.balance : '-'}
+                      {student.timezone || '-'}
                     </TableCell>
                   )}
                   <TableCell className={cn(isDeleted && "opacity-50")}>

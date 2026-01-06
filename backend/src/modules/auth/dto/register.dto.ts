@@ -34,14 +34,6 @@ export class RegisterAdminDto {
 	@IsString()
 	@IsNotEmpty()
 	@ApiProperty({
-		description: "The telegram id of the admin",
-		example: "1234567890",
-	})
-	telegram_id: string;
-
-	@IsString()
-	@IsNotEmpty()
-	@ApiProperty({
 		description: "The secret key for the admin",
 		example: "1234567890",
 	})

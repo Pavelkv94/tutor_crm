@@ -17,7 +17,6 @@ import { DeleteTeacherDialog } from '@/components/teachers/DeleteTeacherDialog'
 import { GenerateTelegramLinkDialog } from '@/components/teachers/GenerateTelegramLinkDialog'
 import { teachersApi } from '@/api/teachers'
 import { telegramApi } from '@/api/telegram'
-import type { Teacher } from '@/types'
 
 export const Teachers = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)

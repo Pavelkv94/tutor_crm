@@ -33,6 +33,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [studentClass, setStudentClass] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
+  const [timezone, setTimezone] = useState<'BY' | 'PL' | ''>('')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -55,6 +56,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       setStudentClass('')
       setBirthDate('')
       setTeacherId('')
+      setTimezone('')
     },
   })
 
@@ -68,6 +70,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
+      timezone: timezone ? (timezone as 'BY' | 'PL') : null,
     }
 
     createMutation.mutate(data)
@@ -128,6 +131,19 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
                 </Select>
               </div>
             )}
+            <div className="grid gap-2">
+              <Label htmlFor="timezone">Часовой пояс</Label>
+              <Select value={timezone || 'none'} onValueChange={(value: 'BY' | 'PL' | 'none') => setTimezone(value === 'none' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите часовой пояс (необязательно)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Не выбрано</SelectItem>
+                  <SelectItem value="BY">BY</SelectItem>
+                  <SelectItem value="PL">PL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

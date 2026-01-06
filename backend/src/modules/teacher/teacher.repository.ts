@@ -73,6 +73,20 @@ export class TeacherRepository {
 		return this.mapTeacherToView(teacher);
 	}
 
+	async createAdmin(createAdminDto: any): Promise<TeacherOutputDto> {
+		const admin = await this.prisma.teacher.create({
+			data: {
+				...createAdminDto,
+				role: TeacherRole.ADMIN,
+				timezone: Timezone.BY,
+			},
+			include: {
+				telegrams: true,
+			},
+		});
+		return this.mapTeacherToView(admin);
+	}
+
 	async updateTeacher(id: number, updateTeacherDto: UpdateTeacherDto): Promise<void> {
 		const teacher = await this.prisma.teacher.findUnique({
 			where: { id }

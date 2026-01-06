@@ -8,8 +8,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { lessonsApi } from '@/api/lessons'
 import { telegramApi } from '@/api/telegram'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,21 +33,28 @@ export const StudentReportDialog = ({
 }: StudentReportDialogProps) => {
   const { isAdmin } = useAuth()
 
-  // Get current month dates as default
-  const getDefaultDates = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const firstDay = `${year}-${month}-01`
-    const lastDay = new Date(year, now.getMonth() + 1, 0)
+  // Get current month/year as default
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1 // 1-12
+
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString())
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth.toString())
+
+  // Calculate start and end dates based on selected month/year
+  const getDatesFromMonthYear = (year: number, month: number) => {
+    const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0)
       .toISOString()
       .split('T')[0]
     return { firstDay, lastDay }
   }
 
-  const { firstDay, lastDay } = getDefaultDates()
-  const [startDate, setStartDate] = useState(firstDay)
-  const [endDate, setEndDate] = useState(lastDay)
+  const { firstDay: startDate, lastDay: endDate } = getDatesFromMonthYear(
+    parseInt(selectedYear),
+    parseInt(selectedMonth)
+  )
+
   const [shouldFetch, setShouldFetch] = useState(false)
 
   const { data: reportData, isLoading, error } = useQuery({
@@ -77,13 +90,44 @@ export const StudentReportDialog = ({
     if (!newOpen) {
       // Reset state when dialog closes
       setShouldFetch(false)
-      const { firstDay: fd, lastDay: ld } = getDefaultDates()
-      setStartDate(fd)
-      setEndDate(ld)
+      setSelectedYear(currentYear.toString())
+      setSelectedMonth(currentMonth.toString())
       sendLessonsCostMutation.reset()
     }
     onOpenChange(newOpen)
   }
+
+  const handleYearChange = (value: string) => {
+    setSelectedYear(value)
+    setShouldFetch(false)
+  }
+
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value)
+    setShouldFetch(false)
+  }
+
+  // Generate years (current year ± 5 years)
+  const years = []
+  for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+    years.push(i)
+  }
+
+  // Month names in Russian
+  const monthNames = [
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь',
+  ]
 
   if (!studentId) return null
 
@@ -97,28 +141,34 @@ export const StudentReportDialog = ({
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date">Дата начала</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
-                  setShouldFetch(false)
-                }}
-              />
+              <Label htmlFor="year-select">Год</Label>
+              <Select value={selectedYear} onValueChange={handleYearChange}>
+                <SelectTrigger id="year-select">
+                  <SelectValue placeholder="Выберите год" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date">Дата окончания</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value)
-                  setShouldFetch(false)
-                }}
-              />
+              <Label htmlFor="month-select">Месяц</Label>
+              <Select value={selectedMonth} onValueChange={handleMonthChange}>
+                <SelectTrigger id="month-select">
+                  <SelectValue placeholder="Выберите месяц" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthNames.map((monthName, index) => (
+                    <SelectItem key={index + 1} value={(index + 1).toString()}>
+                      {monthName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

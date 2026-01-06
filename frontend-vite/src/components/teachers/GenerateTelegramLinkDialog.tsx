@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import {
   Dialog,

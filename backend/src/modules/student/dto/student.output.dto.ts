@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Timezone } from "../../teacher/dto/teacher.output.dto";
 
 export class StudentOutputDto {
 	@ApiProperty({ description: 'The id of the student', example: 1 })
@@ -15,6 +16,8 @@ export class StudentOutputDto {
 	deleted_at: Date | null;
 	@ApiProperty({ description: 'The teacher id of the student', example: 1 })
 	teacher_id: number | null;
+	@ApiProperty({ description: 'The timezone of the student', example: 'BY' })
+	timezone: Timezone | null;
 }
 
 export class StudentExtendedOutputDto extends StudentOutputDto {

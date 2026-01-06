@@ -45,6 +45,7 @@ model Student {
 	bookUntilCancellation Boolean @default(false)
   created_at DateTime   @default(now())
 	teacher_id Int?
+	timezone Timezone?
 
 	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
 

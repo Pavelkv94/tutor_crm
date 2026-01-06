@@ -10,6 +10,7 @@ import { RegisterAdminOutputDto } from "./dto/register-admin.output.dto";
 import { LoginOutputDto } from "./dto/login.output.dto";
 import { JwtPayloadDto } from "./dto/jwt.payload.dto";
 import { TeacherService } from "../teacher/teacher.service";
+import { Timezone } from "../teacher/dto/teacher.output.dto";
 
 @Injectable()
 export class AuthService {
@@ -49,11 +50,11 @@ export class AuthService {
 		if (registerDto.secret_key !== this.coreEnvConfig.adminRegistrationSecretKey) {
 			throw new UnauthorizedException("Неверный секретный ключ");
 		}
-
-		const teacher = await this.teacherService.getTeacherByLogin(registerDto.login);
-		if (teacher) {
-			throw new BadRequestException("Администратор уже существует");
-		}
+		await this.teacherService.createAdmin({
+			login: registerDto.login,
+			password: registerDto.password,
+			name: registerDto.name,
+		});
 		return {
 			message: "Admin registered successfully",
 		};
