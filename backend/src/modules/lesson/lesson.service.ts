@@ -222,6 +222,14 @@ export class LessonService {
 		return regularLessons;
 	}
 
+	async getRegularLessons(student_id: number): Promise<RegularLessonOutputDto[]> {
+		const student = await this.studentService.findById(student_id);
+		if (!student) {
+			throw new NotFoundException('Студент не найден');
+		}
+		return await this.lessonRegularRepository.getRegularLessons(student_id);
+	}
+
 	async changeTeacher(lessonId: number, changeTeacherDto: ChangeTeacherDto): Promise<void> {
 		const teacher = await this.teacherService.getTeacherById(changeTeacherDto.teacher_id);
 		if (!teacher) {

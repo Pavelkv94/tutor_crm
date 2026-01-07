@@ -28,16 +28,14 @@ interface EditTeacherDialogProps {
 }
 
 export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDialogProps) => {
-  const [name, setName] = useState('')
-  const [telegramLink, setTelegramLink] = useState('')
+	const [name, setName] = useState('')
   const [timezone, setTimezone] = useState<'BY' | 'PL'>('BY')
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (teacher) {
       setName(teacher.name)
-      // telegram_link is no longer in the Teacher type, but we still allow editing it
-      setTelegramLink('')
+			// telegram_link is no longer in the Teacher type, but we still allow editing it
       setTimezone(teacher.timezone)
     }
   }, [teacher])
@@ -55,8 +53,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
     if (!teacher || !name) return
 
     const data: UpdateTeacherInput = {
-      name,
-      telegram_link: telegramLink || null,
+			name,
       timezone,
     }
 
@@ -83,16 +80,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-telegramLink">Ссылка Telegram (необязательно)</Label>
-              <Input
-                id="edit-telegramLink"
-                value={telegramLink}
-                onChange={(e) => setTelegramLink(e.target.value)}
-                placeholder="https://t.me/username"
-              />
-            </div>
-            <div className="grid gap-2">
+						<div className="grid gap-2">
               <Label htmlFor="edit-timezone">Часовой пояс</Label>
               <Select value={timezone} onValueChange={(value: 'BY' | 'PL') => setTimezone(value)}>
                 <SelectTrigger>

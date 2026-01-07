@@ -479,7 +479,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
           )}
 
           {/* Cancel Lesson Section */}
-          {!isChangingTeacher && (
+          {!isChangingTeacher && isAdmin && (
             <div className="space-y-2">
               {!isCancelling ? (
                 <div className="flex gap-2">
@@ -491,15 +491,13 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                   >
                     Отменить занятие
                   </Button>
-                  {isAdmin && (
-                    <Button 
-                      variant="outline" 
-                      onClick={handleDeleteClick}
-                      className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    >
-                      Удалить занятие
-                    </Button>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDeleteClick}
+                    className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Удалить занятие
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4 border p-4 rounded-lg">

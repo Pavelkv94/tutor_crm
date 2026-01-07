@@ -85,6 +85,19 @@ export interface Teacher {
   created_at: string
 }
 
+export interface SalaryDataOutputDto {
+	total_lessons: number
+	teacher: Teacher
+	lessons: {
+		plan_name: string
+		plan_price: number
+		plan_currency: string
+		duration: number
+		plan_type: string
+		lessons_count: number
+	}[]
+}
+
 export interface CreateTeacherInput {
   name: string
   login: string

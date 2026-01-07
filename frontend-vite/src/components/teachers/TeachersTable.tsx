@@ -1,4 +1,4 @@
-import { Edit, Trash2, Link } from 'lucide-react'
+import { Edit, Trash2, Link, BarChart } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   Table,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Teacher } from '@/types'
 
 interface TeachersTableProps {
@@ -17,9 +18,12 @@ interface TeachersTableProps {
   onEdit: (id: number) => void
   onDelete: (id: number) => void
   onGenerateTelegramLink: (id: number) => void
+	onSalaryReport: (id: number) => void
 }
 
-export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLink }: TeachersTableProps) => {
+export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLink, onSalaryReport }: TeachersTableProps) => {
+	const { user } = useAuth()
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -48,6 +52,8 @@ export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLi
               const telegramLink = teacher.telegrams?.[0]?.username
                 ? `https://t.me/${teacher.telegrams[0].username}`
                 : null
+							// Check if current user is viewing their own row
+							const isCurrentUser = user && teacher.id === parseInt(user.id, 10)
               return (
                 <TableRow
                   key={teacher.id}
@@ -86,6 +92,9 @@ export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLi
                   <TableCell className="text-right">
                     {!isDeleted && (
                       <div className="flex justify-end gap-2">
+												<Button variant="outline" size="icon" onClick={() => onSalaryReport(teacher.id)} className="border-orange-500 text-orange-500 hover:bg-orange-50 hover:text-orange-600" title="Рассчет зарплаты">
+													<BarChart className="h-4 w-4" />
+												</Button>
                         <Button
                           variant="outline"
                           size="icon"
@@ -100,17 +109,21 @@ export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLi
                           size="icon"
                           onClick={() => onEdit(teacher.id)}
                           className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+													title="Редактировать"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => onDelete(teacher.id)}
-                          className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+												{!isCurrentUser && (
+													<Button
+														variant="outline"
+														size="icon"
+														onClick={() => onDelete(teacher.id)}
+														className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+														title="Удалить"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												)}
                       </div>
                     )}
                   </TableCell>

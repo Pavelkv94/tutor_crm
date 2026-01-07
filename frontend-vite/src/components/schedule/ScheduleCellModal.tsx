@@ -150,7 +150,7 @@ export const ScheduleCellModal = ({
   // Hide button if:
   // 1. There's an active INDIVIDUAL lesson (max 1 allowed), OR
   // 2. There are 2+ active PAIR lessons (max 2 allowed)
-  const canAddLesson = !hasActiveIndividualLesson && activePairLessonsCount < 2
+	const canAddLesson = true//!hasActiveIndividualLesson && activePairLessonsCount < 2
   
   // Determine the limit message
   const limitReachedMessage = hasActiveIndividualLesson

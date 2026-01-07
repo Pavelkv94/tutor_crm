@@ -17,12 +17,14 @@ import { DeleteTeacherDialog } from '@/components/teachers/DeleteTeacherDialog'
 import { GenerateTelegramLinkDialog } from '@/components/teachers/GenerateTelegramLinkDialog'
 import { teachersApi } from '@/api/teachers'
 import { telegramApi } from '@/api/telegram'
+import { SalaryReportDialog } from '@/components/teachers/SalaryReportDialog'
 
 export const Teachers = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false)
+	const [salaryReportDialogOpen, setSalaryReportDialogOpen] = useState(false)
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null)
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -73,6 +75,11 @@ export const Teachers = () => {
     generateLinkMutation.mutate(id)
   }
 
+	const handleSalaryReport = (id: number) => {
+		setSelectedTeacherId(id)
+		setSalaryReportDialogOpen(true)
+	}
+
   const handleCopy = () => {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -116,6 +123,7 @@ export const Teachers = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onGenerateTelegramLink={handleGenerateTelegramLink}
+						onSalaryReport={handleSalaryReport}
         />
       )}
 
@@ -139,6 +147,11 @@ export const Teachers = () => {
         onCopy={handleCopy}
         copied={copied}
       />
+			<SalaryReportDialog
+				open={salaryReportDialogOpen}
+				onOpenChange={setSalaryReportDialogOpen}
+				selectedTeacher={selectedTeacher}
+			/>
     </div>
   )
 }

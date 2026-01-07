@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { LessonService } from '../lesson/lesson.service';
 import { Response } from 'express';
 import { TeacherService } from '../teacher/teacher.service';
@@ -6,6 +6,8 @@ import { StudentService } from '../student/student.service';
 import { buildScheduleExcel } from './schedule-excel.util';
 import { buildStudentsExcel } from './students-excel.util';
 import { FilterStudentQuery } from '../student/dto/filter.query.dto';
+import { SalaryDataOutputDto } from './dto/salary.output.dto';
+import { LessonStatusEnum } from '../lesson/dto/lesson-status.enum';
 
 @Injectable()
 export class ReportsService {
@@ -81,6 +83,49 @@ export class ReportsService {
 		// Write workbook to response
 		await workbook.xlsx.write(res);
 		res.end();
+	}
+
+	async getDataForSalary(start_date: string, end_date: string, teacher_id: number): Promise<SalaryDataOutputDto> {
+
+		const lessons = await this.lessonService.findLessonsForPeriod(start_date, end_date, teacher_id);
+
+		const teacher = await this.teacherService.getTeacherById(teacher_id);
+		if (!teacher) {
+			throw new NotFoundException(`Teacher with id ${teacher_id} not found`);
+		}
+
+		const completedLessons = lessons.filter(lesson => (lesson.status === LessonStatusEnum.COMPLETED_PAID || lesson.status === LessonStatusEnum.COMPLETED_UNPAID) && lesson.teacher.id === teacher_id);
+
+		const totalLessons = completedLessons.length;
+
+
+
+		const lessonsByPlan = completedLessons.reduce((acc, lesson) => {
+			acc[lesson.plan.id] = (acc[lesson.plan.id] || 0) + 1;
+			return acc;
+		}, {});
+
+
+		const data: SalaryDataOutputDto = {
+			total_lessons: totalLessons,
+			teacher: teacher,
+			lessons: Object.entries(lessonsByPlan).map(([planId, lessonsCount]) => {
+				const plan = lessons.find(lesson => lesson.plan.id === +planId);
+				if (!plan) {
+					throw new NotFoundException(`Plan with id ${planId} not found`);
+				}
+				return {
+					plan_name: plan?.plan.plan_name,
+					plan_price: plan?.plan.plan_price,
+					plan_currency: plan?.plan.plan_currency,
+					duration: plan?.plan.duration,
+					plan_type: plan?.plan.plan_type,
+					lessons_count: lessonsCount as number,
+				};
+			}),
+		};
+
+		return data;
 	}
 }
 

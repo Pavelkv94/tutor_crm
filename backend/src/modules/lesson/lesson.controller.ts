@@ -26,7 +26,7 @@ import { FreeLessonSwagger } from 'src/core/decorators/swagger/lesson/free-lesso
 import { DeleteLessonSwagger } from 'src/core/decorators/swagger/lesson/delete-lesson-swagger.decorator';
 import { GetLessonsForPeriodAndStudentSwagger } from '../../core/decorators/swagger/lesson/get-lessons-for-period-and-student-swagger.decorator';
 import { StudentLessonsOutputDto } from './dto/student-lessons.output.dto';
-
+import { GetRegularLessonsSwagger } from 'src/core/decorators/swagger/lesson/get-regular-lessons-swagger.decorator';
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
@@ -93,6 +93,14 @@ export class LessonController {
 	@UseGuards(JwtAccessGuard, AdminAccessGuard)
 	async createRegularLesson(@Body() regularLessonsInputDto: RegularLessonsInputDto, @Param('student_id') student_id: string) {
 		return await this.lessonService.createRegularLessons(regularLessonsInputDto, +student_id);
+	}
+
+	@GetRegularLessonsSwagger()
+	@Get('regular/:student_id')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async getRegularLessons(@Param('student_id') student_id: string) {
+		return await this.lessonService.getRegularLessons(+student_id);
 	}
 
 	@GetAssignedLessonsSwagger()

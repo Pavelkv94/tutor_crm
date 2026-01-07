@@ -14,21 +14,16 @@ import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import type { Student, Plan, Teacher, SingleLessonInput } from '@/types'
 
-// Generate time options with 5-minute intervals from 8:00 to 22:00
-const generateTimeOptions = () => {
+// Generate minutes options with 5-minute intervals from 00 to 55
+const generateMinutesOptions = () => {
   const options: string[] = []
-  for (let hour = 8; hour <= 22; hour++) {
-    for (let minute = 0; minute < 60; minute += 5) {
-      // Skip times after 22:00
-      if (hour === 22 && minute > 0) break
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-      options.push(timeString)
-    }
+  for (let minute = 0; minute < 60; minute += 5) {
+    options.push(minute.toString().padStart(2, '0'))
   }
   return options
 }
 
-const TIME_OPTIONS = generateTimeOptions()
+const MINUTES_OPTIONS = generateMinutesOptions()
 
 interface CreateSingleLessonFormProps {
   students: Student[]
@@ -73,18 +68,23 @@ export const CreateSingleLessonForm = ({
   const [planId, setPlanId] = useState<string>('')
   const [teacherId, setTeacherId] = useState<string>(defaultTeacherId.toString())
   const [date, setDate] = useState<string>(defaultDate)
-  const [time, setTime] = useState<string>(defaultTime)
+  // Extract hour from defaultTime (format: HH:MM)
+  const defaultHour = defaultTime.split(':')[0] || '00'
+  const [hour] = useState<string>(defaultHour)
+  const [minutes, setMinutes] = useState<string>('00')
   const [isFree, setIsFree] = useState<boolean>(false)
   const [isTrial, setIsTrial] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const handleSubmit = async () => {
-    if (!studentId || !planId || !teacherId || !date || !time) {
+    if (!studentId || !planId || !teacherId || !date || !hour || !minutes) {
       return
     }
 
     setIsSubmitting(true)
     try {
+      // Combine hour and minutes into time string
+      const time = `${hour}:${minutes}`
       const startDate = convertUTC3ToUTC0(date, time)
       const data: SingleLessonInput = {
         student_id: parseInt(studentId, 10),
@@ -180,18 +180,27 @@ export const CreateSingleLessonForm = ({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Время</Label>
-              <Select value={time} onValueChange={setTime}>
-                <SelectTrigger id="time">
-                  <SelectValue placeholder="Выберите время" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  {TIME_OPTIONS.map((timeOption) => (
-                    <SelectItem key={timeOption} value={timeOption}>
-                      {timeOption}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="hour"
+                  value={hour}
+                  disabled
+                  className="w-16 bg-gray-100 text-center"
+                />
+                <span className="text-lg font-semibold">:</span>
+                <Select value={minutes} onValueChange={setMinutes}>
+                  <SelectTrigger id="minutes" className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTES_OPTIONS.map((minuteOption) => (
+                      <SelectItem key={minuteOption} value={minuteOption}>
+                        {minuteOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label className="text-sm font-medium text-muted-foreground">Тип занятия</Label>
@@ -254,7 +263,7 @@ export const CreateSingleLessonForm = ({
             <Button
               variant="default"
               onClick={handleSubmit}
-              disabled={!studentId || !planId || !teacherId || !date || !time || isSubmitting}
+              disabled={!studentId || !planId || !teacherId || !date || !hour || !minutes || isSubmitting}
               className="flex-1"
             >
               Создать

@@ -926,6 +926,47 @@
         "tags": [
           "Lessons"
         ]
+      },
+      "get": {
+        "operationId": "LessonController_getRegularLessons",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": true,
+            "in": "path",
+            "description": "Student ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regular lessons have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegularLessonOutputDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all regular lessons for a student",
+        "tags": [
+          "Lessons"
+        ]
       }
     },
     "/lessons/assigned": {
@@ -1367,11 +1408,6 @@
             "description": "The name of the admin",
             "example": "John Doe"
           },
-          "telegram_id": {
-            "type": "string",
-            "description": "The telegram id of the admin",
-            "example": "1234567890"
-          },
           "secret_key": {
             "type": "string",
             "description": "The secret key for the admin",
@@ -1382,7 +1418,6 @@
           "login",
           "password",
           "name",
-          "telegram_id",
           "secret_key"
         ]
       },
@@ -1484,11 +1519,6 @@
             "description": "The name of the teacher",
             "example": "John Doe"
           },
-          "telegram_link": {
-            "type": "object",
-            "description": "The telegram link of the teacher",
-            "example": "https://t.me/teacher123"
-          },
           "timezone": {
             "type": "string",
             "description": "The timezone of the teacher",
@@ -1499,7 +1529,6 @@
           "login",
           "password",
           "name",
-          "telegram_link",
           "timezone"
         ]
       },
@@ -1641,13 +1670,19 @@
             "type": "number",
             "description": "The teacher id of the student",
             "example": 1
+          },
+          "timezone": {
+            "type": "string",
+            "description": "The timezone of the student",
+            "example": "BY"
           }
         },
         "required": [
           "name",
           "class",
           "birth_date",
-          "teacher_id"
+          "teacher_id",
+          "timezone"
         ]
       },
       "StudentOutputDto": {
@@ -1688,6 +1723,11 @@
             "type": "object",
             "description": "The teacher id of the student",
             "example": 1
+          },
+          "timezone": {
+            "type": "object",
+            "description": "The timezone of the student",
+            "example": "BY"
           }
         },
         "required": [
@@ -1697,7 +1737,8 @@
           "birth_date",
           "created_at",
           "deleted_at",
-          "teacher_id"
+          "teacher_id",
+          "timezone"
         ]
       },
       "StudentExtendedOutputDto": {
@@ -1739,6 +1780,11 @@
             "description": "The teacher id of the student",
             "example": 1
           },
+          "timezone": {
+            "type": "object",
+            "description": "The timezone of the student",
+            "example": "BY"
+          },
           "balance": {
             "type": "number",
             "description": "The balance of the student",
@@ -1768,6 +1814,7 @@
           "created_at",
           "deleted_at",
           "teacher_id",
+          "timezone",
           "balance",
           "bookUntilCancellation",
           "notifyAboutBirthday",
@@ -1825,7 +1872,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-05T14:32:25.484Z"
+            "example": "2026-01-07T19:03:01.763Z"
           },
           "status": {
             "type": "string",
@@ -1862,7 +1909,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-05T14:32:25.484Z",
+            "example": "2026-01-07T19:03:01.763Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1874,14 +1921,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-05T14:32:25.484Z",
+            "example": "2026-01-07T19:03:01.763Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-05T14:32:25.484Z"
+            "example": "2026-01-07T19:03:01.763Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -1969,7 +2016,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-01-05T14:32:25.472Z"
+            "example": "2026-01-07T19:03:01.752Z"
           },
           "isFree": {
             "type": "boolean",
@@ -2003,7 +2050,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-05T14:32:25.499Z"
+            "example": "2026-01-07T19:03:01.780Z"
           }
         },
         "required": [
@@ -2014,6 +2061,67 @@
       "RegularLessonsInputDto": {
         "type": "object",
         "properties": {}
+      },
+      "RegularLessonOutputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Regular lesson ID",
+            "example": 1
+          },
+          "student_id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "Teacher ID",
+            "example": 1
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Start time",
+            "example": "10:00"
+          },
+          "week_day": {
+            "type": "string",
+            "description": "Week day",
+            "example": "MONDAY"
+          },
+          "start_period_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Start period date",
+            "example": "2026-01-07T19:03:01.798Z"
+          },
+          "end_period_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "End period date",
+            "example": "2026-01-07T19:03:01.798Z"
+          },
+          "plan": {
+            "description": "Plan",
+            "example": 1,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanOutputDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "teacher_id",
+          "start_time",
+          "week_day",
+          "start_period_date",
+          "end_period_date",
+          "plan"
+        ]
       },
       "ChangeTeacherDto": {
         "type": "object",

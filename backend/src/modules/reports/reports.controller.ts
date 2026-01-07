@@ -15,7 +15,8 @@ import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { TeacherRoleEnum } from '../teacher/dto/teacherRole';
 import { ApiTags } from '@nestjs/swagger';
 import { FilterStudentQuery } from '../student/dto/filter.query.dto';
-
+import { AdminAccessGuard } from 'src/core/guards/admin-access.guard';
+import { SalaryDataOutputDto } from './dto/salary.output.dto';
 @ApiTags('Reports')
 @Controller('reports')
 @UseGuards(JwtAccessGuard)
@@ -76,6 +77,16 @@ export class ReportsController {
 			filter,
 			res,
 		);
+	}
+
+	@Get('salary')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(AdminAccessGuard)
+	async getDataForSalary(
+		@Query('start_date') start_date: string,
+		@Query('end_date') end_date: string,
+		@Query('teacher_id') teacher_id: string): Promise<SalaryDataOutputDto> {
+		return await this.reportsService.getDataForSalary(start_date, end_date, +teacher_id);
 	}
 }
 

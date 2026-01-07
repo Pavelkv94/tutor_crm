@@ -15,6 +15,17 @@ import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Lesson, Teacher, RescheduledLessonInput } from '@/types'
 
+// Generate minutes options with 5-minute intervals from 00 to 55
+const generateMinutesOptions = () => {
+  const options: string[] = []
+  for (let minute = 0; minute < 60; minute += 5) {
+    options.push(minute.toString().padStart(2, '0'))
+  }
+  return options
+}
+
+const MINUTES_OPTIONS = generateMinutesOptions()
+
 // Convert UTC+3 date and time to UTC+0 ISO string
 const convertUTC3ToUTC0 = (dateStr: string, timeStr: string): string => {
   // Parse date and time in UTC+3
@@ -53,15 +64,21 @@ export const RescheduleLessonForm = ({
   const { isAdmin } = useAuth()
   const [teacherId, setTeacherId] = useState<string>(defaultTeacherId.toString())
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  // Extract hour from defaultTime (format: HH:MM)
+  const defaultHour = defaultTime.split(':')[0] || '00'
+  const [hour] = useState<string>(defaultHour)
+  const [minutes, setMinutes] = useState<string>('00')
 
   const handleSubmit = async () => {
-    if (!teacherId) {
+    if (!teacherId || !hour || !minutes) {
       return
     }
 
     setIsSubmitting(true)
     try {
-      const startDate = convertUTC3ToUTC0(defaultDate, defaultTime)
+      // Combine hour and minutes into time string
+      const time = `${hour}:${minutes}`
+      const startDate = convertUTC3ToUTC0(defaultDate, time)
       const data: RescheduledLessonInput = {
         rescheduled_lesson_id: lesson.id,
         teacher_id: isAdmin ? parseInt(teacherId, 10) : undefined,
@@ -138,12 +155,27 @@ export const RescheduleLessonForm = ({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Время</Label>
-              <Input
-                id="time"
-                value={defaultTime}
-                disabled
-                className="bg-gray-100"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="hour"
+                  value={hour}
+                  disabled
+                  className="w-16 bg-gray-100 text-center"
+                />
+                <span className="text-lg font-semibold">:</span>
+                <Select value={minutes} onValueChange={setMinutes}>
+                  <SelectTrigger id="minutes" className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTES_OPTIONS.map((minuteOption) => (
+                      <SelectItem key={minuteOption} value={minuteOption}>
+                        {minuteOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center space-x-2 pt-6">
               <Checkbox
@@ -161,7 +193,7 @@ export const RescheduleLessonForm = ({
             <Button
               variant="default"
               onClick={handleSubmit}
-              disabled={!teacherId || isSubmitting}
+              disabled={!teacherId || !hour || !minutes || isSubmitting}
               className="flex-1"
             >
               Создать

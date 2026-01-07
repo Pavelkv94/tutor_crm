@@ -175,12 +175,27 @@ export const Schedule = () => {
     return lessonsMap.get(key) || []
   }
 
-  // Format lesson display text
+  // Get first name (text before first space)
+  const getFirstName = (fullName: string): string => {
+    const spaceIndex = fullName.indexOf(' ')
+    return spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName
+  }
+
+  // Format lesson display text (for cells - shows first name only)
   const formatLessonText = (lesson: Lesson): string => {
     const { hours, minutes } = getUTC3DateParts(lesson.date)
     const hoursStr = hours.toString().padStart(2, '0')
     const minutesStr = minutes.toString().padStart(2, '0')
-    return `[${hoursStr}:${minutesStr}] ${lesson.student.name} ${lesson.student.class}кл ${lesson.plan.duration} мин`
+    const firstName = getFirstName(lesson.student.name)
+		return `[${hoursStr}:${minutesStr}] ${firstName} ${lesson.student.class}кл ${lesson.plan.duration}м`
+  }
+
+  // Format lesson display text with full name (for tooltips)
+  const formatLessonTextFull = (lesson: Lesson): string => {
+    const { hours, minutes } = getUTC3DateParts(lesson.date)
+    const hoursStr = hours.toString().padStart(2, '0')
+    const minutesStr = minutes.toString().padStart(2, '0')
+		return `[${hoursStr}:${minutesStr}] ${lesson.student.name} ${lesson.student.class}кл - ${lesson.plan.duration} минут`
   }
 
   // Get background color for lesson status
@@ -388,7 +403,7 @@ export const Schedule = () => {
       {/* Schedule Grid */}
       <div className="overflow-x-auto w-full">
         {/* Weekdays Header */}
-        <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b-2 border-gray-800">
+        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b-2 border-gray-800">
           <div className="bg-gray-100 border-r-2 border-gray-800 h-[24px] text-center font-bold text-xs flex items-center justify-center">
             Время
           </div>
@@ -402,11 +417,11 @@ export const Schedule = () => {
             return (
               <div
                 key={index}
-                className={`bg-yellow-100 border-r border-gray-500 last:border-r-0 h-[24px] text-center font-semibold text-xs flex items-center justify-center ${
+                className={`bg-yellow-100 border-r border-gray-500 last:border-r-0 h-[24px] text-center font-semibold text-xs flex items-center justify-center min-w-0 overflow-hidden ${
                   isCurrentDayColumn ? 'border-l-4 border-l-purple-500 border-r-4 border-r-purple-500' : ''
                 }`}
               >
-                {day}
+                <span className="truncate">{day}</span>
               </div>
             )
           })}
@@ -419,14 +434,14 @@ export const Schedule = () => {
             className="mb-4 border-2 border-gray-400 rounded-lg overflow-hidden"
           >
             {/* Week Header with Day Numbers */}
-            <div className="grid grid-cols-[80px_repeat(7,1fr)] bg-gray-50 border-b border-gray-500">
+            <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-gray-50 border-b border-gray-500">
               <div className="bg-gray-200 border-r-2 border-gray-800 h-[24px]"></div>
               {week.map((day, dayIndex) => {
                 const isCurrentDay = day !== null && isToday(day)
                 return (
                   <div
                     key={dayIndex}
-                    className={`border-r border-gray-500 last:border-r-0 h-[24px] text-center font-bold text-xs flex items-center justify-center ${
+                    className={`border-r border-gray-500 last:border-r-0 h-[24px] text-center font-bold text-xs flex items-center justify-center min-w-0 ${
                       day
                         ? isCurrentDay
                           ? 'bg-purple-400 text-white border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
@@ -444,7 +459,7 @@ export const Schedule = () => {
             {hours.map((hour, hourIndex) => (
               <div
                 key={hourIndex}
-                className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-gray-400 last:border-b-0"
+                className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-gray-400 last:border-b-0"
               >
                 {/* Time Column */}
                 <div className="bg-gray-100 border-r-2 border-gray-800 min-h-[32px] text-center font-bold text-xs flex items-center justify-center">
@@ -460,6 +475,11 @@ export const Schedule = () => {
                   const hasTrialLesson = cellLessons.some((lesson) => lesson.is_trial)
                   const hasFreeLesson = cellLessons.some((lesson) => lesson.is_free)
                   
+                  // Determine current teacher ID
+                  const currentTeacherId = isAdmin && selectedTeacherId 
+                    ? parseInt(selectedTeacherId, 10) 
+                    : user?.id ? parseInt(user.id, 10) : null
+                  
                   const tooltipText = day
                     ? `${weekDayName}, ${day} ${months[parseInt(selectedMonth, 10) - 1]?.label} ${selectedYear}, ${hour}`
                     : ''
@@ -467,7 +487,7 @@ export const Schedule = () => {
                   const is13Hour = hour === '13:00'
                   
                   // Build cell className with proper border handling
-                  let cellClassName = 'border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col'
+                  let cellClassName = 'border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col min-w-0 overflow-hidden'
                   
                   // Apply trial lesson border (2px #f9c600) - takes precedence over free lesson and current day border
                   if (hasTrialLesson) {
@@ -524,20 +544,26 @@ export const Schedule = () => {
                           }
                         >
                           {hasLessons && (
-                            <div className={`flex flex-col ${cellLessons.length === 1 ? 'h-full' : ''}`}>
-                              {cellLessons.map((lesson) => (
-                                <div
-                                  key={lesson.id}
-                                  className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate ${
-                                    cellLessons.length === 1 ? 'h-full flex items-center' : ''
-                                  }`}
-                                  style={{
-                                    backgroundColor: getLessonStatusColor(lesson.status),
-                                  }}
-                                >
-                                  {formatLessonText(lesson)}
-                                </div>
-                              ))}
+                            <div className={`flex flex-col min-w-0 ${cellLessons.length === 1 ? 'h-full' : ''}`}>
+                              {cellLessons.map((lesson) => {
+                                // Check if teacher was replaced (teacher_id different from current teacher)
+                                const isTeacherReplaced = currentTeacherId !== null && lesson.teacher.id !== currentTeacherId
+                                
+                                return (
+                                  <div
+                                    key={lesson.id}
+                                    className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${
+                                      cellLessons.length === 1 ? 'h-full flex items-center' : ''
+                                    }`}
+                                    style={{
+                                      backgroundColor: getLessonStatusColor(lesson.status),
+                                      opacity: isTeacherReplaced ? 0.5 : 1,
+                                    }}
+                                  >
+                                    {formatLessonText(lesson)}
+                                  </div>
+                                )
+                              })}
                             </div>
                           )}
                         </div>
@@ -548,7 +574,7 @@ export const Schedule = () => {
                           <div className="mt-1 space-y-1">
                             {cellLessons.map((lesson) => (
                               <p key={lesson.id} className="text-xs">
-                                {formatLessonText(lesson)}
+                                {formatLessonTextFull(lesson)}
                               </p>
                             ))}
                           </div>

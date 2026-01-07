@@ -60,9 +60,10 @@ export class LessonRepository {
 		const lessons = await this.prisma.lesson.findMany({
 			where: {
 				date: { gte: start_date, lte: endDate },
-				student: {
-					teacher_id,
-				},
+				OR: [
+					{ teacher_id },
+					{ student: { teacher_id } },
+				],
 			},
 			include: {
 				student: true,
@@ -121,9 +122,10 @@ export class LessonRepository {
 		const lessons = await this.prisma.lesson.findMany({
 			where: {
 				date: { gte: startDate, lte: endDate },
-				student: {
-					teacher_id,
-				},
+				OR: [
+					{ teacher_id },
+					{ student: { teacher_id } },
+				],
 			},
 			include: {
 				student: true,
