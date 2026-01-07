@@ -1,6 +1,8 @@
 services:
   tutor_backend:
     container_name: tutor_backend
+    cpus: 1
+    mem_limit: 512m
     restart: unless-stopped
     build:
       context: ./backend
@@ -24,6 +26,8 @@ services:
 
   tutor_frontend:
     container_name: tutor_frontend
+    cpus: 1
+    mem_limit: 512m
     restart: unless-stopped
     build:
       context: ./frontend-vite
@@ -40,6 +44,8 @@ services:
   tutor_postgres:
     image: postgres:17
     container_name: tutor_postgres
+    cpus: 1
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
