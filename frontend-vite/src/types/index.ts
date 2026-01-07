@@ -131,6 +131,14 @@ export interface TeacherBasic {
   name: string
 }
 
+export interface StudentLessonsOutputDto {
+	id: number
+	name: string
+	class: number
+	canceled_lessons: number
+	missed_lessons: number
+}
+
 export interface Lesson {
   id: number
   student: Student

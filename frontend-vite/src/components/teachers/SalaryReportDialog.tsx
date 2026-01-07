@@ -6,7 +6,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog'
 import { useQuery } from '@tanstack/react-query'
-import type { SalaryDataOutputDto, Teacher } from '@/types'
+import type { Teacher } from '@/types'
 import { teachersApi } from '@/api/teachers'
 import { useState, useEffect } from 'react'
 import { Label } from '@radix-ui/react-label'

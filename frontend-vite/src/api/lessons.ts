@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput } from '@/types'
+import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput, StudentLessonsOutputDto } from '@/types'
 
 export const lessonsApi = {
   getLessonsForPeriod: async (
@@ -130,5 +130,14 @@ export const lessonsApi = {
   deleteLesson: async (lessonId: number): Promise<void> => {
     await apiClient.delete(`/lessons/${lessonId}`)
   },
+	getStudentLessonsReport: async (studentId: number, startDate: string, endDate: string): Promise<StudentLessonsOutputDto> => {
+		const response = await apiClient.get<StudentLessonsOutputDto>(`/lessons/student/${studentId}`, {
+			params: {
+				start_date: startDate,
+				end_date: endDate,
+			},
+		})
+		return response.data
+	},
 }
 
