@@ -479,7 +479,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
           )}
 
           {/* Cancel Lesson Section */}
-          {!isChangingTeacher && isAdmin && (
+					{!isChangingTeacher && (
             <div className="space-y-2">
               {!isCancelling ? (
                 <div className="flex gap-2">
@@ -491,13 +491,15 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                   >
                     Отменить занятие
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleDeleteClick}
-                    className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  >
-                    Удалить занятие
-                  </Button>
+									{isAdmin && (
+										<Button
+											variant="outline"
+											onClick={handleDeleteClick}
+											className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+										>
+											Удалить занятие
+										</Button>
+									)}
                 </div>
               ) : (
                 <div className="space-y-4 border p-4 rounded-lg">
@@ -548,7 +550,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                         Прогул
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+											{isAdmin && <div className="flex items-center space-x-2">
                       <Checkbox
                         id="fullCancel"
                         checked={fullCancel}
@@ -563,7 +565,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       <Label htmlFor="fullCancel" className="text-sm font-normal cursor-pointer">
                         Отменить
                       </Label>
-                    </div>
+											</div>}
                   </div>
                   <div className="flex gap-2">
                     <Button

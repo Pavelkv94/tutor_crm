@@ -381,7 +381,7 @@ export const Schedule = () => {
             <div
               className="w-6 h-6 border-2 rounded"
               style={{
-                borderColor: '#1e40af',
+								borderColor: '#3fc12d',
                 backgroundColor: 'transparent',
               }}
             />
@@ -471,15 +471,8 @@ export const Schedule = () => {
                   const weekDayName = weekDays[dayIndex]
                   const cellLessons = getLessonsForCell(day, hour)
                   const hasLessons = cellLessons.length > 0
-                  const isCurrentDay = day !== null && isToday(day)
-                  const hasTrialLesson = cellLessons.some((lesson) => lesson.is_trial)
-                  const hasFreeLesson = cellLessons.some((lesson) => lesson.is_free)
-                  
-                  // Determine current teacher ID
-                  const currentTeacherId = isAdmin && selectedTeacherId 
-                    ? parseInt(selectedTeacherId, 10) 
-                    : user?.id ? parseInt(user.id, 10) : null
-                  
+									const isCurrentDay = day !== null && isToday(day)
+
                   const tooltipText = day
                     ? `${weekDayName}, ${day} ${months[parseInt(selectedMonth, 10) - 1]?.label} ${selectedYear}, ${hour}`
                     : ''
@@ -490,12 +483,7 @@ export const Schedule = () => {
                   let cellClassName = 'border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col min-w-0 overflow-hidden'
                   
                   // Apply trial lesson border (2px #f9c600) - takes precedence over free lesson and current day border
-                  if (hasTrialLesson) {
-                    cellClassName += ' border-2'
-                  } else if (hasFreeLesson) {
-                    // Apply free lesson border (2px dark blue)
-                    cellClassName += ' border-2'
-                  } else if (isCurrentDay) {
+									if (isCurrentDay) {
                     cellClassName += ' border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
                   }
                   
@@ -534,36 +522,23 @@ export const Schedule = () => {
                       <TooltipTrigger asChild>
                         <div 
                           className={cellClassName} 
-                          onClick={handleCellClick}
-                          style={
-                            hasTrialLesson 
-                              ? { borderColor: '#f9c600' } 
-                              : hasFreeLesson 
-                              ? { borderColor: '#1e40af' } 
-                              : undefined
-                          }
+													onClick={handleCellClick}
                         >
                           {hasLessons && (
                             <div className={`flex flex-col min-w-0 ${cellLessons.length === 1 ? 'h-full' : ''}`}>
-                              {cellLessons.map((lesson) => {
-                                // Check if teacher was replaced (teacher_id different from current teacher)
-                                const isTeacherReplaced = currentTeacherId !== null && lesson.teacher.id !== currentTeacherId
-                                
-                                return (
-                                  <div
-                                    key={lesson.id}
-                                    className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${
-                                      cellLessons.length === 1 ? 'h-full flex items-center' : ''
-                                    }`}
-                                    style={{
-                                      backgroundColor: getLessonStatusColor(lesson.status),
-                                      opacity: isTeacherReplaced ? 0.5 : 1,
-                                    }}
-                                  >
-                                    {formatLessonText(lesson)}
-                                  </div>
-                                )
-                              })}
+															{cellLessons.map((lesson) => (
+																<div
+																	key={lesson.id}
+																	className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${cellLessons.length === 1 ? 'h-full flex items-center' : ''
+																		}`}
+																	style={{
+																		backgroundColor: getLessonStatusColor(lesson.status),
+																		border: (lesson.is_trial || lesson.is_free) ? `2px solid ${lesson.is_trial ? '#f9c600' : lesson.is_free ? '#3fc12d' : undefined}` : 'none',
+																	}}
+																>
+																	{formatLessonText(lesson)}
+																</div>
+															))}
                             </div>
                           )}
                         </div>

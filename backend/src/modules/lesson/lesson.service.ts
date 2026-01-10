@@ -203,10 +203,10 @@ export class LessonService {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);
 				}
-				if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
-					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
-					throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
-				}
+				// if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+				// 	await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+				// 	throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
+				// }
 				if (existingLessons.filter(el => el.student.id === student_id).length > 0) {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Это время уже назначено у ${existingLessons[0].student.name}: ${mergedDate}`);
@@ -245,6 +245,9 @@ export class LessonService {
 		const lesson = await this.lessonRepository.findById(lessonId);
 		if (!lesson) {
 			throw new NotFoundException('Урок не найден');
+		}
+		if (cancelLessonDto.status === CancelationStatusEnum.CANCELLED && teacher.role !== TeacherRoleEnum.ADMIN) {
+			throw new BadRequestException('Вы не можете отменить этот урок');
 		}
 		if (lesson.status === LessonStatusEnum.CANCELLED || lesson.status === LessonStatusEnum.MISSED || lesson.status === LessonStatusEnum.RESCHEDULED) {
 			throw new BadRequestException('Урок уже отменен');
