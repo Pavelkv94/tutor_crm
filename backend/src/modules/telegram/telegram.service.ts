@@ -83,10 +83,7 @@ export class TelegramService extends Telegraf {
 	}
 
 	async sendMessageToAdmin(message: string) {
-		console.log('telegramAdminId', this.configService.telegramAdminId);
-		console.log('telegramAdminId.toString()', this.configService.telegramAdminId.toString());
 		const admin = await this.telegramRepository.findTelegramByTelegramId(this.configService.telegramAdminId.toString());
-		console.log('admin', admin);
 		if (!admin) {
 			throw new NotFoundException("Администратор не найден");
 		}
