@@ -32,6 +32,8 @@ export class TelegramRepository {
 
 	async findTelegramByTelegramId(telegramId: string): Promise<Telegram | null> {
 		console.log('telegramId repository', telegramId);
+		const telegrams = await this.prisma.telegram.findMany();
+		console.log('telegrams', telegrams);
 		const telegram = await this.prisma.telegram.findUnique({
 			where: { telegram_id: telegramId },
 		});
