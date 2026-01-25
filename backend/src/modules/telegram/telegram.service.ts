@@ -41,11 +41,6 @@ export class TelegramService extends Telegraf {
 		const firstName = ctx.message?.from?.first_name;
 		const token = ctx.message?.text?.split(' ')[1];
 		const chatId = ctx.message?.chat?.id;
-		console.log(chatId);
-		console.log(username);
-		console.log(firstName);
-		console.log(token);
-		console.log(this.configService.telegramAdminId);
 		if (!token && chatId !== +this.configService.telegramAdminId) {
 			await ctx.replyWithHTML(TELEGRAM_MESSAGES.welcomeUnauthorized);
 			return;
@@ -88,7 +83,10 @@ export class TelegramService extends Telegraf {
 	}
 
 	async sendMessageToAdmin(message: string) {
+		console.log('telegramAdminId', this.configService.telegramAdminId);
+		console.log('telegramAdminId.toString()', this.configService.telegramAdminId.toString());
 		const admin = await this.telegramRepository.findTelegramByTelegramId(this.configService.telegramAdminId.toString());
+		console.log('admin', admin);
 		if (!admin) {
 			throw new NotFoundException("Администратор не найден");
 		}
