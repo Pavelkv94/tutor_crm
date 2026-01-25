@@ -58,6 +58,23 @@ services:
     networks:
       - tutor_network
 
+  tutor_backup:
+    image: postgres:17
+    container_name: tutor_backup
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    depends_on:
+      - tutor_postgres
+    volumes:
+      - ./db_backups:/home/akiro/backups
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: >
+      bash -c "echo '0 3 * * * pg_dump -h tutor_postgres -U ${POSTGRES_USER} -d ${POSTGRES_DB} -F c -f /backups/db_$(date +\%F).dump' | crontab - && cron -f"
+    networks:
+      - tutor_network
+
 volumes:
   tutor_postgres:
 

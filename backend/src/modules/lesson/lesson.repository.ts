@@ -246,8 +246,23 @@ export class LessonRepository {
 	}
 
 	async deleteLesson(lessonId: number): Promise<void> {
-		await this.prisma.lesson.delete({
+		const lesson = await this.prisma.lesson.findUnique({
 			where: { id: lessonId },
+		});
+		if (!lesson) {
+			throw new NotFoundException('Занятие не найдено');
+		}
+
+		await this.prisma.$transaction(async (tx) => {
+			if (lesson.rescheduled_lesson_id) {
+				await tx.lesson.update({
+					where: { id: lesson.rescheduled_lesson_id },
+					data: { rescheduled_lesson_id: null, rescheduled_lesson_date: null },
+				});
+			}
+			await tx.lesson.delete({
+				where: { id: lessonId },
+			});
 		});
 	}
 
