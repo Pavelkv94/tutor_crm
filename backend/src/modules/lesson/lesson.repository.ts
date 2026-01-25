@@ -163,6 +163,8 @@ export class LessonRepository {
 			},
 			where: {
 				status: LessonStatus.PENDING_UNPAID,
+				is_trial: false,
+				is_free: false,
 				date: { lt: now },
 			},
 		});
@@ -172,6 +174,8 @@ export class LessonRepository {
 			},
 			where: {
 				status: LessonStatus.PENDING_PAID,
+				is_trial: false,
+				is_free: false,
 				date: { lt: now },
 			},
 		});
