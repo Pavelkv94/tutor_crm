@@ -21,6 +21,14 @@ import {
 import { plansApi } from '@/api/plans'
 import type { CreatePlanInput } from '@/types'
 
+const currencyFlags: Record<string, string> = {
+	USD: '🇺🇸',
+	EUR: '🇪🇺',
+	PLN: '🇵🇱',
+	BYN: '🇧🇾',
+	RUB: '🇷🇺',
+}
+
 interface CreatePlanDialogProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
@@ -28,7 +36,7 @@ interface CreatePlanDialogProps {
 
 export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) => {
 	const [planPrice, setPlanPrice] = useState('')
-	const [planCurrency, setPlanCurrency] = useState<'PLN' | 'BYN' | 'USD' | 'EUR'>('BYN')
+	const [planCurrency, setPlanCurrency] = useState<'PLN' | 'BYN' | 'USD' | 'EUR' | 'RUB'>('BYN')
 	const [duration, setDuration] = useState('')
 	const [planType, setPlanType] = useState<'INDIVIDUAL' | 'PAIR'>('INDIVIDUAL')
 	const queryClient = useQueryClient()
@@ -81,15 +89,41 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 						</div>
 						<div className="grid gap-2">
 							<Label htmlFor="planCurrency">Валюта</Label>
-							<Select value={planCurrency} onValueChange={(value: 'USD' | 'EUR' | 'PLN' | 'BYN') => setPlanCurrency(value)}>
+							<Select value={planCurrency} onValueChange={(value: 'USD' | 'EUR' | 'PLN' | 'BYN' | 'RUB') => setPlanCurrency(value)}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="BYN">BYN</SelectItem>
-									<SelectItem value="PLN">PLN</SelectItem>
-									<SelectItem value="USD">USD</SelectItem>
-									<SelectItem value="EUR">EUR</SelectItem>
+									<SelectItem value="BYN">
+										<span className="flex items-center gap-2">
+											<span>{currencyFlags.BYN}</span>
+											<span>BYN</span>
+										</span>
+									</SelectItem>
+									<SelectItem value="PLN">
+										<span className="flex items-center gap-2">
+											<span>{currencyFlags.PLN}</span>
+											<span>PLN</span>
+										</span>
+									</SelectItem>
+									<SelectItem value="USD">
+										<span className="flex items-center gap-2">
+											<span>{currencyFlags.USD}</span>
+											<span>USD</span>
+										</span>
+									</SelectItem>
+									<SelectItem value="EUR">
+										<span className="flex items-center gap-2">
+											<span>{currencyFlags.EUR}</span>
+											<span>EUR</span>
+										</span>
+									</SelectItem>
+									<SelectItem value="RUB">
+										<span className="flex items-center gap-2">
+											<span>{currencyFlags.RUB}</span>
+											<span>RUB</span>
+										</span>
+									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

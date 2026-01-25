@@ -177,6 +177,7 @@ enum PlanCurrency {
   EUR
   PLN
 	BYN
+	RUB
 }
 
 enum LessonStatus {

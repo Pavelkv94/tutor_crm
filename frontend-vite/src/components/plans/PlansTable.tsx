@@ -23,6 +23,7 @@ const currencyFlags: Record<string, string> = {
   EUR: '🇪🇺',
   PLN: '🇵🇱',
   BYN: '🇧🇾',
+  RUB: '🇷🇺',
 }
 
 export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => {

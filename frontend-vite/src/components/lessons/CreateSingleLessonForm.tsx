@@ -14,6 +14,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import type { Student, Plan, Teacher, SingleLessonInput } from '@/types'
 
+const currencyFlags: Record<string, string> = {
+	USD: '🇺🇸',
+	EUR: '🇪🇺',
+	PLN: '🇵🇱',
+	BYN: '🇧🇾',
+	RUB: '🇷🇺',
+}
+
 // Generate minutes options with 5-minute intervals from 00 to 55
 const generateMinutesOptions = () => {
   const options: string[] = []
@@ -146,7 +154,12 @@ export const CreateSingleLessonForm = ({
                 <SelectContent>
                   {activePlans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id.toString()}>
-                      {plan.plan_name}
+                      <span className="flex items-center gap-2">
+                        <span>{plan.plan_name}</span>
+                      <span className="text-muted-foreground">
+                        {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] || ''}
+                      </span>
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

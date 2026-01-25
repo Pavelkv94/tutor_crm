@@ -61,7 +61,7 @@ export interface Plan {
 
 export interface CreatePlanInput {
   plan_price: number
-  plan_currency: 'USD' | 'EUR' | 'PLN' | 'BYN'
+  plan_currency: 'USD' | 'EUR' | 'PLN' | 'BYN' | 'RUB'
   duration: number
   plan_type: 'INDIVIDUAL' | 'PAIR'
 }

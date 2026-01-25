@@ -20,6 +20,7 @@ const currencyFlags: Record<string, string> = {
 	EUR: '🇪🇺',
 	PLN: '🇵🇱',
 	BYN: '🇧🇾',
+	RUB: '🇷🇺',
 }
 
 interface SalaryReportDialogProps {
