@@ -517,6 +517,11 @@ export const Schedule = () => {
                     }
                   }
 
+									// Determine current teacher ID
+									const currentTeacherId = isAdmin && selectedTeacherId
+										? parseInt(selectedTeacherId, 10)
+										: user?.id
+
                   return (
                     <Tooltip key={dayIndex}>
                       <TooltipTrigger asChild>
@@ -526,19 +531,23 @@ export const Schedule = () => {
                         >
                           {hasLessons && (
                             <div className={`flex flex-col min-w-0 ${cellLessons.length === 1 ? 'h-full' : ''}`}>
-															{cellLessons.map((lesson) => (
-																<div
-																	key={lesson.id}
-																	className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${cellLessons.length === 1 ? 'h-full flex items-center' : ''
-																		}`}
-																	style={{
-																		backgroundColor: getLessonStatusColor(lesson.status),
-																		border: (lesson.is_trial || lesson.is_free) ? `2px solid ${lesson.is_trial ? '#f9c600' : lesson.is_free ? '#3fc12d' : undefined}` : 'none',
-																	}}
-																>
-																	{formatLessonText(lesson)}
-																</div>
-															))}
+															{cellLessons.map((lesson) => {
+																const isDifferentTeacher = currentTeacherId !== undefined && lesson.teacher.id !== currentTeacherId
+																return (
+																	<div
+																		key={lesson.id}
+																		className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${cellLessons.length === 1 ? 'h-full flex items-center' : ''
+																			}`}
+																		style={{
+																			backgroundColor: getLessonStatusColor(lesson.status),
+																			border: (lesson.is_trial || lesson.is_free) ? `2px solid ${lesson.is_trial ? '#f9c600' : lesson.is_free ? '#3fc12d' : undefined}` : 'none',
+																			opacity: isDifferentTeacher ? 0.5 : 1,
+																		}}
+																	>
+																		{formatLessonText(lesson)}
+																	</div>
+																)
+															})}
                             </div>
                           )}
                         </div>
