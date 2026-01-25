@@ -139,10 +139,11 @@ export class LessonRepository {
 		return lessons.map(l => this.mapLessonToView(l));
 	}
 
-	async findExistingLessonsByDate(mergedDate: Date): Promise<Array<Lesson & { student: Student } & { plan: Plan }>> {
+	async findExistingLessonsByDateAndTeacher(mergedDate: Date, teacher_id: number): Promise<Array<Lesson & { student: Student } & { plan: Plan }>> {
 		return await this.prisma.lesson.findMany({
 			where: {
 				date: mergedDate,
+				teacher_id: teacher_id,
 				status: {
 					in: [LessonStatusEnum.PENDING_UNPAID, LessonStatusEnum.PENDING_PAID, LessonStatusEnum.COMPLETED_PAID, LessonStatusEnum.COMPLETED_UNPAID],
 				},

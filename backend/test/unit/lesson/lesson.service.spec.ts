@@ -161,7 +161,7 @@ describe('LessonService', () => {
 			expect(result).toEqual(mockLessonOutput);
 			expect(planService.findById).toHaveBeenCalledWith(singleLessonDto.plan_id);
 			expect(studentService.findById).toHaveBeenCalledWith(singleLessonDto.student_id);
-			expect(lessonRepository.findExistingLessonsByDate).toHaveBeenCalled();
+			expect(lessonRepository.findExistingLessonsByDateAndTeacher).toHaveBeenCalled();
 			expect(lessonRepository.createSingleLesson).toHaveBeenCalled();
 		});
 

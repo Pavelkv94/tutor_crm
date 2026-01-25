@@ -47,7 +47,7 @@ export class LessonService {
 			throw new NotFoundException('Студент не найден');
 		}
 
-		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDate(date);
+		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDateAndTeacher(date, teacher_id);
 		if (lessonAlreadyBooked.length > 1) {
 			throw new BadRequestException(`Максимальное количество уроков в это время: ${date.toLocaleDateString()}`);
 		}
@@ -76,7 +76,9 @@ export class LessonService {
 
 	async createRescheduledLesson(rescheduledLessonInputDto: RescheduledLessonInputDto, teacher: JwtPayloadDto): Promise<LessonOutputDto> {
 		const { rescheduled_lesson_id, teacher_id, start_date } = rescheduledLessonInputDto;
-
+		if (!teacher_id) {
+			throw new BadRequestException('Преподаватель не указан');
+		}
 		const lesson = await this.lessonRepository.findById(rescheduled_lesson_id);
 		if (!lesson) {
 			throw new NotFoundException('Урок не найден');
@@ -88,7 +90,7 @@ export class LessonService {
 			throw new BadRequestException('Вы не можете перенести это занятие');
 		}
 
-		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDate(new Date(start_date));
+		const lessonAlreadyBooked = await this.lessonRepository.findExistingLessonsByDateAndTeacher(new Date(start_date), teacher_id);
 		if (lessonAlreadyBooked.length > 1) {
 			throw new BadRequestException(`Максимальное количество уроков в это время: ${new Date(start_date).toLocaleDateString()}`);
 		}
@@ -198,7 +200,7 @@ export class LessonService {
 				));
 
 				// Check if lesson already exists
-				const existingLessons = await this.lessonRepository.findExistingLessonsByDate(mergedDate);
+				const existingLessons = await this.lessonRepository.findExistingLessonsByDateAndTeacher(mergedDate, teacher_id);
 				if (existingLessons.length > 1) {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);
