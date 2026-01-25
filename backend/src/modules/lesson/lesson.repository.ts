@@ -257,7 +257,7 @@ export class LessonRepository {
 			if (lesson.rescheduled_lesson_id) {
 				await tx.lesson.update({
 					where: { id: lesson.rescheduled_lesson_id },
-					data: { rescheduled_lesson_id: null, rescheduled_lesson_date: null },
+					data: { rescheduled_to_lesson_id: null, rescheduled_to_lesson_date: null },
 				});
 			}
 			await tx.lesson.delete({
