@@ -125,17 +125,17 @@ export const ScheduleCellModal = ({
 	// 1. No lessons, OR
 	// 2. All lessons have inactive statuses, OR
 	// 3. Cell has exactly one lesson with rescheduled_lesson_id set (can create rescheduled lesson with same plan.id)
-	const isFreeCell =
-		filteredLessons.length === 0 ||
-		filteredLessons.every((lesson: Lesson) => inactiveStatuses.includes(lesson.status)) ||
-		(filteredLessons.length === 1 && filteredLessons[0].rescheduled_lesson_id !== null)
+	// const isFreeCell =
+	// 	filteredLessons.length === 0 ||
+	// 	filteredLessons.every((lesson: Lesson) => inactiveStatuses.includes(lesson.status)) ||
+	// 	(filteredLessons.length === 1 && filteredLessons[0].rescheduled_lesson_id !== null)
 
 	// Check if cell contains trial lesson
 	const hasTrialLesson = filteredLessons.some((lesson: Lesson) => lesson.is_trial)
 
 	// Check if we can show reschedule button
 	// Hide if cell contains trial lesson
-	const canShowRescheduleButton = isFreeCell && lessonsForReschedule.length > 0 && (isAdmin || user) && !hasTrialLesson
+	const canShowRescheduleButton = lessonsForReschedule.length > 0 && (isAdmin || user) && !hasTrialLesson
 
   // Check if there's an active INDIVIDUAL lesson
   const hasActiveIndividualLesson = activeLessons.some(
