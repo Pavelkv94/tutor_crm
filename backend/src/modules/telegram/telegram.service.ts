@@ -224,7 +224,7 @@ ${lessonsResultMessage.join('\n')}
 
 	}
 
-	@Cron(CronExpression.EVERY_DAY_AT_9AM)
+	@Cron(CronExpression.EVERY_DAY_AT_6AM)
 	async birthdayRemind() {
 		const allStudents = await this.studentService.findAllActiveWithBirthdays();
 		const today = new Date();
