@@ -26,6 +26,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { showSuccessToast } from '@/lib/toast'
 import type { UpdateStudentInput } from '@/types'
 
+const currencyFlags: Record<string, string> = {
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+  PLN: '🇵🇱',
+  BYN: '🇧🇾',
+  RUB: '🇷🇺',
+}
+
 const getDefaultDateTimeLocal = (): string => {
   const d = new Date()
   const pad = (n: number) => n.toString().padStart(2, '0')
@@ -274,7 +282,12 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                         ) : (
                           actualPlans.map((plan) => (
                             <SelectItem key={plan.id} value={plan.id.toString()}>
-                              {plan.plan_name} ({plan.duration} мин)
+                              <span className="flex items-center gap-2">
+                                <span>{plan.plan_name}</span>
+                                <span className="text-muted-foreground">
+                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] ?? ''}
+                                </span>
+                              </span>
                             </SelectItem>
                           ))
                         )}
@@ -312,7 +325,12 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                       <SelectContent>
                         {activePlans.map((plan) => (
                           <SelectItem key={plan.id} value={plan.id.toString()}>
-                            {plan.plan_name} ({plan.duration} мин)
+                            <span className="flex items-center gap-2">
+                              <span>{plan.plan_name}</span>
+                              <span className="text-muted-foreground">
+                                {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] ?? ''}
+                              </span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
