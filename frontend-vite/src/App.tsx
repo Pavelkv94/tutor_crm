@@ -66,8 +66,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/students" replace />} />
-            <Route path="*" element={<Navigate to="/students" replace />} />
+            <Route path="/" element={<Navigate to="/schedule" replace />} />
+            <Route path="*" element={<Navigate to="/schedule" replace />} />
           </Routes>
           <Toaster />
         </AuthProvider>

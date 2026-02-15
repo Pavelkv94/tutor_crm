@@ -183,7 +183,7 @@ export interface CancelLessonInput {
 
 export interface RescheduledLessonInput {
   rescheduled_lesson_id: number
-  teacher_id?: number | null
+	teacher_id: number
   start_date: string
 }
 

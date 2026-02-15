@@ -87,7 +87,7 @@ export class ReportsService {
 
 	async getDataForSalary(start_date: string, end_date: string, teacher_id: number): Promise<SalaryDataOutputDto> {
 
-		const lessons = await this.lessonService.findLessonsForPeriod(start_date, end_date, teacher_id);
+		const lessons = await this.lessonService.findLessonsForPeriodForSalary(start_date, end_date, teacher_id);
 
 		const teacher = await this.teacherService.getTeacherById(teacher_id);
 		if (!teacher) {

@@ -125,6 +125,9 @@ export class LessonService {
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
 		return await this.lessonRepository.findLessonsForPeriod(start_date, end_date, teacher_id);
 	}
+	async findLessonsForPeriodForSalary(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
+		return await this.lessonRepository.findLessonsForPeriodForSalary(start_date, end_date, teacher_id);
+	}
 
 	async findLessonsByStartDate(start_date: Date, teacher_id: number): Promise<LessonOutputDto[]> {
 		return await this.lessonRepository.findLessonsByStartDate(start_date, teacher_id);

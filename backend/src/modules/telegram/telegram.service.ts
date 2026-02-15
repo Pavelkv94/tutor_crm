@@ -87,7 +87,7 @@ export class TelegramService extends Telegraf {
 		if (!admin) {
 			throw new NotFoundException("Администратор не найден");
 		}
-		await this.telegram.sendMessage(admin.telegram_id, message);
+		await this.telegram.sendMessage(admin.telegram_id, message, { parse_mode: 'HTML' });
 	}
 
 	async sendMessageToUser(userTelegramId: string, message: string) {
@@ -177,7 +177,7 @@ export class TelegramService extends Telegraf {
 
 		const currencySymbol = report.plan_currency === "USD" ? "$" : report.plan_currency === "EUR" ? "€" : report.plan_currency === "PLN" ? "zł" : "р";
 		const lessonsMessageList = pendingUnpaidLessons.map((lesson: LessonOutputDto) => {
-			return `${lesson.date.toLocaleDateString('ru-RU', { day: '2-digit', timeZone: 'Europe/Minsk' })} ${lesson.date.toLocaleDateString('ru-RU', { month: 'long', timeZone: 'Europe/Minsk' })} (${lesson.date.toLocaleDateString('ru-RU', { weekday: 'long', timeZone: 'Europe/Minsk' })}) ${lesson.date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' })}  ${lesson.is_free ? "(бесплатно)" : ""}`;
+			return `${lesson.date.toLocaleDateString('ru-RU', { day: '2-digit', timeZone: 'Europe/Minsk' })} ${lesson.date.toLocaleDateString('ru-RU', { month: 'long', timeZone: 'Europe/Minsk' })} (${lesson.date.toLocaleDateString('ru-RU', { weekday: 'long', timeZone: 'Europe/Minsk' })}) ${lesson.date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' })} ${lesson.is_free ? "(бесплатно)" : ""}`;
 		});
 
 		const groupedLessonsByPlan = pendingUnpaidLessons.reduce((acc, lesson) => { const key = lesson.plan.id; if (!acc[key]) acc[key] = []; acc[key].push(lesson); return acc; }, {});
@@ -186,13 +186,15 @@ export class TelegramService extends Telegraf {
 			.filter((lessons: LessonOutputDto[]) => lessons.length > 0)
 			.map((lessons: LessonOutputDto[]) => {
 				const plan = lessons[0].plan;
-				return `🔸${lessons.length} урок(ов) ${(plan?.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре")} × ${plan?.plan_price}р = ${lessons.length * (plan?.plan_price ?? 0)}р`;
+				return `🔸${lessons.length} урок(ов) ${(plan?.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре")} × ${plan?.plan_price}${currencySymbol} = ${lessons.length * (plan?.plan_price ?? 0)}${currencySymbol}`;
 			});
 
 		const monthsOnRus = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРАТ", "ДЕКАБРЬ"];
 		const currentMonth = monthsOnRus[report.requested_month - 1];
 		const message = `
 📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]})
+
+<i>⏰ Время указано по московскому часовому поясу (UTC+3)</i>
 
 ${lessonsMessageList.join('\n')}
 

@@ -139,6 +139,28 @@ export class LessonRepository {
 		return lessons.map(l => this.mapLessonToView(l));
 	}
 
+	async findLessonsForPeriodForSalary(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
+		const startDate = startOfDay(parseISO(start_date));
+		const endDate = endOfDay(parseISO(end_date));
+		const lessons = await this.prisma.lesson.findMany({
+			where: {
+				date: { gte: startDate, lte: endDate },
+				OR: [
+					{ teacher_id },
+				],
+			},
+			include: {
+				student: true,
+				teacher: true,
+				plan: true,
+			},
+			orderBy: {
+				date: 'asc',
+			},
+		});
+		return lessons.map(l => this.mapLessonToView(l));
+	}
+
 	async findExistingLessonsByDateAndTeacher(mergedDate: Date, teacher_id: number): Promise<Array<Lesson & { student: Student } & { plan: Plan }>> {
 		return await this.prisma.lesson.findMany({
 			where: {

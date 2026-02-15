@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const payload = getTokenPayload()
       if (payload) {
         setUser(payload)
-        navigate('/students')
+        navigate('/schedule')
       }
     } catch (error) {
       throw error

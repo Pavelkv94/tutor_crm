@@ -22,7 +22,7 @@ export const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRoutePr
   }
 
   if (adminOnly && !isAdmin) {
-    return <Navigate to="/students" replace />
+    return <Navigate to="/schedule" replace />
   }
 
   return <>{children}</>

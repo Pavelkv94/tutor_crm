@@ -13,7 +13,7 @@ export class RescheduledLessonInputDto {
 
 	@IsInt()
 	@IsOptional()
-	teacher_id?: number | null;
+	teacher_id?: number;
 
 	@ApiProperty({
 		description: "Rescheduled lesson date",

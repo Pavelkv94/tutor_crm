@@ -79,9 +79,10 @@ export const RescheduleLessonForm = ({
       // Combine hour and minutes into time string
       const time = `${hour}:${minutes}`
       const startDate = convertUTC3ToUTC0(defaultDate, time)
+			console.log(teacherId)
       const data: RescheduledLessonInput = {
         rescheduled_lesson_id: lesson.id,
-        teacher_id: isAdmin ? parseInt(teacherId, 10) : undefined,
+				teacher_id: parseInt(teacherId, 10),
         start_date: startDate,
       }
       await lessonsApi.createRescheduledLesson(data)
