@@ -10,6 +10,7 @@ import { Teacher } from "@prisma/client";
 import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto";
 import { ManageFreeLessonStatusDto } from "./dto/manage-free-lesson.input.dto";
 import { Timezone } from "../teacher/dto/teacher.output.dto";
+import { UpdateLessonsPlanForPeriodDto } from "./dto/update-lesson-plan.input.dto";
 @Injectable()
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
@@ -113,6 +114,13 @@ export class LessonRepository {
 		await this.prisma.lesson.update({
 			where: { id: rescheduled_lesson_id },
 			data: { rescheduled_to_lesson_id: createdLesson.id, rescheduled_to_lesson_date: createdLesson.date },
+		});
+	}
+
+	async updateLessonsPlanForPeriod(dto: UpdateLessonsPlanForPeriodDto): Promise<void> {
+		await this.prisma.lesson.updateMany({
+			where: { student_id: dto.student_id, date: { gte: dto.start_date, lte: dto.end_date }, plan_id: dto.old_plan_id },
+			data: { plan_id: dto.new_plan_id },
 		});
 	}
 

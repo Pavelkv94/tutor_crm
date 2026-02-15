@@ -105,13 +105,7 @@ export const RescheduleLessonsModal = ({
           <DialogTitle>Доступные занятия для переноса</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {/* Instruction */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
-            </p>
-          </div>
+				<div className="space-y-4">
 
           {/* Lessons List */}
           {isLoading ? (

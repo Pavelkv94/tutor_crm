@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput, StudentLessonsOutputDto } from '@/types'
+import type { Lesson, RegularLessonsInput, SingleLessonInput, CancelLessonInput, RescheduledLessonInput, StudentLessonsOutputDto, UpdateLessonsPlanForPeriodInput } from '@/types'
 
 export const lessonsApi = {
   getLessonsForPeriod: async (
@@ -138,6 +138,13 @@ export const lessonsApi = {
 			},
 		})
 		return response.data
+	},
+	updateLessonsPlanForPeriod: async (data: UpdateLessonsPlanForPeriodInput): Promise<void> => {
+		await apiClient.patch('/lessons/update-lessons-plan-for-period', {
+			...data,
+			start_date: new Date(data.start_date).toISOString(),
+			end_date: new Date(data.end_date).toISOString(),
+		})
 	},
 }
 

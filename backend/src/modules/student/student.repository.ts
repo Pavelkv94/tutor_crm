@@ -1,12 +1,13 @@
 import { PrismaService } from "src/core/prisma/prisma.service";
 import { CreateStudentDto } from "./dto/create-student.dto";
 import { Injectable } from "@nestjs/common";
-import { Student } from "@prisma/client";
+import { Plan, Student } from "@prisma/client";
 import { StudentOutputDto, StudentExtendedOutputDto } from "./dto/student.output.dto";
 import { UpdateStudentDto } from "./dto/update-student.dto";
 import { FilterStudentQuery } from "./dto/filter.query.dto";
 import { Prisma } from "@prisma/client";
 import { Timezone } from "../teacher/dto/teacher.output.dto";
+import { PlanOutputDto } from "../plan/dto/plan.output.dto";
 
 @Injectable()
 export class StudentRepository {
@@ -47,11 +48,15 @@ export class StudentRepository {
 				telegrams: true,
 			},
 		});
+
+		const plans = await this.prisma.plan.findMany({ where: { lessons: { some: { student_id: id, date: { gte: new Date() }, }, }, deleted_at: null }, distinct: ['id'], });
+		const uniquePlansIds = [...new Set(plans.map(p => p.id))];
+		const uniquePlans = plans.filter(p => uniquePlansIds.includes(p.id));
 		if (!student) {
 			return null;
 		}
 
-		return this.mapStudentToExtendedView(student);
+		return this.mapStudentToExtendedView(student, uniquePlans);
 	}
 
 	async getActiveStudentsWithBirthdays(): Promise<any> {
@@ -112,14 +117,27 @@ export class StudentRepository {
 		};
 	}
 
-	private mapStudentToExtendedView(student: Student): StudentExtendedOutputDto {
+	private mapStudentToExtendedView(student: Student, uniquePlans: Plan[]): StudentExtendedOutputDto {
 		return {
 			...this.mapStudentToView(student),
+			actualPlans: uniquePlans.map(this.mapPlanToView),
 			balance: student.balance,
 			bookUntilCancellation: student.bookUntilCancellation,
 			// telegrams: student.telegrams,
 			notifyAboutBirthday: student.notifyAboutBirthday,
 			notifyAboutLessons: student.notifyAboutLessons,
+		};
+	}
+	private mapPlanToView(plan: Plan): PlanOutputDto {
+		return {
+			id: plan.id,
+			plan_name: plan.plan_name,
+			plan_price: plan.plan_price,
+			plan_currency: plan.plan_currency,
+			duration: plan.duration,
+			plan_type: plan.plan_type,
+			deleted_at: plan.deleted_at || null,
+			created_at: plan.created_at,
 		};
 	}
 }

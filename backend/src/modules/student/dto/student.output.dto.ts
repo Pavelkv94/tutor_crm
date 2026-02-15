@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Timezone } from "../../teacher/dto/teacher.output.dto";
+import { PlanOutputDto } from "src/modules/plan/dto/plan.output.dto";
 
 export class StudentOutputDto {
 	@ApiProperty({ description: 'The id of the student', example: 1 })
@@ -21,6 +22,8 @@ export class StudentOutputDto {
 }
 
 export class StudentExtendedOutputDto extends StudentOutputDto {
+	@ApiProperty({ description: 'The actual plans of the student', type: [PlanOutputDto] })
+	actualPlans: PlanOutputDto[];
 	@ApiProperty({ description: 'The balance of the student' , example: 0 })
 	balance: number;
 	@ApiProperty({ description: 'The book until cancellation of the student' , example: false })

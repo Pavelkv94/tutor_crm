@@ -20,6 +20,7 @@ import { TeacherRoleEnum } from '../teacher/dto/teacherRole';
 import { RescheduledLessonInputDto } from './dto/rescheduled-lesson.input.dto';
 import { ManageFreeLessonStatusDto } from './dto/manage-free-lesson.input.dto';
 import { StudentLessonsOutputDto } from './dto/student-lessons.output.dto';
+import { UpdateLessonsPlanForPeriodDto } from './dto/update-lesson-plan.input.dto';
 
 @Injectable()
 export class LessonService {
@@ -120,6 +121,21 @@ export class LessonService {
 		const createdLesson = await this.lessonRepository.createSingleLesson(newLesson as Lesson);
 		await this.lessonRepository.updateRescheduledLesson(lesson.id, createdLesson);
 		return createdLesson;
+	}
+
+	async updateLessonsPlanForPeriod(updateLessonsPlanForPeriodDto: UpdateLessonsPlanForPeriodDto): Promise<void> {
+		const student = await this.studentService.findById(updateLessonsPlanForPeriodDto.student_id);
+		if (!student) {
+			throw new NotFoundException('Студент не найден');
+		}
+		const plan = await this.planService.findById(updateLessonsPlanForPeriodDto.new_plan_id);
+		if (!plan) {
+			throw new NotFoundException('План не найден');
+		}
+		if (plan.deleted_at) {
+			throw new BadRequestException('План уже удален');
+		}
+		await this.lessonRepository.updateLessonsPlanForPeriod(updateLessonsPlanForPeriodDto);
 	}
 
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {

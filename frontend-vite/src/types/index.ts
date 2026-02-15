@@ -26,10 +26,19 @@ export interface Student {
 }
 
 export interface StudentExtended extends Student {
+  actualPlans?: Plan[]
   balance: number
   bookUntilCancellation: boolean
   notifyAboutBirthday: boolean
   notifyAboutLessons: boolean
+}
+
+export interface UpdateLessonsPlanForPeriodInput {
+  student_id: number
+  old_plan_id: number
+  new_plan_id: number
+  start_date: string
+  end_date: string
 }
 
 export interface CreateStudentInput {

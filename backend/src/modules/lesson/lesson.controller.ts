@@ -27,6 +27,8 @@ import { DeleteLessonSwagger } from 'src/core/decorators/swagger/lesson/delete-l
 import { GetLessonsForPeriodAndStudentSwagger } from '../../core/decorators/swagger/lesson/get-lessons-for-period-and-student-swagger.decorator';
 import { StudentLessonsOutputDto } from './dto/student-lessons.output.dto';
 import { GetRegularLessonsSwagger } from 'src/core/decorators/swagger/lesson/get-regular-lessons-swagger.decorator';
+import { UpdateLessonsPlanForPeriodDto } from './dto/update-lesson-plan.input.dto';
+import { UpdateLessonsPlanForPeriodSwagger } from '../../core/decorators/swagger/lesson/update-lessons-plan-for-period-swagger.decorator';
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonController {
@@ -144,5 +146,13 @@ export class LessonController {
 	@UseGuards(JwtAccessGuard, AdminAccessGuard)
 	async deleteLesson(@Param('id') id: string): Promise<void> {
 		await this.lessonService.deleteLesson(+id);
+	}
+
+	@UpdateLessonsPlanForPeriodSwagger()
+	@Patch('update-lessons-plan-for-period')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	async updateLessonsPlanForPeriod(@Body() updateLessonsPlanForPeriodDto: UpdateLessonsPlanForPeriodDto): Promise<void> {
+		await this.lessonService.updateLessonsPlanForPeriod(updateLessonsPlanForPeriodDto);
 	}
 }
