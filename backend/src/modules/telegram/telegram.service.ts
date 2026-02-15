@@ -194,7 +194,7 @@ export class TelegramService extends Telegraf {
 		const message = `
 📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]})
 
-<i>⏰ Время указано по московскому часовому поясу (UTC+3)</i>
+<i>⏰ Время указано по Минску (UTC+3)</i>
 
 ${lessonsMessageList.join('\n')}
 
