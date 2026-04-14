@@ -36,7 +36,7 @@ export class StudentRepository {
 				lessons: true,
 			},
 			where: { ...where, teacher_id: teacher_id },
-			orderBy: [{ deleted_at: 'desc' }, { name: 'asc' }],
+			orderBy: [{ deleted_at: 'desc' }, { class: 'asc' }, { name: 'asc' }],
 		});
 		return students.map(this.mapStudentToView);
 	}

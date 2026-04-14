@@ -94,7 +94,7 @@ export class ReportsService {
 			throw new NotFoundException(`Teacher with id ${teacher_id} not found`);
 		}
 
-		const completedLessons = lessons.filter(lesson => (lesson.status === LessonStatusEnum.COMPLETED_PAID || lesson.status === LessonStatusEnum.COMPLETED_UNPAID) && lesson.teacher.id === teacher_id);
+		const completedLessons = lessons.filter(lesson => (lesson.status === LessonStatusEnum.COMPLETED_PAID || lesson.status === LessonStatusEnum.COMPLETED_UNPAID || lesson.status === LessonStatusEnum.MISSED) && lesson.teacher.id === teacher_id);
 
 		const totalLessons = completedLessons.length;
 

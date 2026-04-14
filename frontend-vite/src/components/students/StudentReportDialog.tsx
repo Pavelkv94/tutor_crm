@@ -44,9 +44,8 @@ export const StudentReportDialog = ({
   // Calculate start and end dates based on selected month/year
   const getDatesFromMonthYear = (year: number, month: number) => {
     const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
-    const lastDay = new Date(year, month, 0)
-      .toISOString()
-      .split('T')[0]
+    const lastDayDate = new Date(year, month, 0)
+    const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
     return { firstDay, lastDay }
   }
 
