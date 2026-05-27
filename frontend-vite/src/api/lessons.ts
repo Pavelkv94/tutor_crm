@@ -130,8 +130,8 @@ export const lessonsApi = {
   deleteLesson: async (lessonId: number): Promise<void> => {
     await apiClient.delete(`/lessons/${lessonId}`)
   },
-	getStudentLessonsReport: async (studentId: number, startDate: string, endDate: string): Promise<StudentLessonsOutputDto> => {
-		const response = await apiClient.get<StudentLessonsOutputDto>(`/lessons/student/${studentId}`, {
+	getStudentLessonsReport: async (studentId: number, startDate: string, endDate: string): Promise<StudentLessonsOutputDto & { rescheduled_lessons: number }> => {
+		const response = await apiClient.get<StudentLessonsOutputDto & { rescheduled_lessons: number }>(`/lessons/student/${studentId}`, {
 			params: {
 				start_date: startDate,
 				end_date: endDate,

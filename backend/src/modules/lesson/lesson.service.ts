@@ -162,12 +162,13 @@ export class LessonService {
 			throw new BadRequestException('Вы не можете получить уроки для этого студента');
 		}
 		const lessons = await this.lessonRepository.findLessonsForPeriodAndStudent(student_id, start_date, end_date);
-		const studentLessonsOutput: StudentLessonsOutputDto = {
+		const studentLessonsOutput: StudentLessonsOutputDto & { rescheduled_lessons: number } = {
 			id: student.id,
 			name: student.name,
 			class: student.class,
 			canceled_lessons: lessons.filter(lesson => lesson.status === LessonStatusEnum.CANCELLED).length,
 			missed_lessons: lessons.filter(lesson => lesson.status === LessonStatusEnum.MISSED).length,
+			rescheduled_lessons: lessons.filter(lesson => lesson.status === LessonStatusEnum.RESCHEDULED).length,
 		}
 		return studentLessonsOutput;
 	}

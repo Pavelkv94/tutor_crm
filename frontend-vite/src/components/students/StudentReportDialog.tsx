@@ -19,11 +19,47 @@ import {
 import { lessonsApi } from '@/api/lessons'
 import { telegramApi } from '@/api/telegram'
 import { useAuth } from '@/contexts/AuthContext'
+import { cn } from '@/lib/utils'
 
 interface StudentReportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   studentId: number | null
+}
+
+type ReportTab = 'payments' | 'info'
+
+const MONTH_NAMES = [
+	'Январь',
+	'Февраль',
+	'Март',
+	'Апрель',
+	'Май',
+	'Июнь',
+	'Июль',
+	'Август',
+	'Сентябрь',
+	'Октябрь',
+	'Ноябрь',
+	'Декабрь',
+]
+
+const getDatesFromMonthYear = (year: number, month: number) => {
+	const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
+	const lastDayDate = new Date(year, month, 0)
+	const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
+	return { firstDay, lastDay }
+}
+
+const isPeriodRangeValid = (
+	startYear: string,
+	startMonth: string,
+	endYear: string,
+	endMonth: string
+) => {
+	const start = parseInt(startYear, 10) * 12 + parseInt(startMonth, 10)
+	const end = parseInt(endYear, 10) * 12 + parseInt(endMonth, 10)
+	return end >= start
 }
 
 export const StudentReportDialog = ({
@@ -33,33 +69,60 @@ export const StudentReportDialog = ({
 }: StudentReportDialogProps) => {
   const { isAdmin } = useAuth()
 
-  // Get current month/year as default
   const now = new Date()
   const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1 // 1-12
+	const currentMonth = now.getMonth() + 1
 
-  const [selectedYear, setSelectedYear] = useState(currentYear.toString())
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth.toString())
+	const defaultYear = currentYear.toString()
+	const defaultMonth = currentMonth.toString()
 
-  // Calculate start and end dates based on selected month/year
-  const getDatesFromMonthYear = (year: number, month: number) => {
-    const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
-    const lastDayDate = new Date(year, month, 0)
-    const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
-    return { firstDay, lastDay }
-  }
+	const [activeTab, setActiveTab] = useState<ReportTab>(isAdmin ? 'payments' : 'info')
 
-  const { firstDay: startDate, lastDay: endDate } = getDatesFromMonthYear(
-    parseInt(selectedYear),
-    parseInt(selectedMonth)
+	const [paymentYear, setPaymentYear] = useState(defaultYear)
+	const [paymentMonth, setPaymentMonth] = useState(defaultMonth)
+
+	const [infoStartYear, setInfoStartYear] = useState(defaultYear)
+	const [infoStartMonth, setInfoStartMonth] = useState(defaultMonth)
+	const [infoEndYear, setInfoEndYear] = useState(defaultYear)
+	const [infoEndMonth, setInfoEndMonth] = useState(defaultMonth)
+
+	const { firstDay: paymentStartDate, lastDay: paymentEndDate } = getDatesFromMonthYear(
+		parseInt(paymentYear, 10),
+		parseInt(paymentMonth, 10)
   )
 
-  const [shouldFetch, setShouldFetch] = useState(false)
+	const { firstDay: infoStartDate } = getDatesFromMonthYear(
+		parseInt(infoStartYear, 10),
+		parseInt(infoStartMonth, 10)
+	)
+	const { lastDay: infoEndDate } = getDatesFromMonthYear(
+		parseInt(infoEndYear, 10),
+		parseInt(infoEndMonth, 10)
+	)
 
-  const { data: reportData, isLoading, error } = useQuery({
-    queryKey: ['studentLessonsReport', studentId, startDate, endDate],
-    queryFn: () => lessonsApi.getStudentLessonsReport(studentId!, startDate, endDate),
-    enabled: !!studentId && shouldFetch && !!startDate && !!endDate,
+	const isInfoPeriodValid = isPeriodRangeValid(
+		infoStartYear,
+		infoStartMonth,
+		infoEndYear,
+		infoEndMonth
+	)
+
+	const [shouldFetchInfo, setShouldFetchInfo] = useState(false)
+	const [isCopied, setIsCopied] = useState(false)
+
+	const {
+		data: reportData,
+		isLoading: isInfoLoading,
+		error: infoError,
+	} = useQuery({
+		queryKey: ['studentLessonsReport', studentId, infoStartDate, infoEndDate],
+		queryFn: () => {
+			if (!studentId) {
+				throw new Error('Student ID is required')
+			}
+			return lessonsApi.getStudentLessonsReport(studentId, infoStartDate, infoEndDate)
+		},
+		enabled: !!studentId && shouldFetchInfo && isInfoPeriodValid,
   })
 
   const sendLessonsCostMutation = useMutation({
@@ -68,192 +131,378 @@ export const StudentReportDialog = ({
   })
 
   const handleGetInfo = () => {
-    if (!startDate || !endDate) {
+		if (!isInfoPeriodValid) {
       return
     }
-    setShouldFetch(true)
+		setShouldFetchInfo(true)
   }
 
   const handleSendLessonsCostToAdmin = () => {
-    if (!studentId || !startDate || !endDate) {
+		if (!studentId || !paymentStartDate || !paymentEndDate) {
       return
     }
     sendLessonsCostMutation.mutate({
       student_id: studentId,
-      start_date: startDate,
-      end_date: endDate,
+			start_date: paymentStartDate,
+			end_date: paymentEndDate,
     })
   }
 
+	const resetState = () => {
+		setActiveTab(isAdmin ? 'payments' : 'info')
+		setShouldFetchInfo(false)
+		setPaymentYear(defaultYear)
+		setPaymentMonth(defaultMonth)
+		setInfoStartYear(defaultYear)
+		setInfoStartMonth(defaultMonth)
+		setInfoEndYear(defaultYear)
+		setInfoEndMonth(defaultMonth)
+		sendLessonsCostMutation.reset()
+	}
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Reset state when dialog closes
-      setShouldFetch(false)
-      setSelectedYear(currentYear.toString())
-      setSelectedMonth(currentMonth.toString())
-      sendLessonsCostMutation.reset()
+			resetState()
     }
     onOpenChange(newOpen)
   }
 
-  const handleYearChange = (value: string) => {
-    setSelectedYear(value)
-    setShouldFetch(false)
+	const handleTabChange = (tab: ReportTab) => {
+		setActiveTab(tab)
+		setShouldFetchInfo(false)
+		sendLessonsCostMutation.reset()
   }
 
-  const handleMonthChange = (value: string) => {
-    setSelectedMonth(value)
-    setShouldFetch(false)
+	const handlePaymentYearChange = (value: string) => {
+		setPaymentYear(value)
+		sendLessonsCostMutation.reset()
   }
 
-  // Generate years (current year ± 5 years)
-  const years = []
-  for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-    years.push(i)
+	const handlePaymentMonthChange = (value: string) => {
+		setPaymentMonth(value)
+		sendLessonsCostMutation.reset()
   }
 
-  // Month names in Russian
-  const monthNames = [
-    'Январь',
-    'Февраль',
-    'Март',
-    'Апрель',
-    'Май',
-    'Июнь',
-    'Июль',
-    'Август',
-    'Сентябрь',
-    'Октябрь',
-    'Ноябрь',
-    'Декабрь',
-  ]
+	const handleInfoPeriodChange = () => {
+		setShouldFetchInfo(false)
+	}
 
-  if (!studentId) return null
+	const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
+	const startMonthLabel = MONTH_NAMES[Math.max(0, Math.min(11, parseInt(infoStartMonth, 10) - 1))] ?? ''
+	const endMonthLabel = MONTH_NAMES[Math.max(0, Math.min(11, parseInt(infoEndMonth, 10) - 1))] ?? ''
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Отчет</DialogTitle>
-          <DialogDescription>Отчет по ученику.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="year-select">Год</Label>
-              <Select value={selectedYear} onValueChange={handleYearChange}>
-                <SelectTrigger id="year-select">
-                  <SelectValue placeholder="Выберите год" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="month-select">Месяц</Label>
-              <Select value={selectedMonth} onValueChange={handleMonthChange}>
-                <SelectTrigger id="month-select">
-                  <SelectValue placeholder="Выберите месяц" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthNames.map((monthName, index) => (
-                    <SelectItem key={index + 1} value={(index + 1).toString()}>
-                      {monthName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+	const renderYearSelect = (
+		id: string,
+		value: string,
+		onChange: (value: string) => void,
+		label: string
+	) => (
+		<div className="space-y-2">
+			<Label htmlFor={id}>{label}</Label>
+			<Select value={value} onValueChange={onChange}>
+				<SelectTrigger id={id}>
+					<SelectValue placeholder="Выберите год" />
+				</SelectTrigger>
+				<SelectContent>
+					{years.map((year) => (
+						<SelectItem key={year} value={year.toString()}>
+							{year}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</div>
+	)
 
-          <Button
-            onClick={handleGetInfo}
-            disabled={!startDate || !endDate || isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Загрузка...' : 'Получить информацию'}
-          </Button>
+	const renderMonthSelect = (
+		id: string,
+		value: string,
+		onChange: (value: string) => void,
+		label: string
+	) => (
+		<div className="space-y-2">
+			<Label htmlFor={id}>{label}</Label>
+			<Select value={value} onValueChange={onChange}>
+				<SelectTrigger id={id}>
+					<SelectValue placeholder="Выберите месяц" />
+				</SelectTrigger>
+				<SelectContent>
+					{MONTH_NAMES.map((monthName, index) => {
+						const monthValue = (index + 1).toString()
+						return (
+							<SelectItem key={monthValue} value={monthValue}>
+								{monthName}
+							</SelectItem>
+						)
+					})}
+				</SelectContent>
+			</Select>
+		</div>
+	)
 
-          {isAdmin && (
-            <Button
-              onClick={handleSendLessonsCostToAdmin}
-              disabled={!startDate || !endDate || sendLessonsCostMutation.isPending}
-              variant="outline"
-              className="w-full border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-            >
-              {sendLessonsCostMutation.isPending ? 'Отправка...' : 'Отправить мне отчет по оплатам'}
-            </Button>
+	if (!studentId) return null
+
+	const parentReportText =
+		reportData && shouldFetchInfo
+			? [
+				`📋 ОТЧЁТ РОДИТЕЛЮ ЗА УЧЕБНЫЙ ГОД ${infoStartYear} — ${infoEndYear}`,
+				`👦 Ученик: ${reportData.name}, ${reportData.class} класс`,
+				`📅 Период: ${startMonthLabel} ${infoStartYear} — ${endMonthLabel} ${infoEndYear}`,
+				`━━━━━━━━━━━━━━━━━━`,
+				`📊 Посещаемость:`,
+				`⏳ Пропуски (отменённые и неотработанные занятия): ${reportData.canceled_lessons}`,
+				`🔄 Переносы: ${reportData.rescheduled_lessons}`,
+				`😱 Прогулы (неявка без предупреждения): ${reportData.missed_lessons}`,
+				`━━━━━━━━━━━━━━━━━━`,
+				`📚 Результаты:`,
+				`______________________________________________`,
+				`━━━━━━━━━━━━━━━━━━`,
+				`🔎 Общие наблюдения об ученике (поведение, работа на занятии, выполнение домашних заданий):`,
+				`______________________________________________`,
+				`━━━━━━━━━━━━━━━━━━`,
+				`📝 Рекомендации:`,
+				`🙏 Прошу вас от всего сердца — уделяйте хотя бы 15 минут в неделю на повторение наших материалов! `,
+				`⚠️ Опыт перерывов со многими учениками показывает, что всё забывается очень сильно. Мы не живём в англоязычной стране, и поэтому только через повторение и регулярные занятия можно удержать результат 🔁`,
+				`📩 Также дополнительно я пришлю вам небольшое домашнее задание на лето — очень прошу вас, выполняйте его потихоньку, чтобы месяцы нашей совместной работы сохранились и нам не пришлось начинать всё заново 🚀`,
+				`━━━━━━━━━━━━━━━━━━`,
+				`⭐️ P.S. Буду благодарна, если поделитесь своими впечатлениями о прогрессе ребёнка в изучении английского языка и дадите фидбэк о нашей работе! 💬`,
+			].join('\n')
+			: ''
+
+	const handleCopyParentReport = async () => {
+		if (!parentReportText) return
+		try {
+			await navigator.clipboard.writeText(parentReportText)
+			setIsCopied(true)
+			window.setTimeout(() => setIsCopied(false), 1500)
+		} catch {
+			setIsCopied(false)
+		}
+	}
+
+	return (
+		<Dialog open={open} onOpenChange={handleOpenChange}>
+			<DialogContent className="sm:max-w-[900px]">
+				<DialogHeader>
+					<DialogTitle>Отчет</DialogTitle>
+					<DialogDescription>Отчет по ученику.</DialogDescription>
+				</DialogHeader>
+
+				{isAdmin && (
+					<div
+						role="tablist"
+						aria-label="Тип отчета"
+						className="flex gap-1 rounded-lg border p-1"
+					>
+						<button
+							type="button"
+							role="tab"
+							aria-selected={activeTab === 'payments'}
+							className={cn(
+								'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+								activeTab === 'payments'
+									? 'bg-blue-100 text-blue-900 shadow-sm'
+									: 'text-muted-foreground hover:bg-blue-50'
+							)}
+							onClick={() => handleTabChange('payments')}
+						>
+							Оплаты
+						</button>
+						<button
+							type="button"
+							role="tab"
+							aria-selected={activeTab === 'info'}
+							className={cn(
+								'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+								activeTab === 'info'
+									? 'bg-blue-100 text-blue-900 shadow-sm'
+									: 'text-muted-foreground hover:bg-blue-50'
+							)}
+							onClick={() => handleTabChange('info')}
+						>
+							Информация
+						</button>
+					</div>
+				)}
+
+				<div className="space-y-4 py-2">
+					{activeTab === 'payments' && isAdmin && (
+						<>
+							<div className="grid grid-cols-2 gap-4">
+								{renderYearSelect(
+									'payment-year-select',
+									paymentYear,
+									handlePaymentYearChange,
+									'Год'
+								)}
+								{renderMonthSelect(
+									'payment-month-select',
+									paymentMonth,
+									handlePaymentMonthChange,
+									'Месяц'
+								)}
+							</div>
+
+							<Button
+								onClick={handleSendLessonsCostToAdmin}
+								disabled={
+									!paymentStartDate || !paymentEndDate || sendLessonsCostMutation.isPending
+								}
+								variant="outline"
+								className="w-full border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+							>
+								{sendLessonsCostMutation.isPending
+									? 'Отправка...'
+									: 'Отправить мне отчет по оплатам'}
+							</Button>
+
+							{sendLessonsCostMutation.isError && (
+								<div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+									<p className="text-sm text-red-600">
+										Не удалось отправить отчет по оплатам
+									</p>
+								</div>
+							)}
+
+							{sendLessonsCostMutation.isSuccess && (
+								<div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+									<p className="text-sm text-green-600">
+										Отчет по оплатам успешно отправлен
+									</p>
+								</div>
+							)}
+						</>
           )}
 
-          {isLoading && (
-            <div className="py-4 text-center text-muted-foreground">
-              Загрузка данных...
-            </div>
-          )}
+					{activeTab === 'info' && (
+						<>
+							<div className="grid gap-6 sm:grid-cols-2">
+								<div className="space-y-3">
+									<p className="text-sm font-medium text-muted-foreground">Начало периода</p>
+									<div className="grid grid-cols-2 gap-4">
+										{renderYearSelect('info-start-year', infoStartYear, (value) => {
+											setInfoStartYear(value)
+											handleInfoPeriodChange()
+										}, 'Год')}
+										{renderMonthSelect('info-start-month', infoStartMonth, (value) => {
+											setInfoStartMonth(value)
+											handleInfoPeriodChange()
+										}, 'Месяц')}
+									</div>
+								</div>
 
-          {error && (
-            <div className="py-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">
-                Не удалось загрузить данные отчета
-              </p>
-            </div>
-          )}
+								<div className="space-y-3">
+									<p className="text-sm font-medium text-muted-foreground">Конец периода</p>
+									<div className="grid grid-cols-2 gap-4">
+										{renderYearSelect('info-end-year', infoEndYear, (value) => {
+											setInfoEndYear(value)
+											handleInfoPeriodChange()
+										}, 'Год')}
+										{renderMonthSelect('info-end-month', infoEndMonth, (value) => {
+											setInfoEndMonth(value)
+											handleInfoPeriodChange()
+										}, 'Месяц')}
+									</div>
+								</div>
+							</div>
 
-          {sendLessonsCostMutation.isError && (
-            <div className="py-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">
-                Не удалось отправить отчет по оплатам
-              </p>
-            </div>
-          )}
+							{!isInfoPeriodValid && (
+								<div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+									<p className="text-sm text-amber-700">
+										Конец периода не может быть раньше начала
+									</p>
+								</div>
+							)}
 
-          {sendLessonsCostMutation.isSuccess && (
-            <div className="py-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">
-                Отчет по оплатам успешно отправлен
-              </p>
-            </div>
-          )}
+							<Button
+								onClick={handleGetInfo}
+								disabled={!isInfoPeriodValid || isInfoLoading}
+								className="w-full"
+							>
+								{isInfoLoading ? 'Загрузка...' : 'Получить информацию'}
+							</Button>
 
-          {reportData && !isLoading && shouldFetch && (
-            <div className="space-y-3">
-              <div className="p-4 border rounded-lg bg-card">
-                <h3 className="font-semibold text-lg mb-3">Информация об ученике</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Имя:</span>
-                    <span className="font-medium">{reportData.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Класс:</span>
-                    <span className="font-medium">{reportData.class}кл</span>
-                  </div>
-                </div>
-              </div>
+							{isInfoLoading && (
+								<div className="py-4 text-center text-muted-foreground">
+									Загрузка данных...
+								</div>
+							)}
 
-              <div className="p-4 border rounded-lg bg-card">
-                <h3 className="font-semibold text-lg mb-3">Статистика занятий</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Отмененные занятия:</span>
-                    <span className="font-medium text-red-600">{reportData.canceled_lessons}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Пропущенные занятия:</span>
-                    <span className="font-medium text-orange-600">{reportData.missed_lessons}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+							{infoError && (
+								<div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+									<p className="text-sm text-red-600">
+										Не удалось загрузить данные отчета
+									</p>
+								</div>
+							)}
+
+							{reportData && !isInfoLoading && shouldFetchInfo && (
+								<div className="grid gap-3 sm:grid-cols-2">
+									<div className="space-y-3">
+										<div className="p-4 border rounded-lg bg-card">
+											<h3 className="font-semibold text-lg mb-3">Информация об ученике</h3>
+											<div className="space-y-2">
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Имя:</span>
+													<span className="font-medium">{reportData.name}</span>
+												</div>
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Класс:</span>
+													<span className="font-medium">{reportData.class}кл</span>
+												</div>
+											</div>
+										</div>
+
+										<div className="p-4 border rounded-lg bg-card">
+											<h3 className="font-semibold text-lg mb-3">Статистика занятий</h3>
+											<div className="space-y-2">
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Отмененные занятия:</span>
+													<span className="font-medium text-red-600">
+														{reportData.canceled_lessons}
+													</span>
+												</div>
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Переносы:</span>
+													<span className="font-medium text-orange-600">
+														{reportData.rescheduled_lessons}
+													</span>
+												</div>
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Пропущенные занятия:</span>
+													<span className="font-medium text-orange-600">
+														{reportData.missed_lessons}
+													</span>
+												</div>
+											</div>
+										</div>
+									</div>
+
+									<div className="space-y-2">
+										<div className="flex items-center justify-between gap-2">
+											<h3 className="font-semibold">Текст для родителя</h3>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={handleCopyParentReport}
+												disabled={!parentReportText}
+											>
+												{isCopied ? 'Скопировано' : 'Копировать'}
+											</Button>
+										</div>
+										<div className="max-h-[45vh] overflow-auto rounded-lg border bg-muted/30">
+											<pre className="whitespace-pre-wrap break-words p-3 text-sm leading-relaxed">
+												{parentReportText}
+											</pre>
+										</div>
+									</div>
+								</div>
+							)}
+						</>
           )}
         </div>
       </DialogContent>
     </Dialog>
   )
 }
-
