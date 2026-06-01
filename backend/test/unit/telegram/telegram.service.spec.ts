@@ -359,17 +359,6 @@ describe('TelegramService', () => {
 		});
 	});
 
-	describe('calculateAge', () => {
-		it('should calculate age correctly', () => {
-			const birthDate = new Date('2010-01-15');
-			const result = (service as any).calculateAge(birthDate);
-
-			// Age calculation depends on current date, so we just check it's a number
-			expect(typeof result).toBe('number');
-			expect(result).toBeGreaterThan(0);
-		});
-	});
-
 	describe('onStart', () => {
 		it('should send welcome message for unauthorized user without token', async () => {
 			const ctx = {

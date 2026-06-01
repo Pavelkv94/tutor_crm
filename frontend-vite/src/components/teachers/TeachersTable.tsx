@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { RegionDisplay } from '@/components/shared/RegionDisplay'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Teacher } from '@/types'
 
@@ -32,7 +33,7 @@ export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLi
             <TableHead>Имя</TableHead>
             <TableHead>Логин</TableHead>
             <TableHead>Ссылка Telegram</TableHead>
-            <TableHead>Часовой пояс</TableHead>
+						<TableHead>Регион</TableHead>
             <TableHead>Роль</TableHead>
             <TableHead>Дата создания</TableHead>
             <TableHead>Дата архивации</TableHead>
@@ -75,7 +76,9 @@ export const TeachersTable = ({ teachers, onEdit, onDelete, onGenerateTelegramLi
                       '-'
                     )}
                   </TableCell>
-                  <TableCell>{teacher.timezone}</TableCell>
+                  <TableCell>
+                    <RegionDisplay region={teacher.timezone} />
+                  </TableCell>
                   <TableCell>
                     {teacher.role === 'ADMIN' ? 'Администратор' : teacher.role === 'TEACHER' ? 'Преподаватель' : teacher.role}
                   </TableCell>

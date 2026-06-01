@@ -1,4 +1,5 @@
-import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, ArrowUpDown } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   Table,
@@ -18,6 +19,9 @@ interface PlansTableProps {
   isDeleting: boolean
 }
 
+type SortField = 'plan_currency'
+type SortDirection = 'asc' | 'desc'
+
 const currencyFlags: Record<string, string> = {
   USD: '🇺🇸',
   EUR: '🇪🇺',
@@ -27,6 +31,29 @@ const currencyFlags: Record<string, string> = {
 }
 
 export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => {
+  const [sortField, setSortField] = useState<SortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedPlans = [...plans].sort((a, b) => {
+    if (!sortField) return 0
+
+    const aValue = a.plan_currency.toLowerCase()
+    const bValue = b.plan_currency.toLowerCase()
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+    return 0
+  })
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -34,7 +61,17 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
           <TableRow>
             <TableHead>Название</TableHead>
             <TableHead>Цена</TableHead>
-            <TableHead>Валюта</TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-2"
+                onClick={() => handleSort('plan_currency')}
+              >
+                Валюта
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TableHead>
             <TableHead>Длительность (мин)</TableHead>
             <TableHead>Тип</TableHead>
             <TableHead>Дата создания</TableHead>
@@ -43,14 +80,14 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {plans.length === 0 ? (
+          {sortedPlans.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground">
                 Тарифы не найдены
               </TableCell>
             </TableRow>
           ) : (
-            plans.map((plan) => {
+            sortedPlans.map((plan) => {
               const isDeleted = !!plan.deleted_at
               return (
                 <TableRow

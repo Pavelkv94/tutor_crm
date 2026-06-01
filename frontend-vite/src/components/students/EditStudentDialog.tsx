@@ -22,7 +22,9 @@ import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { plansApi } from '@/api/plans'
 import { lessonsApi } from '@/api/lessons'
+import { RegionSelect } from '@/components/shared/RegionSelect'
 import { useAuth } from '@/contexts/AuthContext'
+import type { RegionCode } from '@/constants/regions'
 import { showSuccessToast } from '@/lib/toast'
 import type { UpdateStudentInput } from '@/types'
 
@@ -51,7 +53,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [studentClass, setStudentClass] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
-  const [timezone, setTimezone] = useState<'BY' | 'PL' | ''>('')
+  const [timezone, setTimezone] = useState<RegionCode | ''>('')
   const [oldPlanId, setOldPlanId] = useState<string>('')
   const [newPlanId, setNewPlanId] = useState<string>('')
   const [planStartDate, setPlanStartDate] = useState('')
@@ -154,7 +156,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       name,
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : undefined,
-      timezone: timezone ? (timezone as 'BY' | 'PL') : null,
+      timezone: timezone || null,
     }
 
     // Only include teacher_id if admin and it's provided
@@ -234,22 +236,12 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                   </Select>
                 </div>
               )}
-              <div className="grid gap-2">
-                <Label htmlFor="edit-timezone">Часовой пояс</Label>
-                <Select
-                  value={timezone || 'none'}
-                  onValueChange={(value: 'BY' | 'PL' | 'none') => setTimezone(value === 'none' ? '' : value)}
-                >
-                  <SelectTrigger id="edit-timezone" aria-label="Часовой пояс">
-                    <SelectValue placeholder="Выберите часовой пояс (необязательно)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Не выбрано</SelectItem>
-                    <SelectItem value="BY">BY</SelectItem>
-                    <SelectItem value="PL">PL</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <RegionSelect
+                id="edit-timezone"
+                optional
+                value={timezone}
+                onValueChange={setTimezone}
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

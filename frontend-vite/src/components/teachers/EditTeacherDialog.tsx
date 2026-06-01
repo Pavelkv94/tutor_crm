@@ -11,13 +11,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { RegionSelect } from '@/components/shared/RegionSelect'
+import { DEFAULT_REGION } from '@/constants/regions'
+import type { RegionCode } from '@/constants/regions'
 import { teachersApi } from '@/api/teachers'
 import type { UpdateTeacherInput, Teacher } from '@/types'
 
@@ -29,7 +25,7 @@ interface EditTeacherDialogProps {
 
 export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDialogProps) => {
 	const [name, setName] = useState('')
-  const [timezone, setTimezone] = useState<'BY' | 'PL'>('BY')
+  const [timezone, setTimezone] = useState<RegionCode>(DEFAULT_REGION)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -80,18 +76,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
                 required
               />
             </div>
-						<div className="grid gap-2">
-              <Label htmlFor="edit-timezone">Часовой пояс</Label>
-              <Select value={timezone} onValueChange={(value: 'BY' | 'PL') => setTimezone(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BY">BY</SelectItem>
-                  <SelectItem value="PL">PL</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <RegionSelect id="edit-timezone" value={timezone} onValueChange={setTimezone} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -10,6 +10,7 @@ import { Teacher } from "@prisma/client";
 import { CancelationStatusEnum, CancelLessonDto } from "./dto/cancel-lesson.dto";
 import { ManageFreeLessonStatusDto } from "./dto/manage-free-lesson.input.dto";
 import { Timezone } from "../teacher/dto/teacher.output.dto";
+import { calculateAgeFromBirthDate } from "src/core/utils/calculate-age.util";
 import { UpdateLessonsPlanForPeriodDto } from "./dto/update-lesson-plan.input.dto";
 @Injectable()
 export class LessonRepository {
@@ -312,6 +313,7 @@ export class LessonRepository {
 				name: lesson.student.name,
 				class: lesson.student.class,
 				birth_date: lesson.student.birth_date,
+				age: calculateAgeFromBirthDate(lesson.student.birth_date),
 				created_at: lesson.student.created_at,
 				deleted_at: lesson.student.deleted_at,
 				teacher_id: lesson.student.teacher_id || null,

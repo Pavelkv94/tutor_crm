@@ -20,7 +20,9 @@ import {
 } from '@/components/ui/select'
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
+import { RegionSelect } from '@/components/shared/RegionSelect'
 import { useAuth } from '@/contexts/AuthContext'
+import type { RegionCode } from '@/constants/regions'
 import type { CreateStudentInput } from '@/types'
 
 interface CreateStudentDialogProps {
@@ -33,7 +35,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [studentClass, setStudentClass] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
-  const [timezone, setTimezone] = useState<'BY' | 'PL' | ''>('')
+  const [timezone, setTimezone] = useState<RegionCode | ''>('')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -70,7 +72,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
-      timezone: timezone ? (timezone as 'BY' | 'PL') : null,
+      timezone: timezone || null,
     }
 
     createMutation.mutate(data)
@@ -131,19 +133,11 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
                 </Select>
               </div>
             )}
-            <div className="grid gap-2">
-              <Label htmlFor="timezone">Часовой пояс</Label>
-              <Select value={timezone || 'none'} onValueChange={(value: 'BY' | 'PL' | 'none') => setTimezone(value === 'none' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите часовой пояс (необязательно)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Не выбрано</SelectItem>
-                  <SelectItem value="BY">BY</SelectItem>
-                  <SelectItem value="PL">PL</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <RegionSelect
+              optional
+              value={timezone}
+              onValueChange={setTimezone}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

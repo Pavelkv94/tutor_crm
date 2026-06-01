@@ -18,6 +18,7 @@ import { LessonService } from '../lesson/lesson.service';
 import { JwtPayloadDto } from '../auth/dto/jwt.payload.dto';
 import { LessonStatusEnum } from '../lesson/dto/lesson-status.enum';
 import { LessonOutputDto } from '../lesson/dto/lesson.output.dto';
+import { calculateAgeFromBirthDate } from 'src/core/utils/calculate-age.util';
 
 @Update()
 @Injectable()
@@ -192,17 +193,17 @@ export class TelegramService extends Telegraf {
 		const monthsOnRus = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРАТ", "ДЕКАБРЬ"];
 		const currentMonth = monthsOnRus[report.requested_month - 1];
 		const message = `
-📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]})
+📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]} ${student.class}кл)
 
-<i>⏰ Время указано по Минску (UTC+3)</i>
+<i>⏰ Время указано по МСК (UTC+3)</i>
 
 ${lessonsMessageList.join('\n')}
 
 ${lessonsResultMessage.join('\n')}
-
 📌 Итого: ${pendingUnpaidLessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}${currencySymbol}
 
-💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и  отправить чек для подтверждения 😊
+💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊
+🔗 ССЫЛКА НА ОПЛАТУ:
 				
 `
 
@@ -255,7 +256,7 @@ ${lessonsResultMessage.join('\n')}
 		const bellEmoji = '🔔';
 		const noteEmoji = '📝';
 
-		const age = this.calculateAge(student.birth_date);
+		const age = calculateAgeFromBirthDate(student.birth_date) ?? '?';
 
 		return `
 		${bellEmoji} НАПОМИНАНИЕ О ДНЕ РОЖДЕНИЯ ${bellEmoji}
@@ -265,21 +266,6 @@ ${lessonsResultMessage.join('\n')}
 		
 		${noteEmoji} Не забудьте поздравить с Днем рождения!
 			`.trim();
-	}
-
-	private calculateAge(birthDate: Date): number {
-		const today = new Date();
-		let age = today.getFullYear() - birthDate.getFullYear();
-
-		const hasHadBirthdayThisYear =
-			today.getMonth() > birthDate.getMonth() ||
-			(today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
-
-		if (!hasHadBirthdayThisYear) {
-			age--;
-		}
-
-		return age;
 	}
 
 	// 	async sendReport(sendReportDto: SendReportDto) {

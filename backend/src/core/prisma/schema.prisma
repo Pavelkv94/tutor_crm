@@ -198,6 +198,10 @@ enum TeacherRole {
 enum Timezone {
 	BY
 	PL
+	KZ
+	GE
+	RU
+	EU
 }
 
 enum WeekDay {

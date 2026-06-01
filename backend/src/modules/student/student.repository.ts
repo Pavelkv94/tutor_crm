@@ -8,6 +8,7 @@ import { FilterStudentQuery } from "./dto/filter.query.dto";
 import { Prisma } from "@prisma/client";
 import { Timezone } from "../teacher/dto/teacher.output.dto";
 import { PlanOutputDto } from "../plan/dto/plan.output.dto";
+import { calculateAgeFromBirthDate } from "src/core/utils/calculate-age.util";
 
 @Injectable()
 export class StudentRepository {
@@ -110,6 +111,7 @@ export class StudentRepository {
 			name: student.name,
 			class: student.class,
 			birth_date: student.birth_date,
+			age: calculateAgeFromBirthDate(student.birth_date),
 			created_at: student.created_at,
 			deleted_at: student.deleted_at || null,
 			teacher_id: student.teacher_id || null,

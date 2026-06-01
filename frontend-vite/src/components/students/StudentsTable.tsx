@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { RegionDisplay } from '@/components/shared/RegionDisplay'
 import type { Student } from '@/types'
 
 interface StudentsTableProps {
@@ -27,6 +28,26 @@ interface StudentsTableProps {
 
 type SortField = 'name' | 'class' | 'birth_date'
 type SortDirection = 'asc' | 'desc'
+
+const formatAgeLabel = (age: number): string => {
+  const lastDigit = age % 10
+  const lastTwoDigits = age % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) {
+    return `${age} год`
+  }
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) {
+    return `${age} года`
+  }
+  return `${age} лет`
+}
+
+const formatClassWithAge = (student: Student): string => {
+  if (student.age === null || student.age === undefined) {
+    return String(student.class)
+  }
+  return `${student.class} (${formatAgeLabel(student.age)})`
+}
 
 export const StudentsTable = ({
   students,
@@ -107,6 +128,7 @@ export const StudentsTable = ({
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </TableHead>
+            {showBalance && <TableHead>Регион</TableHead>}
             <TableHead>
               <Button
                 variant="ghost"
@@ -118,7 +140,6 @@ export const StudentsTable = ({
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </TableHead>
-            {showBalance && <TableHead>Часовой пояс</TableHead>}
             <TableHead>Дата создания</TableHead>
             <TableHead>Дата архивации</TableHead>
             <TableHead className="text-right">Действия</TableHead>
@@ -153,18 +174,18 @@ export const StudentsTable = ({
                     </div>
                   </TableCell>
                   <TableCell className={cn(isDeleted && "opacity-50")}>
-                    {student.class}
+                    {formatClassWithAge(student)}
                   </TableCell>
+                  {showBalance && (
+                    <TableCell className={cn(isDeleted && "opacity-50")}>
+                      <RegionDisplay region={student.timezone} />
+                    </TableCell>
+                  )}
                   <TableCell className={cn(isDeleted && "opacity-50")}>
                     {student.birth_date
                       ? format(new Date(student.birth_date), 'MMM dd, yyyy')
                       : '-'}
                   </TableCell>
-                  {showBalance && (
-                    <TableCell className={cn(isDeleted && "opacity-50")}>
-                      {student.timezone || '-'}
-                    </TableCell>
-                  )}
                   <TableCell className={cn(isDeleted && "opacity-50")}>
                     {student.created_at
                       ? format(new Date(student.created_at), 'MMM dd, yyyy')

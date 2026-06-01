@@ -1,3 +1,5 @@
+import type { RegionCode } from '@/constants/regions'
+
 export interface LoginInput {
   login: string
   password: string
@@ -19,10 +21,11 @@ export interface Student {
   name: string
   class: number
   birth_date: string
+  age: number | null
   created_at: string
   deleted_at: string | null
   teacher_id?: number | null
-  timezone?: 'BY' | 'PL' | null
+  timezone?: RegionCode | null
 }
 
 export interface StudentExtended extends Student {
@@ -46,7 +49,7 @@ export interface CreateStudentInput {
   class: number
   birth_date: string | null
   teacher_id: number
-  timezone?: 'BY' | 'PL' | null
+  timezone?: RegionCode | null
 }
 
 export interface UpdateStudentInput {
@@ -54,7 +57,7 @@ export interface UpdateStudentInput {
   class?: number
   birth_date?: string
   teacher_id?: number
-  timezone?: 'BY' | 'PL' | null
+  timezone?: RegionCode | null
 }
 
 export interface Plan {
@@ -88,7 +91,7 @@ export interface Teacher {
   name: string
   login: string
   role: string
-  timezone: 'BY' | 'PL'
+  timezone: RegionCode
   telegrams: Telegram[]
   deleted_at: string | null
   created_at: string
@@ -111,13 +114,13 @@ export interface CreateTeacherInput {
   name: string
   login: string
   password: string
-  timezone: 'BY' | 'PL'
+  timezone: RegionCode
 }
 
 export interface UpdateTeacherInput {
   name: string
   telegram_link?: string | null
-  timezone: 'BY' | 'PL'
+  timezone: RegionCode
 }
 
 export type WeekDay = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'

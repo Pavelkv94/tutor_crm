@@ -4,6 +4,10 @@ import { TelegramOutputDto } from "src/modules/telegram/dto/telegram.outpit.dto"
 export enum Timezone {
 	BY = "BY",
 	PL = "PL",
+	KZ = "KZ",
+	GE = "GE",
+	RU = "RU",
+	EU = "EU",
 }
 
 export class TeacherOutputDto {
