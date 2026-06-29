@@ -36,3 +36,19 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@layer utilities {
+  @keyframes badge-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.15);
+    }
+  }
+
+  .animate-badge-pulse {
+    animation: badge-pulse 2s ease-in-out infinite;
+  }
+}

@@ -1,11 +1,14 @@
 import { Sidebar } from './Sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useTasksPendingCountStream } from '@/hooks/useTasksPendingCountStream'
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
+  useTasksPendingCountStream()
+
   return (
     <TooltipProvider>
       <div className="flex h-screen overflow-hidden">
