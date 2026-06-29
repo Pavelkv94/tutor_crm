@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { LessonService } from './lesson.service';
-import { LessonController } from './lesson.controller';
-import { LessonRepository } from './lesson.repository';
+import { LessonService } from './application/lesson.service';
+import { LessonController } from './interface/lesson.controller';
+import { LessonRepository } from './infrastructure/lesson.repository';
 import { PlanModule } from '../plan/plan.module';
-import { LessonRegularRepository } from './lesson-regular.repository';
+import { LessonRegularRepository } from './infrastructure/lesson-regular.repository';
 import { StudentModule } from '../student/student.module';
 import { TeacherModule } from '../teacher/teacher.module';
 @Module({

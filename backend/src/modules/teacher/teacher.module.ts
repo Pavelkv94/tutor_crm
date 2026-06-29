@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { TeacherController } from './teacher.controller';
-import { TeacherService } from './teacher.service';
-import { CoreModule } from 'src/core/core.module';
-import { TeacherRepository } from './teacher.repository';
-import { BcryptService } from '../auth/bcrypt.service';
+import { TeacherController } from './interface/teacher.controller';
+import { TeacherService } from './application/teacher.service';
+import { AppConfigModule } from '@/config/app-config.module';
+import { TeacherRepository } from './infrastructure/teacher.repository';
+import { BcryptModule } from '@/infrastructure/bcrypt/bcrypt.module';
 
 @Module({
-  imports: [PassportModule, CoreModule],
+	imports: [PassportModule, AppConfigModule, BcryptModule],
   controllers: [TeacherController],
-  providers: [TeacherService, TeacherRepository, BcryptService],
+	providers: [TeacherService, TeacherRepository],
 	exports: [TeacherService, TeacherRepository],
 })
 export class TeacherModule {}

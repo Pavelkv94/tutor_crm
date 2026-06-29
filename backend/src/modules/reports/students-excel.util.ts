@@ -1,5 +1,5 @@
 import * as ExcelJS from 'exceljs';
-import { StudentOutputDto } from '../student/dto/student.output.dto';
+import { StudentDto } from '@/modules/student/interface/dto/responses/student.dto';
 
 interface DateParts {
 	year: number;
@@ -8,7 +8,7 @@ interface DateParts {
 }
 
 export const buildStudentsExcel = (
-	students: StudentOutputDto[],
+	students: StudentDto[],
 	teacherName: string
 ): ExcelJS.Workbook => {
 	// Create a new workbook

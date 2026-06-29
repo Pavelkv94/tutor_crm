@@ -1,12 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/app.module';
-import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole, PlanType, PlanCurrency } from '@prisma/client';
-import { BcryptService } from '../../src/modules/auth/bcrypt.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
+import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 
 describe('PlanController (e2e)', () => {
 	let app: INestApplication;
@@ -18,14 +16,12 @@ describe('PlanController (e2e)', () => {
 		login: 'test_admin_plan_e2e',
 		password: 'testPassword123',
 		name: 'Test Admin Plan E2E',
-		telegram_id: '123456789',
 	};
 
 	const testTeacher = {
 		login: 'test_teacher_plan_e2e',
 		password: 'testPassword123',
 		name: 'Test Teacher Plan E2E',
-		telegram_id: '987654321',
 	};
 
 	const testPlan = {
@@ -45,20 +41,11 @@ describe('PlanController (e2e)', () => {
 	};
 
 	beforeAll(async () => {
-		module = await Test.createTestingModule({
-			imports: [AppModule],
-		})
-			.overrideGuard(ThrottlerGuard)
-			.useValue({
-				canActivate: () => true,
-			})
-			.compile();
-
-		app = await createTestApp();
+		const testContext = await createTestApp();
+		app = testContext.app;
+		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);
 		bcryptService = module.get<BcryptService>(BcryptService);
-
-		await app.init();
 	});
 
 	afterAll(async () => {
@@ -119,8 +106,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -136,7 +123,7 @@ describe('PlanController (e2e)', () => {
 			expect(response.body).toHaveProperty('id');
 			expect(response.body).toHaveProperty('plan_name');
 			expect(response.body.plan_name).toContain(testPlan.plan_type);
-			expect(response.body.plan_name).toContain(`${testPlan.duration} min`);
+			expect(response.body.plan_name).toContain(`${testPlan.duration} мин`);
 			expect(response.body).toHaveProperty('plan_price', testPlan.plan_price);
 			expect(response.body).toHaveProperty('plan_currency', testPlan.plan_currency);
 			expect(response.body).toHaveProperty('duration', testPlan.duration);
@@ -149,7 +136,7 @@ describe('PlanController (e2e)', () => {
 			expect(createdPlan).toBeDefined();
 			expect(createdPlan?.plan_name).toBeDefined();
 			expect(createdPlan?.plan_name).toContain(testPlan.plan_type);
-			expect(createdPlan?.plan_name).toContain(`${testPlan.duration} min`);
+			expect(createdPlan?.plan_name).toContain(`${testPlan.duration} мин`);
 		});
 
 		it('should return 401 without token', async () => {
@@ -171,8 +158,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -198,8 +185,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -241,8 +228,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -281,8 +268,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -316,8 +303,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -365,8 +352,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -391,8 +378,8 @@ describe('PlanController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,

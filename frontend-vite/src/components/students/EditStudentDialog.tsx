@@ -202,7 +202,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                 <Input
                   id="edit-class"
                   type="number"
-                  min="1"
+                  min="0"
                   value={studentClass}
                   onChange={(e) => setStudentClass(e.target.value)}
                   required

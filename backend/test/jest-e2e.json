@@ -9,6 +9,7 @@
   "setupFiles": ["./setup-env.ts"],
 	"globalSetup": "<rootDir>/setup-migrations.ts",
   "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/../src/$1"
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^@/(.*)$": "<rootDir>/../src/$1"
   }
 }

@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client"
+  output       = "./generated"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Teacher {
+  id          Int      @id @default(autoincrement())
+  name        String
+	login       String @unique
+	password    String
+	role        TeacherRole @default(TEACHER)
+	timezone    Timezone?
+
+	lessons Lesson[]
+	students Student[]
+	regular_lessons RegularLesson[]
+
+  created_at  DateTime @default(now())
+	deleted_at DateTime?
+  telegrams  Telegram[]
+	telegram_tokens TelegramToken[]
+
+	@@map("teacher")
+}
+
+model Student {
+  id         Int        @id @default(autoincrement())
+  name       String
+  class      Int
+  birth_date DateTime?
+	balance    Int @default(0)
+	notifyAboutBirthday Boolean @default(true)
+	notifyAboutLessons Boolean @default(true)
+	bookUntilCancellation Boolean @default(false)
+  created_at DateTime   @default(now())
+	teacher_id Int?
+	timezone Timezone?
+
+	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+	regular_lessons RegularLesson[]
+  telegrams  Telegram[]
+  lessons    Lesson[]
+	telegram_tokens TelegramToken[]
+
+	deleted_at DateTime?
+
+	@@map("student")
+}
+
+model RegularLesson {
+	id Int @id @default(autoincrement())
+	plan_id Int
+	student_id Int
+	teacher_id Int
+	start_time String
+	week_day WeekDay
+	start_period_date DateTime
+	end_period_date DateTime
+
+	created_at DateTime @default(now())
+	deleted_at DateTime?
+
+	teacher     Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+	student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+	plan        Plan     @relation(fields: [plan_id], references: [id])
+
+	lessons Lesson[]
+
+	@@map("regular_lesson")
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  student_id  Int
+	teacher_id Int
+  plan_id     Int
+	status      LessonStatus @default(PENDING_UNPAID)
+	comment     String?
+	date  DateTime @db.Timestamptz
+	is_regular Boolean @default(false)
+
+	is_free Boolean @default(false)
+	is_trial Boolean @default(false)
+
+	rescheduled_lesson_id Int?
+	rescheduled_lesson_date DateTime?
+	rescheduled_to_lesson_id Int?
+	rescheduled_to_lesson_date DateTime?
+
+  created_at  DateTime @default(now())
+
+	regular_lesson_id Int?
+
+	teacher     Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  plan        Plan     @relation(fields: [plan_id], references: [id])
+
+	regular_lesson RegularLesson? @relation(fields: [regular_lesson_id], references: [id])
+
+	@@map("lesson")
+}
+
+model Plan {
+  id            Int         @id @default(autoincrement())
+  plan_type     PlanType
+  plan_currency PlanCurrency
+	plan_name     String
+  duration      Int
+	plan_price    Int
+  created_at    DateTime    @default(now())
+	deleted_at    DateTime?
+
+  lessons       Lesson[]
+	regular_lessons RegularLesson[]
+
+	@@map("plan")
+}
+
+model Telegram {
+  id          Int      @id @default(autoincrement())
+  student_id Int?
+  teacher_id Int?
+  telegram_id String @unique
+	username String?
+	first_name String?
+  type        TelegramType @default(STUDENT)
+  created_at  DateTime @default(now())
+
+	student     Student?  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+	@@map("telegram")
+}
+
+model TelegramToken {
+	id Int @id @default(autoincrement())
+	type TelegramType
+
+  student_id Int?
+  teacher_id Int?
+	token String @unique
+	expired_at DateTime
+	created_at DateTime @default(now())
+
+	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  student     Student?  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+
+	@@map("telegram_token")
+}
+  
+enum TelegramType {
+	TEACHER
+	STUDENT
+	PARENT
+}
+
+enum PlanType {
+  INDIVIDUAL
+  PAIR
+}
+
+enum PlanCurrency {
+  USD
+  EUR
+  PLN
+	BYN
+	RUB
+}
+
+enum LessonStatus {
+  PENDING_PAID
+	PENDING_UNPAID
+  COMPLETED_PAID
+	COMPLETED_UNPAID
+	MISSED
+	RESCHEDULED
+  CANCELLED
+}
+
+enum TeacherRole {
+  TEACHER
+  ADMIN
+}
+
+enum Timezone {
+	BY
+	PL
+	KZ
+	GE
+	RU
+	EU
+}
+
+enum WeekDay {
+	MONDAY
+	TUESDAY
+	WEDNESDAY
+	THURSDAY
+	FRIDAY
+	SATURDAY
+	SUNDAY
+}

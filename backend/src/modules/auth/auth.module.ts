@@ -1,20 +1,22 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { BcryptService } from './bcrypt.service';
-import { CredentialsStrategy } from '../../core/guards/credentials.strategy';
-import { CoreModule } from 'src/core/core.module';
+import { AuthController } from './interface/auth.controller';
+import { AuthService } from './application/auth.service';
+import { BcryptService } from '../../infrastructure/bcrypt/bcrypt.service';
+import { CredentialsStrategy } from '@/shared/guards/credentials.strategy';
+import { AppConfigModule } from '@/config/app-config.module';
 import { JwtModule } from '@nestjs/jwt';	
-import { JwtRefreshStrategy } from 'src/core/guards/jwt-refresh.strategy';
-import { JwtAccessStrategy } from 'src/core/guards/jwt-access.strategy';
+import { JwtRefreshStrategy } from '@/shared/guards/jwt-refresh.strategy';
+import { JwtAccessStrategy } from '@/shared/guards/jwt-access.strategy';
 import { TeacherModule } from '../teacher/teacher.module';
+import { BcryptModule } from '@/infrastructure/bcrypt/bcrypt.module';
 
 @Module({
 	imports: [
 		PassportModule,
-		CoreModule,
+		AppConfigModule,
 		JwtModule.register({}),
+		BcryptModule,
 		TeacherModule,
 	],
 	controllers: [AuthController],

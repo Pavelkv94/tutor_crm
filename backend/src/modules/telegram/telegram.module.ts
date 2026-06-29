@@ -1,23 +1,20 @@
 import { Module } from '@nestjs/common';
-import { TelegramService } from './telegram.service';
+import { TelegramService } from '@/modules/telegram/application/telegram.service';
 import { TelegrafModule } from 'nestjs-telegraf';
-import { CoreModule } from 'src/core/core.module';
-import { CoreEnvConfig } from 'src/core/core.config';
-import { TelegramRepository } from './telegram.repository';
-import { TeacherModule } from '../teacher/teacher.module';
-import { StudentModule } from '../student/student.module';
-import { TelegramController } from './telegram.controller';
-import { LessonModule } from '../lesson/lesson.module';
+import { TelegramRepository } from '@/modules/telegram/infrastructure/telegram.repository';
+import { TeacherModule } from '@/modules/teacher/teacher.module';
+import { StudentModule } from '@/modules/student/student.module';
+import { TelegramController } from '@/modules/telegram/interface/telegram.controller';
+import { LessonModule } from '@/modules/lesson/lesson.module';
+import { telegramConfig, TelegramConfig } from '@/config/namespaces/telegram.config';
 
 @Module({
-  imports: [
-		CoreModule,
+	imports: [
     TelegrafModule.forRootAsync({
-			imports: [CoreModule],
-      useFactory: (configService: CoreEnvConfig) => ({
-        token: configService.telegramBotToken,
+			useFactory: (telegramConfig: TelegramConfig) => ({
+				token: telegramConfig.botToken,
       }),
-			inject: [CoreEnvConfig]
+			inject: [telegramConfig.KEY]
     }),
 		TeacherModule,
 		StudentModule,

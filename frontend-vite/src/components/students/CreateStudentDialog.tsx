@@ -101,7 +101,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
               <Input
                 id="class"
                 type="number"
-                min="1"
+                min="0"
                 value={studentClass}
                 onChange={(e) => setStudentClass(e.target.value)}
                 required

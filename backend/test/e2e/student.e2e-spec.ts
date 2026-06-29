@@ -1,12 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/app.module';
-import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole } from '@prisma/client';
-import { BcryptService } from '../../src/modules/auth/bcrypt.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
+import { TeacherRole } from '../../src/infrastructure/prisma/generated/client';
+import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 
 describe('StudentController (e2e)', () => {
 	let app: INestApplication;
@@ -18,14 +16,12 @@ describe('StudentController (e2e)', () => {
 		login: 'test_admin_student_e2e',
 		password: 'testPassword123',
 		name: 'Test Admin Student E2E',
-		telegram_id: '123456789',
 	};
 
 	const testTeacher = {
 		login: 'test_teacher_student_e2e',
 		password: 'testPassword123',
 		name: 'Test Teacher Student E2E',
-		telegram_id: '987654321',
 	};
 
 	const testStudent = {
@@ -41,20 +37,11 @@ describe('StudentController (e2e)', () => {
 	};
 
 	beforeAll(async () => {
-		module = await Test.createTestingModule({
-			imports: [AppModule],
-		})
-			.overrideGuard(ThrottlerGuard)
-			.useValue({
-				canActivate: () => true,
-			})
-			.compile();
-
-		app = await createTestApp();
+		const testContext = await createTestApp();
+		app = testContext.app;
+		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);
 		bcryptService = module.get<BcryptService>(BcryptService);
-
-		await app.init();
 	});
 
 	afterAll(async () => {
@@ -137,8 +124,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -203,8 +190,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -234,8 +221,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -267,8 +254,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -338,8 +325,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -382,8 +369,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -442,8 +429,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -497,8 +484,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -549,8 +536,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -618,8 +605,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -644,8 +631,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -692,8 +679,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -768,8 +755,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -795,8 +782,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -844,8 +831,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -912,8 +899,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -938,8 +925,8 @@ describe('StudentController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,

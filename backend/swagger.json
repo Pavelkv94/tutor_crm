@@ -138,7 +138,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TeacherOutputDto"
+                    "$ref": "#/components/schemas/TeacherDto"
                   }
                 }
               }
@@ -174,7 +174,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeacherOutputDto"
+                  "$ref": "#/components/schemas/TeacherDto"
                 }
               }
             }
@@ -292,7 +292,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreatePlanInputDto"
+                "$ref": "#/components/schemas/CreatePlanDto"
               }
             }
           }
@@ -303,7 +303,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanOutputDto"
+                  "$ref": "#/components/schemas/PlanDto"
                 }
               }
             }
@@ -349,7 +349,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PlanOutputDto"
+                    "$ref": "#/components/schemas/PlanDto"
                   }
                 }
               }
@@ -420,7 +420,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StudentOutputDto"
+                  "$ref": "#/components/schemas/StudentDto"
                 }
               }
             }
@@ -475,7 +475,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/StudentOutputDto"
+                    "$ref": "#/components/schemas/StudentDto"
                   }
                 }
               }
@@ -512,7 +512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StudentExtendedOutputDto"
+                  "$ref": "#/components/schemas/StudentExtendedDto"
                 }
               }
             }
@@ -1191,6 +1191,50 @@
         ]
       }
     },
+    "/lessons/update-lessons-plan-for-period": {
+      "patch": {
+        "operationId": "LessonController_updateLessonsPlanForPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Lessons plan update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLessonsPlanForPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lessons plan updated successfully"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Plan not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update lessons plan for a period",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
     "/reports/schedule/download": {
       "get": {
         "operationId": "ReportsController_downloadSchedule",
@@ -1228,6 +1272,45 @@
         "parameters": [
           {
             "name": "filter",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/reports/salary": {
+      "get": {
+        "operationId": "ReportsController_getDataForSalary",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teacher_id",
             "required": true,
             "in": "query",
             "schema": {
@@ -1434,7 +1517,7 @@
           "message"
         ]
       },
-      "TeacherOutputDto": {
+      "TeacherDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1540,11 +1623,6 @@
             "description": "The name of the teacher",
             "example": "John Doe"
           },
-          "telegram_link": {
-            "type": "object",
-            "description": "The telegram link of the teacher",
-            "example": "https://t.me/teacher123"
-          },
           "timezone": {
             "type": "string",
             "description": "The timezone of the teacher",
@@ -1553,11 +1631,10 @@
         },
         "required": [
           "name",
-          "telegram_link",
           "timezone"
         ]
       },
-      "CreatePlanInputDto": {
+      "CreatePlanDto": {
         "type": "object",
         "properties": {
           "plan_type": {
@@ -1592,7 +1669,7 @@
           "duration"
         ]
       },
-      "PlanOutputDto": {
+      "PlanDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1685,7 +1762,7 @@
           "timezone"
         ]
       },
-      "StudentOutputDto": {
+      "StudentDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1707,6 +1784,12 @@
             "type": "object",
             "description": "The birth date of the student",
             "example": "2000-01-01"
+          },
+          "age": {
+            "type": "object",
+            "description": "The age of the student in full years",
+            "example": 20,
+            "nullable": true
           },
           "created_at": {
             "format": "date-time",
@@ -1735,13 +1818,14 @@
           "name",
           "class",
           "birth_date",
+          "age",
           "created_at",
           "deleted_at",
           "teacher_id",
           "timezone"
         ]
       },
-      "StudentExtendedOutputDto": {
+      "StudentExtendedDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1764,6 +1848,12 @@
             "description": "The birth date of the student",
             "example": "2000-01-01"
           },
+          "age": {
+            "type": "object",
+            "description": "The age of the student in full years",
+            "example": 20,
+            "nullable": true
+          },
           "created_at": {
             "format": "date-time",
             "type": "string",
@@ -1784,6 +1874,13 @@
             "type": "object",
             "description": "The timezone of the student",
             "example": "BY"
+          },
+          "actualPlans": {
+            "description": "The actual plans of the student",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanDto"
+            }
           },
           "balance": {
             "type": "number",
@@ -1811,10 +1908,12 @@
           "name",
           "class",
           "birth_date",
+          "age",
           "created_at",
           "deleted_at",
           "teacher_id",
           "timezone",
+          "actualPlans",
           "balance",
           "bookUntilCancellation",
           "notifyAboutBirthday",
@@ -1823,7 +1922,16 @@
       },
       "UpdateStudentDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "birth_date": {
+            "type": "object",
+            "description": "The birth date of the student",
+            "example": "2000-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "birth_date"
+        ]
       },
       "TeacherBasicOutputDto": {
         "type": "object",
@@ -1856,7 +1964,7 @@
             "description": "Student information",
             "allOf": [
               {
-                "$ref": "#/components/schemas/StudentOutputDto"
+                "$ref": "#/components/schemas/StudentDto"
               }
             ]
           },
@@ -1864,7 +1972,7 @@
             "description": "Plan information",
             "allOf": [
               {
-                "$ref": "#/components/schemas/PlanOutputDto"
+                "$ref": "#/components/schemas/PlanDto"
               }
             ]
           },
@@ -1872,7 +1980,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-01-07T19:03:01.763Z"
+            "example": "2026-06-29T16:07:14.734Z"
           },
           "status": {
             "type": "string",
@@ -1909,7 +2017,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-07T19:03:01.763Z",
+            "example": "2026-06-29T16:07:14.734Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -1921,14 +2029,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-01-07T19:03:01.763Z",
+            "example": "2026-06-29T16:07:14.734Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-01-07T19:03:01.763Z"
+            "example": "2026-06-29T16:07:14.734Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -2016,7 +2124,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-01-07T19:03:01.752Z"
+            "example": "2026-06-29T16:07:14.728Z"
           },
           "isFree": {
             "type": "boolean",
@@ -2050,7 +2158,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-01-07T19:03:01.780Z"
+            "example": "2026-06-29T16:07:14.740Z"
           }
         },
         "required": [
@@ -2094,20 +2202,29 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-01-07T19:03:01.798Z"
+            "example": "2026-06-29T16:07:14.755Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-01-07T19:03:01.798Z"
+            "example": "2026-06-29T16:07:14.755Z"
           },
           "plan": {
             "description": "Plan",
-            "example": 1,
+            "example": {
+              "id": 1,
+              "plan_name": "10 minutes",
+              "plan_price": 1000000,
+              "plan_currency": "USD",
+              "duration": 10,
+              "plan_type": "INDIVIDUAL",
+              "deleted_at": null,
+              "created_at": "2026-06-29T16:07:14.755Z"
+            },
             "allOf": [
               {
-                "$ref": "#/components/schemas/PlanOutputDto"
+                "$ref": "#/components/schemas/PlanDto"
               }
             ]
           }
@@ -2151,6 +2268,45 @@
         },
         "required": [
           "isFree"
+        ]
+      },
+      "UpdateLessonsPlanForPeriodDto": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Start date",
+            "example": "2026-06-29T16:07:14.756Z"
+          },
+          "end_date": {
+            "format": "date-time",
+            "type": "string",
+            "description": "End date",
+            "example": "2026-06-29T16:07:14.756Z"
+          },
+          "new_plan_id": {
+            "type": "number",
+            "description": "Plan ID",
+            "example": 1
+          },
+          "old_plan_id": {
+            "type": "number",
+            "description": "Old plan ID",
+            "example": 1
+          },
+          "student_id": {
+            "type": "number",
+            "description": "Student ID",
+            "example": 1
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date",
+          "new_plan_id",
+          "old_plan_id",
+          "student_id"
         ]
       },
       "TelegramLinkInputDto": {

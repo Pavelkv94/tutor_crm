@@ -1,19 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LessonService } from '../../../src/modules/lesson/lesson.service';
-import { LessonRepository } from '../../../src/modules/lesson/lesson.repository';
-import { PlanService } from '../../../src/modules/plan/plan.service';
-import { StudentService } from '../../../src/modules/student/student.service';
-import { TeacherService } from '../../../src/modules/teacher/teacher.service';
-import { LessonRegularRepository } from '../../../src/modules/lesson/lesson-regular.repository';
+import { LessonService } from '../../../src/modules/lesson/application/lesson.service';
+import { LessonRepository } from '../../../src/modules/lesson/infrastructure/lesson.repository';
+import { PlanService } from '../../../src/modules/plan/application/plan.service';
+import { StudentService } from '../../../src/modules/student/application/student.service';
+import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
+import { LessonRegularRepository } from '../../../src/modules/lesson/infrastructure/lesson-regular.repository';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { SingleLessonInputDto } from '../../../src/modules/lesson/dto/single-lesson.input.dto';
-import { RegularLessonsInputDto, WeekDay } from '../../../src/modules/lesson/dto/regular-lesson.input.dto';
-import { ChangeTeacherDto } from '../../../src/modules/lesson/dto/change-teacher.dto';
-import { CancelLessonDto, CancelationStatusEnum } from '../../../src/modules/lesson/dto/cancel-lesson.dto';
-import { PlanTypeEnum } from '../../../src/modules/plan/dto/create-plan.input.dto';
-import { LessonStatusEnum } from '../../../src/modules/lesson/dto/lesson-status.enum';
-import { TeacherRoleEnum } from '../../../src/modules/teacher/dto/teacherRole';
+import { SingleLessonInputDto } from '../../../src/modules/lesson/interface/dto/requests/single-lesson.input.dto';
+import { RegularLessonsInputDto, WeekDay } from '../../../src/modules/lesson/interface/dto/requests/regular-lesson.input.dto';
+import { ChangeTeacherDto } from '../../../src/modules/lesson/interface/dto/requests/change-teacher.dto';
+import { CancelLessonDto, CancelationStatusEnum } from '../../../src/modules/lesson/interface/dto/requests/cancel-lesson.dto';
+import { PlanTypeEnum } from '../../../src/modules/plan/interface/dto/requests/create-plan.dto';
+import { LessonStatusEnum } from '../../../src/modules/lesson/interface/dto/lesson-status.enum';
+import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
 import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
+import { RescheduledLessonInputDto } from '../../../src/modules/lesson/interface/dto/requests/rescheduled-lesson.input.dto';
+import { ManageFreeLessonStatusDto } from '../../../src/modules/lesson/interface/dto/requests/manage-free-lesson.input.dto';
+import { UpdateLessonsPlanForPeriodDto } from '../../../src/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto';
 
 describe('LessonService', () => {
 	let service: LessonService;
@@ -89,15 +92,22 @@ describe('LessonService', () => {
 				{
 					provide: LessonRepository,
 					useValue: {
-						findExistingLessonsByDate: jest.fn(),
+						findExistingLessonsByDateAndTeacher: jest.fn(),
 						createSingleLesson: jest.fn(),
 						findLessonsForPeriod: jest.fn(),
+						findLessonsForPeriodForSalary: jest.fn(),
 						findLessonsByStartDate: jest.fn(),
+						findLessonsForReschedule: jest.fn(),
+						findLessonsForPeriodAndStudent: jest.fn(),
 						createRegularLesson: jest.fn(),
 						changeTeacher: jest.fn(),
 						findById: jest.fn(),
 						cancelLesson: jest.fn(),
 						updatePendingLessonsStatus: jest.fn(),
+						updateRescheduledLesson: jest.fn(),
+						updateLessonsPlanForPeriod: jest.fn(),
+						deleteLesson: jest.fn(),
+						manageFreeLessonStatus: jest.fn(),
 					},
 				},
 				{
@@ -123,6 +133,7 @@ describe('LessonService', () => {
 					useValue: {
 						createRegularLesson: jest.fn(),
 						deleteRegularLesson: jest.fn(),
+						getRegularLessons: jest.fn(),
 					},
 				},
 			],
@@ -153,7 +164,7 @@ describe('LessonService', () => {
 		it('should create single lesson successfully', async () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDate').mockResolvedValue([]);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
 			jest.spyOn(lessonRepository, 'createSingleLesson').mockResolvedValue(mockLessonOutput as any);
 
 			const result = await service.createSingleLessonByAdmin(singleLessonDto);
@@ -191,7 +202,7 @@ describe('LessonService', () => {
 		it('should throw BadRequestException if too many lessons at same time', async () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDate').mockResolvedValue([
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([
 				mockLesson as any,
 				mockLesson as any,
 			]);
@@ -206,7 +217,7 @@ describe('LessonService', () => {
 			};
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDate').mockResolvedValue([existingLesson as any]);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([existingLesson as any]);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(BadRequestException);
 		});
@@ -218,7 +229,7 @@ describe('LessonService', () => {
 			};
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDate').mockResolvedValue([existingLesson as any]);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([existingLesson as any]);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(BadRequestException);
 		});
@@ -230,7 +241,7 @@ describe('LessonService', () => {
 			};
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDate').mockResolvedValue([existingLesson as any]);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([existingLesson as any]);
 
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(BadRequestException);
 		});
@@ -305,6 +316,11 @@ describe('LessonService', () => {
 			comment: 'Test cancellation',
 		};
 
+		const missedLessonDto: CancelLessonDto = {
+			status: CancelationStatusEnum.MISSED,
+			comment: 'Test missed lesson',
+		};
+
 		const teacherPayload: JwtPayloadDto = {
 			id: '1',
 			login: 'testteacher',
@@ -312,16 +328,23 @@ describe('LessonService', () => {
 			role: TeacherRoleEnum.TEACHER,
 		};
 
-		it('should cancel lesson successfully', async () => {
+		const adminPayload: JwtPayloadDto = {
+			id: '1',
+			login: 'admin',
+			name: 'Admin',
+			role: TeacherRoleEnum.ADMIN,
+		};
+
+		it('should cancel lesson successfully for teacher with missed status', async () => {
 			const mockLessonWithRescheduled = { ...mockLesson, rescheduled_lesson_id: null };
 			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLessonWithRescheduled as any);
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(mockTeacher as any);
 			jest.spyOn(lessonRepository, 'cancelLesson').mockResolvedValue(undefined);
 
-			await service.cancelLesson(1, cancelLessonDto, teacherPayload);
+			await service.cancelLesson(1, missedLessonDto, teacherPayload);
 
 			expect(lessonRepository.findById).toHaveBeenCalledWith(1);
-			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, cancelLessonDto, null);
+			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, missedLessonDto, null);
 		});
 
 		it('should throw NotFoundException if lesson not found', async () => {
@@ -337,9 +360,10 @@ describe('LessonService', () => {
 				status: LessonStatusEnum.CANCELLED,
 			};
 			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(cancelledLesson as any);
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(mockTeacher as any);
 
-			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow(BadRequestException);
-			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Урок уже отменен');
+			await expect(service.cancelLesson(1, cancelLessonDto, adminPayload)).rejects.toThrow(BadRequestException);
+			await expect(service.cancelLesson(1, cancelLessonDto, adminPayload)).rejects.toThrow('Урок уже отменен');
 		});
 
 		it('should throw BadRequestException if teacher tries to cancel lesson for another teacher\'s student', async () => {
@@ -350,17 +374,19 @@ describe('LessonService', () => {
 			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(lessonWithDifferentTeacher as any);
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(mockTeacher as any);
 
+			await expect(service.cancelLesson(1, missedLessonDto, teacherPayload)).rejects.toThrow(BadRequestException);
+			await expect(service.cancelLesson(1, missedLessonDto, teacherPayload)).rejects.toThrow('Вы не можете отменить этот урок');
+		});
+
+		it('should throw BadRequestException if teacher tries to cancel lesson with cancelled status', async () => {
+			const mockLessonWithRescheduled = { ...mockLesson, rescheduled_lesson_id: null };
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLessonWithRescheduled as any);
+
 			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow(BadRequestException);
 			await expect(service.cancelLesson(1, cancelLessonDto, teacherPayload)).rejects.toThrow('Вы не можете отменить этот урок');
 		});
 
 		it('should allow admin to cancel any lesson', async () => {
-			const adminPayload: JwtPayloadDto = {
-				id: '1',
-				login: 'admin',
-				name: 'Admin',
-				role: TeacherRoleEnum.ADMIN,
-			};
 			const lessonWithDifferentTeacher = {
 				...mockLesson,
 				student: { ...mockStudent, teacher_id: 2 },
@@ -372,6 +398,352 @@ describe('LessonService', () => {
 			await service.cancelLesson(1, cancelLessonDto, adminPayload);
 
 			expect(lessonRepository.cancelLesson).toHaveBeenCalled();
+		});
+	});
+
+	describe('createRescheduledLesson', () => {
+		const rescheduledDto: RescheduledLessonInputDto = {
+			rescheduled_lesson_id: 1,
+			teacher_id: 1,
+			start_date: new Date('2024-02-01T10:00:00.000Z'),
+		};
+
+		const teacherPayload: JwtPayloadDto = {
+			id: '1',
+			login: 'teacher',
+			name: 'Teacher',
+			role: TeacherRoleEnum.TEACHER,
+		};
+
+		const adminPayload: JwtPayloadDto = {
+			id: '2',
+			login: 'admin',
+			name: 'Admin',
+			role: TeacherRoleEnum.ADMIN,
+		};
+
+		it('should create rescheduled lesson successfully', async () => {
+			const lessonToReschedule = {
+				...mockLesson,
+				is_trial: false,
+				student: { ...mockStudent, teacher_id: 1 },
+				teacher: { id: 1 },
+				plan: mockPlan,
+				rescheduled_lesson_id: null,
+			};
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(lessonToReschedule as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
+			jest.spyOn(lessonRepository, 'createSingleLesson').mockResolvedValue(mockLessonOutput as any);
+			jest.spyOn(lessonRepository, 'updateRescheduledLesson').mockResolvedValue(undefined);
+
+			const result = await service.createRescheduledLesson(rescheduledDto, teacherPayload);
+
+			expect(result).toEqual(mockLessonOutput);
+			expect(lessonRepository.updateRescheduledLesson).toHaveBeenCalled();
+		});
+
+		it('should throw BadRequestException if teacher_id not provided', async () => {
+			const dtoWithoutTeacher = { ...rescheduledDto, teacher_id: undefined };
+
+			await expect(service.createRescheduledLesson(dtoWithoutTeacher, teacherPayload)).rejects.toThrow(BadRequestException);
+			await expect(service.createRescheduledLesson(dtoWithoutTeacher, teacherPayload)).rejects.toThrow('Преподаватель не указан');
+		});
+
+		it('should throw NotFoundException if lesson not found', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(null);
+
+			await expect(service.createRescheduledLesson(rescheduledDto, teacherPayload)).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw BadRequestException if trial lesson', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue({ ...mockLesson, is_trial: true } as any);
+
+			await expect(service.createRescheduledLesson(rescheduledDto, teacherPayload)).rejects.toThrow(BadRequestException);
+			await expect(service.createRescheduledLesson(rescheduledDto, teacherPayload)).rejects.toThrow('Пробное занятие не может быть перенесено');
+		});
+
+		it('should throw BadRequestException if teacher tries to reschedule another teacher student lesson', async () => {
+			const lessonWithDifferentTeacher = {
+				...mockLesson,
+				is_trial: false,
+				student: { ...mockStudent, teacher_id: 2 },
+			};
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(lessonWithDifferentTeacher as any);
+
+			await expect(service.createRescheduledLesson(rescheduledDto, teacherPayload)).rejects.toThrow(BadRequestException);
+			await expect(service.createRescheduledLesson(rescheduledDto, teacherPayload)).rejects.toThrow('Вы не можете перенести это занятие');
+		});
+
+		it('should allow admin to reschedule any lesson', async () => {
+			const lessonWithDifferentTeacher = {
+				...mockLesson,
+				is_trial: false,
+				student: { ...mockStudent, teacher_id: 2 },
+				teacher: { id: 1 },
+				plan: mockPlan,
+			};
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(lessonWithDifferentTeacher as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
+			jest.spyOn(lessonRepository, 'createSingleLesson').mockResolvedValue(mockLessonOutput as any);
+			jest.spyOn(lessonRepository, 'updateRescheduledLesson').mockResolvedValue(undefined);
+
+			await service.createRescheduledLesson(rescheduledDto, adminPayload);
+
+			expect(lessonRepository.createSingleLesson).toHaveBeenCalled();
+		});
+	});
+
+	describe('updateLessonsPlanForPeriod', () => {
+		const dto: UpdateLessonsPlanForPeriodDto = {
+			student_id: 1,
+			new_plan_id: 2,
+			old_plan_id: 1,
+			start_date: new Date('2024-01-01'),
+			end_date: new Date('2024-01-31'),
+		};
+
+		it('should update lessons plan successfully', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
+			jest.spyOn(lessonRepository, 'updateLessonsPlanForPeriod').mockResolvedValue(undefined);
+
+			await service.updateLessonsPlanForPeriod(dto);
+
+			expect(lessonRepository.updateLessonsPlanForPeriod).toHaveBeenCalledWith(dto);
+		});
+
+		it('should throw NotFoundException if student not found', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(null as any);
+
+			await expect(service.updateLessonsPlanForPeriod(dto)).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw NotFoundException if plan not found', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(planService, 'findById').mockResolvedValue(null);
+
+			await expect(service.updateLessonsPlanForPeriod(dto)).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw BadRequestException if plan is deleted', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(planService, 'findById').mockResolvedValue({ ...mockPlan, deleted_at: new Date() } as any);
+
+			await expect(service.updateLessonsPlanForPeriod(dto)).rejects.toThrow(BadRequestException);
+		});
+	});
+
+	describe('findLessonsForPeriodAndStudent', () => {
+		const teacherPayload: JwtPayloadDto = {
+			id: '1',
+			login: 'teacher',
+			name: 'Teacher',
+			role: TeacherRoleEnum.TEACHER,
+		};
+
+		const adminPayload: JwtPayloadDto = {
+			id: '2',
+			login: 'admin',
+			name: 'Admin',
+			role: TeacherRoleEnum.ADMIN,
+		};
+
+		it('should return student lessons summary', async () => {
+			const lessons = [
+				{ ...mockLessonOutput, status: LessonStatusEnum.CANCELLED },
+				{ ...mockLessonOutput, status: LessonStatusEnum.MISSED },
+				{ ...mockLessonOutput, status: LessonStatusEnum.RESCHEDULED },
+			];
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(lessonRepository, 'findLessonsForPeriodAndStudent').mockResolvedValue(lessons as any);
+
+			const result = await service.findLessonsForPeriodAndStudent(1, '2024-01-01', '2024-01-31', teacherPayload);
+
+			expect(result).toEqual({
+				id: mockStudent.id,
+				name: mockStudent.name,
+				class: mockStudent.class,
+				canceled_lessons: 1,
+				missed_lessons: 1,
+				rescheduled_lessons: 1,
+			});
+		});
+
+		it('should throw NotFoundException if student not found', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(null as any);
+
+			await expect(service.findLessonsForPeriodAndStudent(1, '2024-01-01', '2024-01-31', teacherPayload)).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw BadRequestException if teacher tries to access another teacher student', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue({ ...mockStudent, teacher_id: 2 } as any);
+
+			await expect(service.findLessonsForPeriodAndStudent(1, '2024-01-01', '2024-01-31', teacherPayload)).rejects.toThrow(BadRequestException);
+		});
+
+		it('should allow admin to access any student', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue({ ...mockStudent, teacher_id: 2 } as any);
+			jest.spyOn(lessonRepository, 'findLessonsForPeriodAndStudent').mockResolvedValue([]);
+
+			await service.findLessonsForPeriodAndStudent(1, '2024-01-01', '2024-01-31', adminPayload);
+
+			expect(lessonRepository.findLessonsForPeriodAndStudent).toHaveBeenCalled();
+		});
+	});
+
+	describe('findPendingUnpaidLessonsForPeriodAndStudent', () => {
+		const teacherPayload: JwtPayloadDto = {
+			id: '1',
+			login: 'teacher',
+			name: 'Teacher',
+			role: TeacherRoleEnum.TEACHER,
+		};
+
+		it('should return pending unpaid non-trial lessons', async () => {
+			const lessons = [
+				{ ...mockLessonOutput, status: LessonStatusEnum.PENDING_UNPAID, is_trial: false },
+				{ ...mockLessonOutput, status: LessonStatusEnum.PENDING_UNPAID, is_trial: true },
+				{ ...mockLessonOutput, status: LessonStatusEnum.COMPLETED_PAID, is_trial: false },
+			];
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(lessonRepository, 'findLessonsForPeriodAndStudent').mockResolvedValue(lessons as any);
+
+			const result = await service.findPendingUnpaidLessonsForPeriodAndStudent(1, '2024-01-01', '2024-01-31', teacherPayload);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].status).toBe(LessonStatusEnum.PENDING_UNPAID);
+		});
+	});
+
+	describe('createRegularLessons', () => {
+		const regularLessonsDto: RegularLessonsInputDto = {
+			lessons: [{
+				plan_id: 1,
+				start_time: '2024-01-01T10:00:00.000Z',
+				week_day: WeekDay.MONDAY,
+				start_period_date: '2024-01-01T00:00:00.000Z',
+				end_period_date: '2024-01-15T00:00:00.000Z',
+				teacher_id: 1,
+			}],
+		};
+
+		const mockRegularLesson = { id: 1, week_day: WeekDay.MONDAY };
+
+		it('should create regular lessons successfully', async () => {
+			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
+			jest.spyOn(lessonRegularRepository, 'createRegularLesson').mockResolvedValue(mockRegularLesson as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
+			jest.spyOn(lessonRepository, 'createRegularLesson').mockResolvedValue(undefined);
+
+			const result = await service.createRegularLessons(regularLessonsDto, 1);
+
+			expect(result).toEqual([mockRegularLesson]);
+			expect(lessonRegularRepository.createRegularLesson).toHaveBeenCalled();
+		});
+
+		it('should throw NotFoundException if plan not found', async () => {
+			jest.spyOn(planService, 'findById').mockResolvedValue(null);
+
+			await expect(service.createRegularLessons(regularLessonsDto, 1)).rejects.toThrow(NotFoundException);
+		});
+
+		it('should rollback regular lesson on conflict', async () => {
+			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
+			jest.spyOn(lessonRegularRepository, 'createRegularLesson').mockResolvedValue(mockRegularLesson as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([
+				{ ...mockLesson, student: { ...mockStudent, id: 1 } },
+			] as any);
+			jest.spyOn(lessonRegularRepository, 'deleteRegularLesson').mockResolvedValue(undefined);
+
+			await expect(service.createRegularLessons(regularLessonsDto, 1)).rejects.toThrow(BadRequestException);
+			expect(lessonRegularRepository.deleteRegularLesson).toHaveBeenCalledWith(mockRegularLesson.id);
+		});
+	});
+
+	describe('getRegularLessons', () => {
+		it('should return regular lessons for student', async () => {
+			const mockRegularLessons = [{ id: 1, week_day: WeekDay.MONDAY }];
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(lessonRegularRepository, 'getRegularLessons').mockResolvedValue(mockRegularLessons as any);
+
+			const result = await service.getRegularLessons(1);
+
+			expect(result).toEqual(mockRegularLessons);
+		});
+
+		it('should throw NotFoundException if student not found', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(null as any);
+
+			await expect(service.getRegularLessons(1)).rejects.toThrow(NotFoundException);
+		});
+	});
+
+	describe('deleteLesson', () => {
+		it('should delete lesson successfully', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLesson as any);
+			jest.spyOn(lessonRepository, 'deleteLesson').mockResolvedValue(undefined);
+
+			await service.deleteLesson(1);
+
+			expect(lessonRepository.deleteLesson).toHaveBeenCalledWith(1);
+		});
+
+		it('should throw NotFoundException if lesson not found', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(null);
+
+			await expect(service.deleteLesson(1)).rejects.toThrow(NotFoundException);
+		});
+	});
+
+	describe('manageFreeLessonStatus', () => {
+		const dto: ManageFreeLessonStatusDto = { isFree: true };
+
+		it('should manage free lesson status successfully', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue({ ...mockLesson, is_trial: false } as any);
+			jest.spyOn(lessonRepository, 'manageFreeLessonStatus').mockResolvedValue(undefined);
+
+			await service.manageFreeLessonStatus(1, dto);
+
+			expect(lessonRepository.manageFreeLessonStatus).toHaveBeenCalledWith(1, dto);
+		});
+
+		it('should throw BadRequestException for trial lesson', async () => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue({ ...mockLesson, is_trial: true } as any);
+
+			await expect(service.manageFreeLessonStatus(1, dto)).rejects.toThrow(BadRequestException);
+			await expect(service.manageFreeLessonStatus(1, dto)).rejects.toThrow('Пробное занятие не может быть изменено');
+		});
+	});
+
+	describe('findLessonsForReschedule', () => {
+		it('should delegate to repository', async () => {
+			jest.spyOn(lessonRepository, 'findLessonsForReschedule').mockResolvedValue([mockLessonOutput] as any);
+
+			const result = await service.findLessonsForReschedule(1);
+
+			expect(result).toEqual([mockLessonOutput]);
+			expect(lessonRepository.findLessonsForReschedule).toHaveBeenCalledWith(1);
+		});
+	});
+
+	describe('findLessonsForPeriodForSalary', () => {
+		it('should delegate to repository', async () => {
+			jest.spyOn(lessonRepository, 'findLessonsForPeriodForSalary').mockResolvedValue([mockLessonOutput] as any);
+
+			const result = await service.findLessonsForPeriodForSalary('2024-01-01', '2024-01-31', 1);
+
+			expect(result).toEqual([mockLessonOutput]);
+			expect(lessonRepository.findLessonsForPeriodForSalary).toHaveBeenCalledWith('2024-01-01', '2024-01-31', 1);
+		});
+	});
+
+	describe('updateLessonsStatus', () => {
+		it('should update pending lessons status', async () => {
+			jest.spyOn(lessonRepository, 'updatePendingLessonsStatus').mockResolvedValue(undefined);
+
+			await service.updateLessonsStatus();
+
+			expect(lessonRepository.updatePendingLessonsStatus).toHaveBeenCalled();
 		});
 	});
 });

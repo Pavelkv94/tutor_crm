@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TelegramRepository } from '../../../src/modules/telegram/telegram.repository';
-import { PrismaService } from '../../../src/core/prisma/prisma.service';
-import { TokenDataInputDto } from '../../../src/modules/telegram/dto/token-data.input.dto';
-import { TelegramInputDto } from '../../../src/modules/telegram/dto/telegram.input.dto';
-import { TelegramUserEnum } from '../../../src/modules/telegram/dto/telegram-user.enum';
+import { TelegramRepository } from '../../../src/modules/telegram/infrastructure/telegram.repository';
+import { PrismaService } from '../../../src/infrastructure/prisma/prisma.service';
+import { TokenDataInputDto } from '../../../src/modules/telegram/interface/dto/requests/token-data.input.dto';
+import { TelegramInputDto } from '../../../src/modules/telegram/interface/dto/requests/telegram.input.dto';
+import { TelegramUserEnum } from '../../../src/modules/telegram/interface/dto/telegram-user.enum';
 
 describe('TelegramRepository', () => {
 	let repository: TelegramRepository;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BcryptService } from '../../../src/modules/auth/bcrypt.service';
+import { BcryptService } from '../../../src/infrastructure/bcrypt/bcrypt.service';
 
 describe('BcryptService', () => {
 	let service: BcryptService;

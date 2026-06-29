@@ -1,12 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/app.module';
-import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestRefreshToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole } from '@prisma/client';
-import { BcryptService } from '../../src/modules/auth/bcrypt.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
+import { createTestApp, generateTestRefreshToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
+import { TeacherRole } from '../../src/infrastructure/prisma/generated/client';
+import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 
 describe('AuthController (e2e)', () => {
 	let app: INestApplication;
@@ -18,31 +16,20 @@ describe('AuthController (e2e)', () => {
 		login: 'test_admin',
 		password: 'testPassword123',
 		name: 'Test Admin',
-		telegram_id: '123456789',
 	};
 
 	const testTeacher = {
 		login: 'test_teacher',
 		password: 'testPassword123',
 		name: 'Test Teacher',
-		telegram_id: '987654321',
 	};
 
 	beforeAll(async () => {
-		module = await Test.createTestingModule({
-			imports: [AppModule],
-		})
-			.overrideGuard(ThrottlerGuard)
-			.useValue({
-				canActivate: () => true,
-			})
-			.compile();
-
-		app = await createTestApp();
+		const testContext = await createTestApp();
+		app = testContext.app;
+		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);
 		bcryptService = module.get<BcryptService>(BcryptService);
-
-		await app.init();
 	});
 
 	afterAll(async () => {
@@ -131,15 +118,14 @@ describe('AuthController (e2e)', () => {
 
 	describe('POST /auth/register-admin', () => {
 		it('should succeed with valid secret key', async () => {
-			const coreEnvConfig = getCoreEnvConfig(module);
+			const authConfig = getAuthConfig(module);
 			const response = await request(app.getHttpServer())
 				.post('/auth/register-admin')
 				.send({
 					login: testAdmin.login,
 					password: testAdmin.password,
 					name: testAdmin.name,
-					telegram_id: testAdmin.telegram_id,
-					secret_key: coreEnvConfig.adminRegistrationSecretKey,
+					secret_key: authConfig.adminRegistrationSecretKey,
 				})
 				.expect(201);
 
@@ -160,14 +146,13 @@ describe('AuthController (e2e)', () => {
 					login: testAdmin.login,
 					password: testAdmin.password,
 					name: testAdmin.name,
-					telegram_id: testAdmin.telegram_id,
 					secret_key: 'wrong_secret_key',
 				})
 				.expect(401);
 		});
 
 		it('should return 400 if admin exists', async () => {
-			const coreEnvConfig = getCoreEnvConfig(module);
+			const authConfig = getAuthConfig(module);
 			const passwordHash = await bcryptService.generateHash(testAdmin.password);
 
 			// Create admin first
@@ -185,8 +170,7 @@ describe('AuthController (e2e)', () => {
 					login: testAdmin.login,
 					password: testAdmin.password,
 					name: testAdmin.name,
-					telegram_id: testAdmin.telegram_id,
-					secret_key: coreEnvConfig.adminRegistrationSecretKey,
+					secret_key: authConfig.adminRegistrationSecretKey,
 				})
 				.expect(400);
 		});
@@ -205,8 +189,8 @@ describe('AuthController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const refreshToken = await generateTestRefreshToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const refreshToken = await generateTestRefreshToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,

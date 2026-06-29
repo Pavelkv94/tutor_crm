@@ -1,24 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlanService } from '../../../src/modules/plan/plan.service';
-import { PlanRepository } from '../../../src/modules/plan/plan.repository';
+import { PlanService } from '../../../src/modules/plan/application/plan.service';
+import { PlanRepositoryPort } from '../../../src/modules/plan/application/ports/plan.repository.port';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { CreatePlanInputDto, PlanTypeEnum } from '../../../src/modules/plan/dto/create-plan.input.dto';
-import { FilterPlanQuery } from '../../../src/modules/plan/dto/filter.query.dto';
+import { CreatePlanDto, PlanTypeEnum } from '../../../src/modules/plan/interface/dto/requests/create-plan.dto';
 
 describe('PlanService', () => {
 	let service: PlanService;
-	let repository: PlanRepository;
-
-	const mockPlan = {
-		id: 1,
-		plan_type: PlanTypeEnum.INDIVIDUAL,
-		plan_currency: 'USD' as any,
-		plan_price: 100000,
-		duration: 10,
-		plan_name: 'Test Plan',
-		deleted_at: null,
-		created_at: new Date(),
-	};
+	let repository: PlanRepositoryPort;
 
 	const mockPlanOutput = {
 		id: 1,
@@ -36,10 +24,9 @@ describe('PlanService', () => {
 			providers: [
 				PlanService,
 				{
-					provide: PlanRepository,
+					provide: PlanRepositoryPort,
 					useValue: {
 						createPlan: jest.fn(),
-						getPlans: jest.fn(),
 						getPlanById: jest.fn(),
 						deletePlan: jest.fn(),
 					},
@@ -48,7 +35,7 @@ describe('PlanService', () => {
 		}).compile();
 
 		service = module.get<PlanService>(PlanService);
-		repository = module.get<PlanRepository>(PlanRepository);
+		repository = module.get<PlanRepositoryPort>(PlanRepositoryPort);
 	});
 
 	it('should be defined', () => {
@@ -56,7 +43,7 @@ describe('PlanService', () => {
 	});
 
 	describe('create', () => {
-		const createPlanDto: CreatePlanInputDto = {
+		const createPlanDto: CreatePlanDto = {
 			plan_type: PlanTypeEnum.INDIVIDUAL,
 			plan_currency: 'USD' as any,
 			plan_price: 100000,
@@ -70,20 +57,6 @@ describe('PlanService', () => {
 
 			expect(result).toEqual(mockPlanOutput);
 			expect(repository.createPlan).toHaveBeenCalledWith(createPlanDto);
-		});
-	});
-
-	describe('findAll', () => {
-		it('should return all plans', async () => {
-			const filter = FilterPlanQuery.ALL;
-			const mockPlans = [mockPlanOutput];
-
-			jest.spyOn(repository, 'getPlans').mockResolvedValue(mockPlans as any);
-
-			const result = await service.findAll(filter);
-
-			expect(result).toEqual(mockPlans);
-			expect(repository.getPlans).toHaveBeenCalledWith(filter);
 		});
 	});
 
@@ -137,4 +110,3 @@ describe('PlanService', () => {
 		});
 	});
 });
-

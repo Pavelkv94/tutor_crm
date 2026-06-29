@@ -2,18 +2,43 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../src/app.module';
 import { JwtService } from '@nestjs/jwt';
-import { CoreEnvConfig } from '../../src/core/core.config';
+import { authConfig, AuthConfig } from '../../src/config/namespaces/auth.config';
 import { JwtPayloadDto } from '../../src/modules/auth/dto/jwt.payload.dto';
-import { TeacherRole } from '@prisma/client';
+import { TeacherRoleEnum } from '../../src/modules/teacher/interface/dto/teacherRole';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { TelegramService } from '../../src/modules/telegram/telegram.service';
+import { TelegramService } from '../../src/modules/telegram/application/telegram.service';
+import { TelegramModule } from '../../src/modules/telegram/telegram.module';
+import { createTelegramTestModule } from './telegram-test.module';
 import * as cookieParser from 'cookie-parser';
-import { TelegrafModule } from 'nestjs-telegraf';
+
+export interface CreateTestAppOptions {
+	useRealTelegramService?: boolean;
+}
+
+export interface TestAppContext {
+	app: INestApplication;
+	module: TestingModule;
+	mockTelegramService: {
+		generateTelegramLink: jest.Mock;
+		sendLessonsCostToAdmin: jest.Mock;
+		sendMessageToAdmin: jest.Mock;
+		sendMessageToUser: jest.Mock;
+		onStart: jest.Mock;
+		birthdayRemind: jest.Mock;
+		stop: jest.Mock;
+		launch: jest.Mock;
+		telegram: {
+			sendMessage: jest.Mock;
+		};
+	};
+}
 
 /**
- * Creates a test NestJS application instance
+ * Creates a test NestJS application instance with mocked Telegram bot
  */
-export async function createTestApp(): Promise<INestApplication> {
+export async function createTestApp(
+	options: CreateTestAppOptions = {},
+): Promise<TestAppContext> {
 	const mockTelegramService = {
 		generateTelegramLink: jest.fn(),
 		sendLessonsCostToAdmin: jest.fn(),
@@ -28,40 +53,37 @@ export async function createTestApp(): Promise<INestApplication> {
 		},
 	};
 
-	const moduleFixture: TestingModule = await Test.createTestingModule({
-		imports: [
-			AppModule,
-			// Override TelegrafModule to prevent bot initialization
-			TelegrafModule.forRoot({
-				token: 'mock-token-for-testing',
-			}),
-		],
+	const moduleBuilder = Test.createTestingModule({
+		imports: [AppModule],
 	})
 		.overrideGuard(ThrottlerGuard)
 		.useValue({
 			canActivate: () => true,
 		})
-		.overrideProvider(TelegramService)
-		.useValue(mockTelegramService as any)
-		.compile();
+		.overrideModule(TelegramModule)
+		.useModule(
+			createTelegramTestModule(
+				options.useRealTelegramService ? undefined : mockTelegramService,
+			),
+		);
+
+	const moduleFixture: TestingModule = await moduleBuilder.compile();
 
 	const app = moduleFixture.createNestApplication();
 	app.use(cookieParser());
 	app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-	
-	// Get the actual TelegramService instance and replace its telegram property
-	try {
-		const telegramService = moduleFixture.get<TelegramService>(TelegramService, { strict: false });
-		if (telegramService) {
-			(telegramService as any).telegram = mockTelegramService.telegram;
-			(telegramService as any).stop = mockTelegramService.stop;
-			(telegramService as any).launch = mockTelegramService.launch;
-		}
-	} catch (e) {
-		// Ignore if TelegramService is not found
+	await app.init();
+
+	if (options.useRealTelegramService) {
+		const telegramService = moduleFixture.get<TelegramService>(TelegramService);
+		(telegramService as any).telegram = mockTelegramService.telegram;
 	}
-	
-	return app;
+
+	return {
+		app,
+		module: moduleFixture,
+		mockTelegramService,
+	};
 }
 
 /**
@@ -69,20 +91,20 @@ export async function createTestApp(): Promise<INestApplication> {
  */
 export async function generateTestAccessToken(
 	jwtService: JwtService,
-	coreEnvConfig: CoreEnvConfig,
+	auth: AuthConfig,
 	payload: Partial<JwtPayloadDto> = {}
 ): Promise<string> {
 	const defaultPayload: JwtPayloadDto = {
 		id: '1',
 		login: 'testuser',
 		name: 'Test User',
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 		...payload,
 	};
 
 	return jwtService.signAsync(defaultPayload, {
-		secret: coreEnvConfig.accessSecretKey,
-		expiresIn: coreEnvConfig.accessExpiresIn as any,
+		secret: auth.accessSecretKey,
+		expiresIn: auth.accessExpiresIn as any,
 	});
 }
 
@@ -91,20 +113,20 @@ export async function generateTestAccessToken(
  */
 export async function generateTestRefreshToken(
 	jwtService: JwtService,
-	coreEnvConfig: CoreEnvConfig,
+	auth: AuthConfig,
 	payload: Partial<JwtPayloadDto> = {}
 ): Promise<string> {
 	const defaultPayload: JwtPayloadDto = {
 		id: '1',
 		login: 'testuser',
 		name: 'Test User',
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 		...payload,
 	};
 
 	return jwtService.signAsync(defaultPayload, {
-		secret: coreEnvConfig.refreshSecretKey,
-		expiresIn: coreEnvConfig.refreshExpiresIn as any,
+		secret: auth.refreshSecretKey,
+		expiresIn: auth.refreshExpiresIn as any,
 	});
 }
 
@@ -113,21 +135,26 @@ export async function generateTestRefreshToken(
  */
 export async function generateTestAdminToken(
 	jwtService: JwtService,
-	coreEnvConfig: CoreEnvConfig
+	auth: AuthConfig
 ): Promise<string> {
-	return generateTestAccessToken(jwtService, coreEnvConfig, {
-		role: TeacherRole.ADMIN,
+	return generateTestAccessToken(jwtService, auth, {
+		role: TeacherRoleEnum.ADMIN,
 		login: 'admin',
 		name: 'Admin User',
 	});
 }
 
 /**
- * Helper to get CoreEnvConfig from a testing module
+ * Helper to get AuthConfig from a testing module
  */
-export function getCoreEnvConfig(module: TestingModule): CoreEnvConfig {
-	return module.get<CoreEnvConfig>(CoreEnvConfig);
+export function getAuthConfig(module: TestingModule): AuthConfig {
+	return module.get<AuthConfig>(authConfig.KEY);
 }
+
+/**
+ * @deprecated Use getAuthConfig instead
+ */
+export const getCoreEnvConfig = getAuthConfig;
 
 /**
  * Helper to get JwtService from a testing module
@@ -143,12 +170,9 @@ export async function closeTestApp(app: INestApplication): Promise<void> {
 	try {
 		await app.close();
 	} catch (error: any) {
-		// Ignore Telegram bot shutdown errors in tests
 		if (error?.message?.includes('Bot is not running') || error?.message?.includes('telegram')) {
-			// Silently ignore telegram bot errors during test teardown
 			return;
 		}
 		throw error;
 	}
 }
-

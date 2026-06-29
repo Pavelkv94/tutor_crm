@@ -1,38 +1,35 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../../../src/modules/auth/auth.service';
-import { BcryptService } from '../../../src/modules/auth/bcrypt.service';
+import { AuthService } from '../../../src/modules/auth/application/auth.service';
+import { BcryptService } from '../../../src/infrastructure/bcrypt/bcrypt.service';
 import { JwtService } from '@nestjs/jwt';
-import { CoreEnvConfig } from '../../../src/core/core.config';
-import { TeacherService } from '../../../src/modules/teacher/teacher.service';
+import { authConfig, AuthConfig } from '../../../src/config/namespaces/auth.config';
+import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { LoginInputDto } from '../../../src/modules/auth/dto/login.input.dto';
-import { RegisterAdminDto } from '../../../src/modules/auth/dto/register.dto';
-import { TeacherRole } from '@prisma/client';
-import { Timezone } from '../../../src/modules/teacher/dto/teacher.output.dto';
+import { LoginDto } from '../../../src/modules/auth/dto/requests/login.dto';
+import { RegisterAdminDto } from '../../../src/modules/auth/dto/requests/register-admin.dto';
+import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
+import { Timezone } from '../../../src/modules/teacher/interface/dto/responses/teacher.dto';
 
 describe('AuthService', () => {
 	let service: AuthService;
 	let bcryptService: BcryptService;
 	let jwtService: JwtService;
 	let teacherService: TeacherService;
-	let coreEnvConfig: CoreEnvConfig;
 
-	const mockCoreEnvConfig = {
+	const mockAuthConfig = {
 		accessSecretKey: 'test_access_secret_key',
 		accessExpiresIn: '15m',
 		refreshSecretKey: 'test_refresh_secret_key',
 		refreshExpiresIn: '1h',
 		adminRegistrationSecretKey: 'test_admin_secret_key',
-	} as CoreEnvConfig;
+	} as AuthConfig;
 
 	const mockTeacher = {
 		id: 1,
 		login: 'testuser',
 		name: 'Test User',
 		password: 'hashedPassword',
-		role: TeacherRole.TEACHER,
-		telegram_id: null,
-		telegram_link: null,
+		role: TeacherRoleEnum.TEACHER,
 		timezone: Timezone.BY,
 		deleted_at: null,
 		created_at: new Date(),
@@ -43,8 +40,8 @@ describe('AuthService', () => {
 			providers: [
 				AuthService,
 				{
-					provide: CoreEnvConfig,
-					useValue: mockCoreEnvConfig,
+					provide: authConfig.KEY,
+					useValue: mockAuthConfig,
 				},
 				{
 					provide: BcryptService,
@@ -62,6 +59,7 @@ describe('AuthService', () => {
 					provide: TeacherService,
 					useValue: {
 						getTeacherByLogin: jest.fn(),
+						createAdmin: jest.fn(),
 					},
 				},
 			],
@@ -71,7 +69,6 @@ describe('AuthService', () => {
 		bcryptService = module.get<BcryptService>(BcryptService);
 		jwtService = module.get<JwtService>(JwtService);
 		teacherService = module.get<TeacherService>(TeacherService);
-		coreEnvConfig = module.get<CoreEnvConfig>(CoreEnvConfig);
 	});
 
 	it('should be defined', () => {
@@ -101,16 +98,20 @@ describe('AuthService', () => {
 				login: 'admin',
 				password: 'password123',
 				name: 'Admin User',
-				telegram_id: '123456789',
 				secret_key: 'test_admin_secret_key',
 			};
 
-			jest.spyOn(teacherService, 'getTeacherByLogin').mockResolvedValue(null);
+			jest.spyOn(teacherService, 'createAdmin').mockResolvedValue(undefined);
 
 			const result = await service.registerAdmin(registerDto);
 
 			expect(result).toHaveProperty('message');
 			expect(result.message).toBe('Admin registered successfully');
+			expect(teacherService.createAdmin).toHaveBeenCalledWith({
+				login: registerDto.login,
+				password: registerDto.password,
+				name: registerDto.name,
+			});
 		});
 
 		it('should throw UnauthorizedException with invalid secret key', async () => {
@@ -118,7 +119,6 @@ describe('AuthService', () => {
 				login: 'admin',
 				password: 'password123',
 				name: 'Admin User',
-				telegram_id: '123456789',
 				secret_key: 'wrong_secret_key',
 			};
 
@@ -131,11 +131,12 @@ describe('AuthService', () => {
 				login: 'admin',
 				password: 'password123',
 				name: 'Admin User',
-				telegram_id: '123456789',
 				secret_key: 'test_admin_secret_key',
 			};
 
-			jest.spyOn(teacherService, 'getTeacherByLogin').mockResolvedValue(mockTeacher);
+			jest
+				.spyOn(teacherService, 'createAdmin')
+				.mockRejectedValue(new BadRequestException('Администратор уже существует'));
 
 			await expect(service.registerAdmin(registerDto)).rejects.toThrow(BadRequestException);
 			await expect(service.registerAdmin(registerDto)).rejects.toThrow('Администратор уже существует');
@@ -144,7 +145,7 @@ describe('AuthService', () => {
 
 	describe('validateUser', () => {
 		it('should return teacher with valid credentials', async () => {
-			const loginDto: LoginInputDto = {
+			const loginDto: LoginDto = {
 				login: 'testuser',
 				password: 'password123',
 			};
@@ -160,7 +161,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if user not found', async () => {
-			const loginDto: LoginInputDto = {
+			const loginDto: LoginDto = {
 				login: 'nonexistent',
 				password: 'password123',
 			};
@@ -172,7 +173,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException with wrong password', async () => {
-			const loginDto: LoginInputDto = {
+			const loginDto: LoginDto = {
 				login: 'testuser',
 				password: 'wrongPassword',
 			};
@@ -185,4 +186,3 @@ describe('AuthService', () => {
 		});
 	});
 });
-

@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { TelegramService } from '../../../src/modules/telegram/telegram.service';
-import { CoreEnvConfig } from '../../../src/core/core.config';
-import { TeacherService } from '../../../src/modules/teacher/teacher.service';
-import { StudentService } from '../../../src/modules/student/student.service';
-import { TelegramRepository } from '../../../src/modules/telegram/telegram.repository';
-import { LessonService } from '../../../src/modules/lesson/lesson.service';
-import { TelegramLinkInputDto } from '../../../src/modules/telegram/dto/telegram-link.input.dto';
-import { LessonsCostFiltersDto } from '../../../src/modules/telegram/dto/lessons-cost-filter.input.dto';
-import { TelegramUserEnum } from '../../../src/modules/telegram/dto/telegram-user.enum';
+import { TelegramService } from '../../../src/modules/telegram/application/telegram.service';
+import { telegramConfig, TelegramConfig } from '../../../src/config/namespaces/telegram.config';
+import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
+import { StudentService } from '../../../src/modules/student/application/student.service';
+import { TelegramRepository } from '../../../src/modules/telegram/infrastructure/telegram.repository';
+import { LessonService } from '../../../src/modules/lesson/application/lesson.service';
+import { TelegramLinkInputDto } from '../../../src/modules/telegram/interface/dto/requests/telegram-link.input.dto';
+import { LessonsCostFiltersDto } from '../../../src/modules/telegram/interface/dto/requests/lessons-cost-filter.input.dto';
+import { TelegramUserEnum } from '../../../src/modules/telegram/interface/dto/telegram-user.enum';
 import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
-import { TeacherRole } from '@prisma/client';
-import { LessonStatusEnum } from '../../../src/modules/lesson/dto/lesson-status.enum';
+import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
+import { LessonStatusEnum } from '../../../src/modules/lesson/interface/dto/lesson-status.enum';
 
 describe('TelegramService', () => {
 	let service: TelegramService;
@@ -19,13 +19,12 @@ describe('TelegramService', () => {
 	let studentService: StudentService;
 	let telegramRepository: TelegramRepository;
 	let lessonService: LessonService;
-	let coreEnvConfig: CoreEnvConfig;
 
-	const mockCoreEnvConfig = {
-		telegramBotToken: 'test_bot_token',
-		telegramBotName: 'test_bot',
-		telegramAdminId: '123456789',
-	} as CoreEnvConfig;
+	const mockTelegramConfig = {
+		botToken: 'test_bot_token',
+		botName: 'test_bot',
+		adminId: '123456789',
+	} as TelegramConfig;
 
 	const mockTeacher = {
 		id: 1,
@@ -63,30 +62,36 @@ describe('TelegramService', () => {
 		id: '1',
 		login: 'testuser',
 		name: 'Test Teacher',
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 	};
 
 	const mockLessons = [
 		{
 			id: 1,
+			date: new Date('2024-01-15T10:00:00Z'),
 			is_free: false,
 			plan: {
+				id: 1,
 				plan_price: 100,
 				plan_currency: 'BYN',
 			},
 		},
 		{
 			id: 2,
+			date: new Date('2024-01-16T10:00:00Z'),
 			is_free: true,
 			plan: {
+				id: 1,
 				plan_price: 0,
 				plan_currency: 'BYN',
 			},
 		},
 		{
 			id: 3,
+			date: new Date('2024-01-17T10:00:00Z'),
 			is_free: false,
 			plan: {
+				id: 2,
 				plan_price: 150,
 				plan_currency: 'BYN',
 			},
@@ -98,8 +103,8 @@ describe('TelegramService', () => {
 			providers: [
 				TelegramService,
 				{
-					provide: CoreEnvConfig,
-					useValue: mockCoreEnvConfig,
+					provide: telegramConfig.KEY,
+					useValue: mockTelegramConfig,
 				},
 				{
 					provide: TeacherService,
@@ -138,8 +143,6 @@ describe('TelegramService', () => {
 		studentService = module.get<StudentService>(StudentService);
 		telegramRepository = module.get<TelegramRepository>(TelegramRepository);
 		lessonService = module.get<LessonService>(LessonService);
-		coreEnvConfig = module.get<CoreEnvConfig>(CoreEnvConfig);
-
 		// Mock telegram.sendMessage
 		(service as any).telegram = {
 			sendMessage: jest.fn().mockResolvedValue({ message_id: 1 }),
@@ -264,7 +267,11 @@ describe('TelegramService', () => {
 			await service.sendMessageToAdmin(message);
 
 			expect(telegramRepository.findTelegramByTelegramId).toHaveBeenCalledWith('123456789');
-			expect((service as any).telegram.sendMessage).toHaveBeenCalledWith(mockTelegramUser.telegram_id, message);
+			expect((service as any).telegram.sendMessage).toHaveBeenCalledWith(
+				mockTelegramUser.telegram_id,
+				message,
+				{ parse_mode: 'HTML' },
+			);
 		});
 
 		it('should throw NotFoundException when admin not found', async () => {
@@ -285,7 +292,10 @@ describe('TelegramService', () => {
 			await service.sendMessageToUser(telegramId, message);
 
 			expect(telegramRepository.findTelegramByTelegramId).toHaveBeenCalledWith(telegramId);
-			expect((service as any).telegram.sendMessage).toHaveBeenCalledWith(mockTelegramUser.telegram_id, message);
+			expect((service as any).telegram.sendMessage).toHaveBeenCalledWith(
+				mockTelegramUser.telegram_id,
+				message,
+			);
 		});
 
 		it('should not throw when user not found', async () => {

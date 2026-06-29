@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TeacherService } from '../../../src/modules/teacher/teacher.service';
-import { TeacherRepository } from '../../../src/modules/teacher/teacher.repository';
-import { BcryptService } from '../../../src/modules/auth/bcrypt.service';
+import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
+import { TeacherRepository } from '../../../src/modules/teacher/infrastructure/teacher.repository';
+import { BcryptService } from '../../../src/infrastructure/bcrypt/bcrypt.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { CreateTeacherDto } from '../../../src/modules/teacher/dto/create-teacher.input.dto';
-import { UpdateTeacherDto } from '../../../src/modules/teacher/dto/update-teacher.input.dto';
-import { TeacherRole } from '@prisma/client';
-import { Timezone } from '../../../src/modules/teacher/dto/teacher.output.dto';
-import { FilterTeacherQuery } from '../../../src/modules/teacher/dto/filter.query.dto';
+import { CreateTeacherDto } from '../../../src/modules/teacher/interface/dto/requests/create-teacher.input.dto';
+import { UpdateTeacherDto } from '../../../src/modules/teacher/interface/dto/requests/update-teacher.input.dto';
+import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
+import { Timezone } from '../../../src/modules/teacher/interface/dto/responses/teacher.dto';
+import { FilterTeacherQuery } from '../../../src/modules/teacher/interface/dto/requests/filter.query.dto';
 
 describe('TeacherService', () => {
 	let service: TeacherService;
@@ -19,7 +19,7 @@ describe('TeacherService', () => {
 		login: 'testuser',
 		name: 'Test User',
 		password: 'hashedPassword',
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 		telegram_id: null,
 		telegram_link: null,
 		timezone: Timezone.BY,
@@ -36,7 +36,7 @@ describe('TeacherService', () => {
 		timezone: Timezone.BY,
 		deleted_at: null,
 		created_at: new Date(),
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 		telegrams: [],
 	};
 
@@ -114,7 +114,6 @@ describe('TeacherService', () => {
 				login: 'newuser',
 				password: 'password123',
 				name: 'New User',
-				telegram_link: null,
 				timezone: Timezone.BY,
 			};
 
@@ -141,7 +140,6 @@ describe('TeacherService', () => {
 				login: 'existinguser',
 				password: 'password123',
 				name: 'Existing User',
-				telegram_link: null,
 				timezone: Timezone.BY,
 			};
 
@@ -157,7 +155,6 @@ describe('TeacherService', () => {
 	describe('updateTeacher', () => {
 		const updateTeacherDto: UpdateTeacherDto = {
 			name: 'Updated Teacher',
-			telegram_link: 'https://t.me/updated',
 			timezone: Timezone.BY,
 		};
 

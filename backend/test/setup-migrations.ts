@@ -8,53 +8,56 @@ import * as fs from 'fs';
  * This ensures the test database schema is up to date
  */
 export default async function setupMigrations() {
-	// Load environment variables from .env.testing.local
-	const envPath = path.resolve(__dirname, '../.env.testing.local');
-	
+	const envPath = path.resolve(__dirname, '../.env.testing');
+
 	if (!fs.existsSync(envPath)) {
-		console.warn(`Warning: .env.testing.local not found at ${envPath}`);
-		console.warn('Skipping migrations. Make sure .env.testing.local exists with DATABASE_URL');
+		console.warn(`Warning: .env.testing not found at ${envPath}`);
+		console.warn('Skipping migrations. Make sure .env.testing exists with POSTGRES_URI');
 		return;
 	}
-	
+
 	dotenv.config({ path: envPath });
-	
+
+	process.env.NODE_ENV ??= 'testing';
+	process.env.LOG_LEVEL ??= 'error';
+
+	const databaseUrl = process.env.POSTGRES_URI ?? process.env.DATABASE_URL;
+
 	console.log('Running Prisma migrations for test database...');
-	console.log('DATABASE_URL:', process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 30)}...` : 'Not set');
-	
-	if (!process.env.DATABASE_URL) {
-		console.error('DATABASE_URL not found in environment variables');
-		throw new Error('DATABASE_URL is required for migrations');
+	console.log(
+		'Database URL:',
+		databaseUrl ? `${databaseUrl.substring(0, 30)}...` : 'Not set',
+	);
+
+	if (!databaseUrl) {
+		console.error('POSTGRES_URI (or DATABASE_URL) not found in environment variables');
+		throw new Error('POSTGRES_URI is required for migrations');
 	}
-	
+
 	try {
-		const schemaPath = path.resolve(__dirname, '../src/core/prisma/schema.prisma');
-		
-		// First, generate Prisma client to ensure it's up to date
+		const schemaPath = path.resolve(__dirname, '../src/infrastructure/prisma/schema.prisma');
+
 		console.log('Generating Prisma client...');
-		execSync(
-			`npx prisma generate --schema=${schemaPath}`,
-			{
-				stdio: 'pipe',
-				env: {
-					...process.env,
-					DATABASE_URL: process.env.DATABASE_URL,
-				},
-			}
-		);
-		
-		// Use db push for test databases - it syncs schema without requiring migrations
-		// This is better for test databases that might be reset frequently
+		execSync(`npx prisma generate --schema=${schemaPath}`, {
+			stdio: 'pipe',
+			env: {
+				...process.env,
+				POSTGRES_URI: databaseUrl,
+				DATABASE_URL: databaseUrl,
+			},
+		});
+
 		console.log('Pushing database schema...');
 		execSync(
-			`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`,
+			`npx prisma db push --schema=${schemaPath} --accept-data-loss`,
 			{
 				stdio: 'inherit',
 				env: {
 					...process.env,
-					DATABASE_URL: process.env.DATABASE_URL,
+					POSTGRES_URI: databaseUrl,
+					DATABASE_URL: databaseUrl,
 				},
-			}
+			},
 		);
 		console.log('✓ Database schema synced successfully');
 	} catch (error: any) {
@@ -64,4 +67,3 @@ export default async function setupMigrations() {
 		throw error;
 	}
 }
-

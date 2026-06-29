@@ -1,6 +1,6 @@
 import * as ExcelJS from 'exceljs';
-import { LessonOutputDto } from '../lesson/dto/lesson.output.dto';
-import { LessonStatusEnum } from '../lesson/dto/lesson-status.enum';
+import { LessonOutputDto } from '@/modules/lesson/interface/dto/responses/lesson.output.dto';
+import { LessonStatusEnum } from '@/modules/lesson/interface/dto/lesson-status.enum';
 
 interface DateParts {
 	year: number;

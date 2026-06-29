@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StudentService } from '../../../src/modules/student/student.service';
-import { StudentRepository } from '../../../src/modules/student/student.repository';
-import { TeacherService } from '../../../src/modules/teacher/teacher.service';
+import { StudentService } from '../../../src/modules/student/application/student.service';
+import { StudentRepository } from '../../../src/modules/student/infrastructure/student.repository';
+import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { CreateStudentDto } from '../../../src/modules/student/dto/create-student.dto';
-import { UpdateStudentDto } from '../../../src/modules/student/dto/update-student.dto';
-import { FilterStudentQuery } from '../../../src/modules/student/dto/filter.query.dto';
+import { CreateStudentDto } from '../../../src/modules/student/interface/dto/requests/create-student.dto';
+import { UpdateStudentDto } from '../../../src/modules/student/interface/dto/requests/update-student.dto';
+import { FilterStudentQuery } from '../../../src/modules/student/interface/dto/requests/filter.query.dto';
 
 describe('StudentService', () => {
 	let service: StudentService;
@@ -89,6 +89,7 @@ describe('StudentService', () => {
 			class: 5,
 			birth_date: new Date('2010-01-15'),
 			teacher_id: 1,
+			timezone: 'BY' as any,
 		};
 
 		it('should create student successfully', async () => {
@@ -147,6 +148,7 @@ describe('StudentService', () => {
 		const updateStudentDto: UpdateStudentDto = {
 			name: 'Updated Student',
 			class: 6,
+			birth_date: new Date('2010-01-15'),
 		};
 
 		it('should update student successfully', async () => {

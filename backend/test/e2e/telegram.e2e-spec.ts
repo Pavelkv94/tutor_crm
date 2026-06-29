@@ -1,15 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/app.module';
-import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole, PlanType, PlanCurrency } from '@prisma/client';
-import { BcryptService } from '../../src/modules/auth/bcrypt.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import { TelegramService } from '../../src/modules/telegram/telegram.service';
-import { TelegramUserEnum } from '../../src/modules/telegram/dto/telegram-user.enum';
-import { LessonStatusEnum } from '../../src/modules/lesson/dto/lesson-status.enum';
+import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
+import { telegramConfig, TelegramConfig } from '../../src/config/namespaces/telegram.config';
+import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
+import { TelegramService } from '../../src/modules/telegram/application/telegram.service';
+import { TelegramUserEnum } from '../../src/modules/telegram/interface/dto/telegram-user.enum';
+import { LessonStatusEnum } from '../../src/modules/lesson/interface/dto/lesson-status.enum';
 
 describe('TelegramController (e2e)', () => {
 	let app: INestApplication;
@@ -22,14 +21,12 @@ describe('TelegramController (e2e)', () => {
 		login: 'test_admin_telegram_e2e',
 		password: 'testPassword123',
 		name: 'Test Admin Telegram E2E',
-		telegram_id: '123456789',
 	};
 
 	const testTeacher = {
 		login: 'test_teacher_telegram_e2e',
 		password: 'testPassword123',
 		name: 'Test Teacher Telegram E2E',
-		telegram_id: '987654321',
 	};
 
 	const testStudent = {
@@ -39,26 +36,12 @@ describe('TelegramController (e2e)', () => {
 	};
 
 	beforeAll(async () => {
-		module = await Test.createTestingModule({
-			imports: [AppModule],
-		})
-			.overrideGuard(ThrottlerGuard)
-			.useValue({
-				canActivate: () => true,
-			})
-			.compile();
-
-		app = await createTestApp();
+		const testContext = await createTestApp({ useRealTelegramService: true });
+		app = testContext.app;
+		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);
 		bcryptService = module.get<BcryptService>(BcryptService);
 		telegramService = module.get<TelegramService>(TelegramService);
-
-		// Mock telegram.sendMessage to avoid actual Telegram API calls
-		(telegramService as any).telegram = {
-			sendMessage: jest.fn().mockResolvedValue({ message_id: 1 }),
-		};
-
-		await app.init();
 	});
 
 	afterAll(async () => {
@@ -151,8 +134,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -213,8 +196,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -256,8 +239,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -286,8 +269,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -316,8 +299,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -356,8 +339,8 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -376,7 +359,7 @@ describe('TelegramController (e2e)', () => {
 	});
 
 	describe('POST /telegram/send-lessons-cost-to-admin', () => {
-		it('should send lessons cost to admin with teacher JWT', async () => {
+		it('should send lessons cost to admin with admin JWT', async () => {
 			// Create teacher first
 			const teacherPasswordHash = await bcryptService.generateHash(testTeacher.password);
 			const teacher = await prisma.teacher.create({
@@ -442,9 +425,11 @@ describe('TelegramController (e2e)', () => {
 				},
 			});
 
+			const tgConfig = module.get<TelegramConfig>(telegramConfig.KEY);
+
 			await prisma.telegram.create({
 				data: {
-					telegram_id: '123456789',
+					telegram_id: tgConfig.adminId.toString(),
 					username: 'admin',
 					first_name: 'Admin',
 					type: TelegramUserEnum.TEACHER,
@@ -454,17 +439,17 @@ describe('TelegramController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			await request(app.getHttpServer())
 				.post('/telegram/send-lessons-cost-to-admin')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.send({
 					student_id: student.id,
 					start_date: '2024-01-01',
@@ -477,28 +462,27 @@ describe('TelegramController (e2e)', () => {
 		});
 
 		it('should return 404 when student not found', async () => {
-			// Create teacher user
-			const passwordHash = await bcryptService.generateHash(testTeacher.password);
-			const teacher = await prisma.teacher.create({
+			const adminPasswordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
 				data: {
-					...testTeacher,
-					password: passwordHash,
-					role: TeacherRole.TEACHER,
+					...testAdmin,
+					password: adminPasswordHash,
+					role: TeacherRole.ADMIN,
 				},
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			await request(app.getHttpServer())
 				.post('/telegram/send-lessons-cost-to-admin')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.send({
 					student_id: 99999,
 					start_date: '2024-01-01',
@@ -527,18 +511,27 @@ describe('TelegramController (e2e)', () => {
 				},
 			});
 
+			const adminPasswordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
+				data: {
+					...testAdmin,
+					password: adminPasswordHash,
+					role: TeacherRole.ADMIN,
+				},
+			});
+
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			await request(app.getHttpServer())
 				.post('/telegram/send-lessons-cost-to-admin')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.send({
 					student_id: student.id,
 					start_date: '2024-01-01',
@@ -559,28 +552,27 @@ describe('TelegramController (e2e)', () => {
 		});
 
 		it('should return validation errors for invalid data', async () => {
-			// Create teacher user
-			const passwordHash = await bcryptService.generateHash(testTeacher.password);
-			const teacher = await prisma.teacher.create({
+			const adminPasswordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
 				data: {
-					...testTeacher,
-					password: passwordHash,
-					role: TeacherRole.TEACHER,
+					...testAdmin,
+					password: adminPasswordHash,
+					role: TeacherRole.ADMIN,
 				},
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
-				id: teacher.id.toString(),
-				login: teacher.login,
-				name: teacher.name,
-				role: teacher.role,
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
 			});
 
 			await request(app.getHttpServer())
 				.post('/telegram/send-lessons-cost-to-admin')
-				.set('Authorization', `Bearer ${teacherToken}`)
+				.set('Authorization', `Bearer ${adminToken}`)
 				.send({
 					student_id: 'invalid',
 					start_date: '',

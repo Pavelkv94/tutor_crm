@@ -1,4 +1,4 @@
-import { calculateAgeFromBirthDate } from '../../../src/core/utils/calculate-age.util';
+import { calculateAgeFromBirthDate } from '../../../src/shared/utils/calculate-age.util';
 
 describe('calculateAgeFromBirthDate', () => {
 	const referenceDate = new Date('2026-06-01');

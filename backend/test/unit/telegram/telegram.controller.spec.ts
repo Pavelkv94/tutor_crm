@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TelegramController } from '../../../src/modules/telegram/telegram.controller';
-import { TelegramService } from '../../../src/modules/telegram/telegram.service';
-import { TelegramLinkInputDto } from '../../../src/modules/telegram/dto/telegram-link.input.dto';
-import { LessonsCostFiltersDto } from '../../../src/modules/telegram/dto/lessons-cost-filter.input.dto';
+import { TelegramController } from '../../../src/modules/telegram/interface/telegram.controller';
+import { TelegramService } from '../../../src/modules/telegram/application/telegram.service';
+import { TelegramLinkInputDto } from '../../../src/modules/telegram/interface/dto/requests/telegram-link.input.dto';
+import { LessonsCostFiltersDto } from '../../../src/modules/telegram/interface/dto/requests/lessons-cost-filter.input.dto';
 import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
-import { TeacherRole } from '@prisma/client';
+import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
 
 describe('TelegramController', () => {
 	let controller: TelegramController;
@@ -18,7 +18,7 @@ describe('TelegramController', () => {
 		id: '1',
 		login: 'testuser',
 		name: 'Test Teacher',
-		role: TeacherRole.TEACHER,
+		role: TeacherRoleEnum.TEACHER,
 	};
 
 	beforeEach(async () => {

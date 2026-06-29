@@ -1,14 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/app.module';
-import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { createTestApp, generateTestAdminToken, generateTestAccessToken, getCoreEnvConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole, PlanType, PlanCurrency } from '@prisma/client';
-import { BcryptService } from '../../src/modules/auth/bcrypt.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import { CancelationStatusEnum } from '../../src/modules/lesson/dto/cancel-lesson.dto';
-import { WeekDay } from '../../src/modules/lesson/dto/regular-lesson.input.dto';
+import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
+import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
+import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
+import { CancelationStatusEnum } from '../../src/modules/lesson/interface/dto/requests/cancel-lesson.dto';
+import { WeekDay } from '../../src/modules/lesson/interface/dto/requests/regular-lesson.input.dto';
 
 describe('LessonController (e2e)', () => {
 	let app: INestApplication;
@@ -20,21 +18,18 @@ describe('LessonController (e2e)', () => {
 		login: 'test_admin_lesson_e2e',
 		password: 'testPassword123',
 		name: 'Test Admin Lesson E2E',
-		telegram_id: '123456789',
 	};
 
 	const testTeacher = {
 		login: 'test_teacher_lesson_e2e',
 		password: 'testPassword123',
 		name: 'Test Teacher Lesson E2E',
-		telegram_id: '987654321',
 	};
 
 	const testTeacher2 = {
 		login: 'test_teacher2_lesson_e2e',
 		password: 'testPassword123',
 		name: 'Test Teacher 2 Lesson E2E',
-		telegram_id: '111222333',
 	};
 
 	const testStudent = {
@@ -60,20 +55,11 @@ describe('LessonController (e2e)', () => {
 	};
 
 	beforeAll(async () => {
-		module = await Test.createTestingModule({
-			imports: [AppModule],
-		})
-			.overrideGuard(ThrottlerGuard)
-			.useValue({
-				canActivate: () => true,
-			})
-			.compile();
-
-		app = await createTestApp();
+		const testContext = await createTestApp();
+		app = testContext.app;
+		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);
 		bcryptService = module.get<BcryptService>(BcryptService);
-
-		await app.init();
 	});
 
 	afterAll(async () => {
@@ -198,8 +184,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -218,6 +204,7 @@ describe('LessonController (e2e)', () => {
 					teacher_id: teacher.id,
 					start_date: startDate.toISOString(),
 					isFree: false,
+					isTrial: false,
 				})
 				.expect(201);
 
@@ -239,6 +226,7 @@ describe('LessonController (e2e)', () => {
 					teacher_id: 1,
 					start_date: new Date().toISOString(),
 					isFree: false,
+					isTrial: false,
 				})
 				.expect(401);
 		});
@@ -254,8 +242,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -271,6 +259,7 @@ describe('LessonController (e2e)', () => {
 					teacher_id: 1,
 					start_date: new Date().toISOString(),
 					isFree: false,
+					isTrial: false,
 				})
 				.expect(401);
 		});
@@ -303,8 +292,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -320,6 +309,7 @@ describe('LessonController (e2e)', () => {
 					teacher_id: teacher.id,
 					start_date: new Date().toISOString(),
 					isFree: false,
+					isTrial: false,
 				})
 				.expect(404);
 		});
@@ -348,8 +338,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -365,6 +355,7 @@ describe('LessonController (e2e)', () => {
 					teacher_id: teacher.id,
 					start_date: new Date().toISOString(),
 					isFree: false,
+					isTrial: false,
 				})
 				.expect(404);
 		});
@@ -412,8 +403,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -479,8 +470,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -536,8 +527,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -594,8 +585,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -652,8 +643,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -732,8 +723,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -775,8 +766,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -803,8 +794,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -822,7 +813,7 @@ describe('LessonController (e2e)', () => {
 	});
 
 	describe('PATCH /lessons/:id/cancel', () => {
-		it('should succeed canceling lesson with teacher JWT (own student)', async () => {
+		it('should succeed marking lesson as missed with teacher JWT (own student)', async () => {
 			const teacherPasswordHash = await bcryptService.generateHash(testTeacher.password);
 			const teacher = await prisma.teacher.create({
 				data: {
@@ -860,8 +851,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -872,16 +863,15 @@ describe('LessonController (e2e)', () => {
 				.patch(`/lessons/${lesson.id}/cancel`)
 				.set('Authorization', `Bearer ${teacherToken}`)
 				.send({
-					status: CancelationStatusEnum.CANCELLED,
-					comment: 'Test cancellation',
+					status: CancelationStatusEnum.MISSED,
+					comment: 'Test missed lesson',
 				})
 				.expect(204);
 
-			// Verify lesson was cancelled
 			const cancelledLesson = await prisma.lesson.findUnique({
 				where: { id: lesson.id },
 			});
-			expect(cancelledLesson?.status).toBe('CANCELLED');
+			expect(cancelledLesson?.status).toBe('MISSED');
 		});
 
 		it('should succeed canceling lesson with admin JWT', async () => {
@@ -931,8 +921,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const adminToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: admin.id.toString(),
 				login: admin.login,
 				name: admin.name,
@@ -996,8 +986,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacherToken = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacherToken = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher.id.toString(),
 				login: teacher.login,
 				name: teacher.name,
@@ -1060,8 +1050,8 @@ describe('LessonController (e2e)', () => {
 			});
 
 			const jwtService = getJwtService(module);
-			const coreEnvConfig = getCoreEnvConfig(module);
-			const teacher2Token = await generateTestAccessToken(jwtService, coreEnvConfig, {
+			const authConfig = getAuthConfig(module);
+			const teacher2Token = await generateTestAccessToken(jwtService, authConfig, {
 				id: teacher2.id.toString(),
 				login: teacher2.login,
 				name: teacher2.name,
