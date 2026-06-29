@@ -25,6 +25,7 @@ model Teacher {
 	lessons Lesson[]
 	students Student[]
 	regular_lessons RegularLesson[]
+	tasks Task[]
 
   created_at  DateTime @default(now())
 	deleted_at DateTime?
@@ -160,12 +161,36 @@ model TelegramToken {
 
 	@@map("telegram_token")
 }
+
+model Task {
+	id String @id @default(uuid())
+	description String
+
+	status TaskStatus @default(IN_PROGRESS)
+
+	color String
+
+	teacher_id Int
+	created_at DateTime @default(now())
+	updated_at DateTime @updatedAt
+
+	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+	@@map("task")
+}
   
 enum TelegramType {
 	TEACHER
 	STUDENT
 	PARENT
 }
+
+enum TaskStatus {
+	IN_PROGRESS
+	ON_APPROVAL
+	COMPLETED
+}
+
 
 enum PlanType {
   INDIVIDUAL

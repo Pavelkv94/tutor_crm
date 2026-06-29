@@ -10,6 +10,7 @@ import { TelegramModule } from '@/modules/telegram/telegram.module';
 import { AppConfigModule } from '@/config/app-config.module';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './modules/tasks/tasks.module';
 @Module({
 	imports: [
 		AppConfigModule,
@@ -28,6 +29,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 		LessonModule,
 		ReportsModule,
 		TelegramModule,
+		TasksModule,
 	],
 	controllers: [],
 	providers: [],

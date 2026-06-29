@@ -95,11 +95,11 @@ export class StudentRepository {
 	}
 
 	async updateStudentClass(): Promise<void> {
-		// Increment class for students with class < 11
+		// Increment class for students with 1 <= class < 11 (class 0 is excluded)
 		await this.prisma.student.updateMany({
 			where: {
 				deleted_at: null,
-				class: { lt: 11 }
+				class: { gt: 0, lt: 11 },
 			},
 			data: { class: { increment: 1 } },
 		});
