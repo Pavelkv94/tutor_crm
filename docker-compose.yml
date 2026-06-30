@@ -101,7 +101,7 @@ services:
       - tutor_network
 
   tutor_postgres_exporter:
-    image: prometheuscommunity/postgres-exporter:v0.16.0
+    image: prometheuscommunity/postgres-exporter:v0.20.0
     container_name: tutor_postgres_exporter
     cpus: 0.25
     mem_limit: 128m
