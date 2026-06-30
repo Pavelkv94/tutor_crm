@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { PlanDto } from '@/modules/plan/interface/dto/responses/plan.dto';
+import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
 
 export class StudentDto {
 	@ApiProperty({ description: 'The id of the student', example: 1 })
@@ -21,6 +22,10 @@ export class StudentDto {
 	teacher_id: number | null;
 	@ApiProperty({ description: 'The timezone of the student', example: 'BY' })
 	timezone: Timezone | null;
+	@ApiProperty({ description: 'Whether the student has given marketing consent', example: false })
+	marketing_consent: boolean;
+	@ApiProperty({ description: 'The payment currency of the student', example: 'BYN', enum: PaymentCurrency })
+	payment_currency: PaymentCurrency;
 }
 
 export class StudentExtendedDto extends StudentDto {

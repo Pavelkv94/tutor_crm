@@ -41,6 +41,8 @@ describe('StudentService', () => {
 		birth_date: new Date('2010-01-15'),
 		teacher_id: 1,
 		balance: 0,
+		marketing_consent: false,
+		payment_currency: 'BYN',
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,

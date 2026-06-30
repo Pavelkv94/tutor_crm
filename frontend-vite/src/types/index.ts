@@ -16,6 +16,8 @@ export interface JwtPayload {
   role: 'ADMIN' | 'TEACHER'
 }
 
+export type PaymentCurrency = 'EUR' | 'PLN' | 'BYN'
+
 export interface Student {
   id: number
   name: string
@@ -26,6 +28,8 @@ export interface Student {
   deleted_at: string | null
   teacher_id?: number | null
   timezone?: RegionCode | null
+  marketing_consent: boolean
+  payment_currency: PaymentCurrency
 }
 
 export interface StudentExtended extends Student {
@@ -50,6 +54,8 @@ export interface CreateStudentInput {
   birth_date: string | null
   teacher_id: number
   timezone?: RegionCode | null
+  marketing_consent?: boolean
+  payment_currency?: PaymentCurrency
 }
 
 export interface UpdateStudentInput {
@@ -58,6 +64,8 @@ export interface UpdateStudentInput {
   birth_date?: string
   teacher_id?: number
   timezone?: RegionCode | null
+  marketing_consent?: boolean
+  payment_currency?: PaymentCurrency
 }
 
 export interface Plan {

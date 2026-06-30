@@ -19,7 +19,6 @@ export default async function setupMigrations() {
 	dotenv.config({ path: envPath });
 
 	process.env.NODE_ENV ??= 'testing';
-	process.env.LOG_LEVEL ??= 'error';
 
 	const databaseUrl = process.env.POSTGRES_URI ?? process.env.DATABASE_URL;
 

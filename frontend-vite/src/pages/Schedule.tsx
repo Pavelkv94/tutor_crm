@@ -21,6 +21,7 @@ import { ScheduleCellModal } from '@/components/schedule/ScheduleCellModal'
 import { RescheduleCard } from '@/components/schedule/RescheduleCard'
 import { RescheduleLessonsModal } from '@/components/schedule/RescheduleLessonsModal'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { Teacher, Lesson } from '@/types'
 
 export const Schedule = () => {
@@ -91,10 +92,10 @@ export const Schedule = () => {
   })
 
 
-  // Generate hours from 8:00 to 22:00
+  // Generate hours from 8:00 to 21:00
   const hours = useMemo(() => {
     const hoursList: string[] = []
-    for (let i = 8; i <= 22; i++) {
+    for (let i = 8; i <= 21; i++) {
       hoursList.push(`${i.toString().padStart(2, '0')}:00`)
     }
     return hoursList
@@ -175,27 +176,46 @@ export const Schedule = () => {
     return lessonsMap.get(key) || []
   }
 
-  // Get first name (text before first space)
-  const getFirstName = (fullName: string): string => {
-    const spaceIndex = fullName.indexOf(' ')
-    return spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName
-  }
-
-  // Format lesson display text (for cells - shows first name only)
-  const formatLessonText = (lesson: Lesson): string => {
+  const formatLessonTime = (lesson: Lesson): string => {
     const { hours, minutes } = getUTC3DateParts(lesson.date)
     const hoursStr = hours.toString().padStart(2, '0')
     const minutesStr = minutes.toString().padStart(2, '0')
-    const firstName = getFirstName(lesson.student.name)
-		return `[${hoursStr}:${minutesStr}] ${firstName} ${lesson.student.class}кл ${lesson.plan.duration}м`
+    return `${hoursStr}:${minutesStr}`
+  }
+
+  const getLessonTypeLabel = (lesson: Lesson): string => {
+    if (lesson.is_trial) return 'пробное'
+    if (lesson.is_free) return 'бесплатное'
+
+    switch (lesson.status) {
+      case 'PENDING_PAID':
+      case 'COMPLETED_PAID':
+        return 'оплачено'
+      case 'PENDING_UNPAID':
+      case 'COMPLETED_UNPAID':
+        return 'не оплачено'
+      case 'MISSED':
+        return 'прогул'
+      case 'RESCHEDULED':
+        return 'перенесено'
+      case 'CANCELLED':
+        return 'отменено'
+      default:
+        return lesson.is_paid ? 'оплачено' : 'не оплачено'
+    }
+  }
+
+  const formatLessonPrimaryLine = (lesson: Lesson): string => {
+    return `[${formatLessonTime(lesson)}] ${lesson.student.name} ${lesson.student.class}кл`
+  }
+
+  const formatLessonSecondaryLine = (lesson: Lesson): string => {
+    return `${lesson.plan.duration} мин · ${getLessonTypeLabel(lesson)}`
   }
 
   // Format lesson display text with full name (for tooltips)
   const formatLessonTextFull = (lesson: Lesson): string => {
-    const { hours, minutes } = getUTC3DateParts(lesson.date)
-    const hoursStr = hours.toString().padStart(2, '0')
-    const minutesStr = minutes.toString().padStart(2, '0')
-		return `[${hoursStr}:${minutesStr}] ${lesson.student.name} ${lesson.student.class}кл - ${lesson.plan.duration} минут`
+    return `${formatLessonPrimaryLine(lesson)} — ${formatLessonSecondaryLine(lesson)}`
   }
 
   // Get background color for lesson status
@@ -346,10 +366,7 @@ export const Schedule = () => {
 							</div>
 						)}
 						<div className="flex items-end">
-							<Button 
-								onClick={handleDownloadSchedule} 
-								className="bg-green-600 hover:bg-green-700 text-white"
-							>
+							<Button onClick={handleDownloadSchedule} className="font-semibold">
 								Скачать расписание
 							</Button>
 						</div>
@@ -364,149 +381,121 @@ export const Schedule = () => {
       </div>
 
       {/* Status Legend */}
-      <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-        <div className="flex flex-wrap gap-4">
+      <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
+        <div className="flex flex-wrap gap-x-5 gap-y-3">
           {statusLegend.map((status) => (
             <div key={status} className="flex items-center gap-2">
               <div
-                className="w-6 h-6 border border-gray-400 rounded"
+                className="h-5 w-5 rounded-md border border-border"
                 style={{
                   backgroundColor: getLessonStatusColor(status),
                 }}
               />
-              <span className="text-xs text-gray-700">{getStatusLabel(status)}</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {getStatusLabel(status)}
+              </span>
             </div>
           ))}
           <div className="flex items-center gap-2">
             <div
-              className="w-6 h-6 border-2 rounded"
-              style={{
-								borderColor: '#3fc12d',
-                backgroundColor: 'transparent',
-              }}
+              className="h-5 w-5 rounded-md border-2 bg-card"
+              style={{ borderColor: '#3fc12d' }}
             />
-            <span className="text-xs text-gray-700">Бесплатное занятие</span>
+            <span className="text-xs font-medium text-muted-foreground">Бесплатное занятие</span>
           </div>
           <div className="flex items-center gap-2">
             <div
-              className="w-6 h-6 border-2 rounded"
-              style={{
-                borderColor: '#f9c600',
-                backgroundColor: 'transparent',
-              }}
+              className="h-5 w-5 rounded-md border-2 bg-card"
+              style={{ borderColor: '#f9c600' }}
             />
-            <span className="text-xs text-gray-700">Пробное занятие</span>
+            <span className="text-xs font-medium text-muted-foreground">Пробное занятие</span>
           </div>
         </div>
       </div>
 
       {/* Schedule Grid */}
-      <div className="overflow-x-auto w-full">
-        {/* Weekdays Header */}
-        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b-2 border-gray-800">
-          <div className="bg-gray-100 border-r-2 border-gray-800 h-[24px] text-center font-bold text-xs flex items-center justify-center">
-            Время
-          </div>
-          {weekDays.map((day, index) => {
-            // Check if any day in any week at this column index is today
-            const isCurrentDayColumn = weeks.some(week => {
-              const dayNumber = week[index]
-              return dayNumber !== null && dayNumber !== undefined && isToday(dayNumber)
-            })
-            
-            return (
-              <div
-                key={index}
-                className={`bg-yellow-100 border-r border-gray-500 last:border-r-0 h-[24px] text-center font-semibold text-xs flex items-center justify-center min-w-0 overflow-hidden ${
-                  isCurrentDayColumn ? 'border-l-4 border-l-purple-500 border-r-4 border-r-purple-500' : ''
-                }`}
-              >
-                <span className="truncate">{day}</span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Weeks */}
-        {weeks.map((week, weekIndex) => (
-          <div
-            key={weekIndex}
-            className="mb-4 border-2 border-gray-400 rounded-lg overflow-hidden"
-          >
-            {/* Week Header with Day Numbers */}
-            <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-gray-50 border-b border-gray-500">
-              <div className="bg-gray-200 border-r-2 border-gray-800 h-[24px]"></div>
-              {week.map((day, dayIndex) => {
-                const isCurrentDay = day !== null && isToday(day)
-                return (
-                  <div
-                    key={dayIndex}
-                    className={`border-r border-gray-500 last:border-r-0 h-[24px] text-center font-bold text-xs flex items-center justify-center min-w-0 ${
-                      day
-                        ? isCurrentDay
-                          ? 'bg-purple-400 text-white border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
-                          : 'bg-white text-black'
-                        : 'bg-gray-300 text-gray-500'
-                    }`}
-                  >
-                    {day || ''}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Hour Rows */}
-            {hours.map((hour, hourIndex) => (
-              <div
-                key={hourIndex}
-                className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-gray-400 last:border-b-0"
-              >
-                {/* Time Column */}
-                <div className="bg-gray-100 border-r-2 border-gray-800 min-h-[32px] text-center font-bold text-xs flex items-center justify-center">
-                  {hour}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="overflow-x-auto w-full">
+          {weeks.map((week, weekIndex) => (
+            <div
+              key={weekIndex}
+              className="border-b border-border last:border-b-0"
+            >
+              {/* Week Header */}
+              <div className="grid grid-cols-[72px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary">
+                <div className="flex items-center justify-center border-r border-border px-2 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Время
                 </div>
-
-                {/* Day Columns */}
                 {week.map((day, dayIndex) => {
-                  const weekDayName = weekDays[dayIndex]
-                  const cellLessons = getLessonsForCell(day, hour)
-                  const hasLessons = cellLessons.length > 0
-									const isCurrentDay = day !== null && isToday(day)
+                  const isCurrentDay = day !== null && isToday(day)
 
-                  const tooltipText = day
-                    ? `${weekDayName}, ${day} ${months[parseInt(selectedMonth, 10) - 1]?.label} ${selectedYear}, ${hour}`
-                    : ''
-                  
-                  const is13Hour = hour === '13:00'
-                  
-                  // Build cell className with proper border handling
-                  let cellClassName = 'border-r border-gray-400 last:border-r-0 min-h-[32px] transition-colors duration-200 flex flex-col min-w-0 overflow-hidden'
-                  
-                  // Apply trial lesson border (2px #f9c600) - takes precedence over free lesson and current day border
-									if (isCurrentDay) {
-                    cellClassName += ' border-l-4 border-l-purple-500 border-r-4 border-r-purple-500'
-                  }
-                  
-                  // Add background and cursor styles
-                  cellClassName += day
-                    ? is13Hour
-                      ? ' bg-[#88f1ec] hover:bg-[#7ae0d9] cursor-pointer'
-                      : hasLessons
-                      ? ' cursor-pointer'
-                      : ' bg-white hover:bg-blue-50 cursor-pointer'
-                    : ' bg-gray-300 cursor-not-allowed'
+                  return (
+                    <div
+                      key={dayIndex}
+                      className={cn(
+                        'flex min-w-0 flex-col items-center justify-center border-r border-border px-1 py-2 text-center last:border-r-0',
+                        day
+                          ? isCurrentDay
+                            ? 'bg-accent text-accent-foreground'
+                            : 'text-secondary-foreground'
+                          : 'bg-secondary/60 text-muted-foreground',
+                      )}
+                    >
+                      {day ? (
+                        <>
+                          <span className="truncate text-[10px] font-bold uppercase leading-tight tracking-wide">
+                            {weekDays[dayIndex]}
+                          </span>
+                          <span className="text-sm font-extrabold leading-tight">{day}</span>
+                        </>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
 
-                  if (!day) {
-                    return (
-                      <div
-                        key={dayIndex}
-                        className={cellClassName}
-                      />
-                    )
-                  }
+              {/* Hour Rows */}
+              {hours.map((hour, hourIndex) => (
+                <div
+                  key={hourIndex}
+                  className="grid grid-cols-[72px_repeat(7,minmax(0,1fr))] border-b border-border last:border-b-0"
+                >
+                  <div className="flex min-h-[36px] items-center justify-center border-r border-border bg-secondary/50 text-xs font-bold text-foreground">
+                    {hour}
+                  </div>
 
-                  const handleCellClick = () => {
-                    if (day) {
+                  {week.map((day, dayIndex) => {
+                    const weekDayName = weekDays[dayIndex]
+                    const cellLessons = getLessonsForCell(day, hour)
+                    const hasLessons = cellLessons.length > 0
+                    const isCurrentDay = day !== null && isToday(day)
+
+                    const tooltipText = day
+                      ? `${weekDayName}, ${day} ${months[parseInt(selectedMonth, 10) - 1]?.label} ${selectedYear}, ${hour}`
+                      : ''
+
+                    const is13Hour = hour === '13:00'
+
+                    let cellClassName =
+                      'border-r border-border last:border-r-0 min-h-[36px] p-0.5 transition-colors duration-150 flex flex-col min-w-0 overflow-hidden'
+
+                    if (isCurrentDay && day) {
+                      cellClassName += ' bg-accent/20'
+                    }
+
+                    cellClassName += day
+                      ? is13Hour
+                        ? ' bg-[#88f1ec]/60 cursor-pointer hover:bg-gray-100'
+                        : isCurrentDay
+                          ? ' cursor-pointer hover:bg-gray-100'
+                          : ' bg-card cursor-pointer hover:bg-gray-100'
+                      : ' bg-gray-300 cursor-not-allowed'
+
+                    if (!day) {
+                      return <div key={dayIndex} className={cellClassName} />
+                    }
+
+                    const handleCellClick = () => {
                       const hourNum = parseInt(hour.split(':')[0], 10)
                       setSelectedCell({
                         year: parseInt(selectedYear, 10),
@@ -515,62 +504,73 @@ export const Schedule = () => {
                         hour: hourNum,
                       })
                     }
-                  }
 
-									// Determine current teacher ID
-									const currentTeacherId = isAdmin && selectedTeacherId
-										? parseInt(selectedTeacherId, 10)
-										: user?.id
+                    const currentTeacherId =
+                      isAdmin && selectedTeacherId
+                        ? parseInt(selectedTeacherId, 10)
+                        : user?.id
 
-                  return (
-                    <Tooltip key={dayIndex}>
-                      <TooltipTrigger asChild>
-                        <div 
-                          className={cellClassName} 
-													onClick={handleCellClick}
-                        >
+                    return (
+                      <Tooltip key={dayIndex}>
+                        <TooltipTrigger asChild>
+                          <div className={cellClassName} onClick={handleCellClick}>
+                            {hasLessons && (
+                              <div
+                                className={`flex min-w-0 flex-col gap-0.5 ${cellLessons.length === 1 ? 'h-full' : ''}`}
+                              >
+                                {cellLessons.map((lesson) => {
+                                  const isDifferentTeacher =
+                                    currentTeacherId !== undefined &&
+                                    lesson.teacher.id !== currentTeacherId
+
+                                  return (
+                                    <div
+                                      key={lesson.id}
+                                      className={`mx-0.5 flex min-w-0 flex-col justify-center rounded-sm px-1 py-0.5 text-xs leading-tight text-[#000000] ${
+                                        cellLessons.length === 1 ? 'h-full' : ''
+                                      }`}
+                                      style={{
+                                        backgroundColor: getLessonStatusColor(lesson.status),
+                                        border:
+                                          lesson.is_trial || lesson.is_free
+                                            ? `2px solid ${lesson.is_trial ? '#f9c600' : '#3fc12d'}`
+                                            : 'none',
+                                        opacity: isDifferentTeacher ? 0.5 : 1,
+                                      }}
+                                    >
+                                      <div className="truncate font-semibold">
+                                        {formatLessonPrimaryLine(lesson)}
+                                      </div>
+                                      <div className="truncate text-[10px] leading-tight opacity-80">
+                                        {formatLessonSecondaryLine(lesson)}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">{tooltipText}</p>
                           {hasLessons && (
-                            <div className={`flex flex-col min-w-0 ${cellLessons.length === 1 ? 'h-full' : ''}`}>
-															{cellLessons.map((lesson) => {
-																const isDifferentTeacher = currentTeacherId !== undefined && lesson.teacher.id !== currentTeacherId
-																return (
-																	<div
-																		key={lesson.id}
-																		className={`px-1 py-0.5 text-xs leading-tight text-[#000000] truncate min-w-0 ${cellLessons.length === 1 ? 'h-full flex items-center' : ''
-																			}`}
-																		style={{
-																			backgroundColor: getLessonStatusColor(lesson.status),
-																			border: (lesson.is_trial || lesson.is_free) ? `2px solid ${lesson.is_trial ? '#f9c600' : lesson.is_free ? '#3fc12d' : undefined}` : 'none',
-																			opacity: isDifferentTeacher ? 0.5 : 1,
-																		}}
-																	>
-																		{formatLessonText(lesson)}
-																	</div>
-																)
-															})}
+                            <div className="mt-1 space-y-1">
+                              {cellLessons.map((lesson) => (
+                                <p key={lesson.id} className="text-xs">
+                                  {formatLessonTextFull(lesson)}
+                                </p>
+                              ))}
                             </div>
                           )}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">{tooltipText}</p>
-                        {hasLessons && (
-                          <div className="mt-1 space-y-1">
-                            {cellLessons.map((lesson) => (
-                              <p key={lesson.id} className="text-xs">
-                                {formatLessonTextFull(lesson)}
-                              </p>
-                            ))}
-                          </div>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        ))}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Schedule Cell Modal */}

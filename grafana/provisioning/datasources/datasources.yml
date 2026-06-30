@@ -1,0 +1,18 @@
+apiVersion: 1
+
+# Датасорсы провижинятся как код — при сбросе тома Grafana они восстановятся автоматически.
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://tutor_prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://tutor_jaeger:16686
+    editable: true

@@ -45,7 +45,7 @@ export class TeacherRepository {
 				created_at: true,
 				telegrams: true,
 			},
-			orderBy: [{ deleted_at: 'desc' }, { name: 'asc' }],
+			orderBy: [{ deleted_at: 'desc' }, { role: 'desc' }, { name: 'asc' }],
 		});
 		return teachers.map(this.mapTeacherToView);
 	}

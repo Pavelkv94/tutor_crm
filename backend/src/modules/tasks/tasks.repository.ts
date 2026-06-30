@@ -31,7 +31,7 @@ export class TasksRepository implements TasksRepositoryPort {
 				login: true,
 				role: true,
 			},
-			orderBy: { name: 'asc' },
+			orderBy: [{ role: 'desc' }, { name: 'asc' }],
 		});
 
 		const groupedCounts = await this.prisma.task.groupBy({

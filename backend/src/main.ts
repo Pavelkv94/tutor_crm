@@ -1,3 +1,4 @@
+import './observability/tracing/tracing'; //* загружаем tracing перед инициализацией nestjs модулей
 import { NestFactory } from '@nestjs/core';
 import { env } from '@/config/bootstrap-env';
 import { AppModule } from '@/app.module';
@@ -37,7 +38,7 @@ async function bootstrap() {
 		allowedHeaders: ['Content-Type', 'Authorization'],
 	});
 
-	app.setGlobalPrefix('api');
+	app.setGlobalPrefix('api', { exclude: ['metrics'] });
 
 	await app.listen(env.PORT, () => {
 		console.log(`Server is running on port ${process.env.PORT ?? 5000}`);

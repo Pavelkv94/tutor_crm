@@ -27,7 +27,7 @@ export const TeacherSelectionGrid = ({
     <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-8">
       <h1 className="text-2xl sm:text-3xl font-bold">Ученики</h1>
       <p className="text-muted-foreground">Выберите преподавателя</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-3xl px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full px-4">
         {teachers.map((teacher) => {
           const isCurrentUser = currentUserId && teacher.id === +currentUserId
 

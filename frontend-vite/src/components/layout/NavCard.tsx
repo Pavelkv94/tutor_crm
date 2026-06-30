@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Card, CardContent } from '@/components/ui/card'
-import { TasksNavBadge } from '@/components/tasks/TasksNavBadge'
 import { tasksApi } from '@/api/tasks'
 import { useAuth } from '@/contexts/AuthContext'
+import { TasksNavBadge } from '@/components/tasks/TasksNavBadge'
 import type { NavItem } from '@/constants/navigation'
 
 interface NavCardProps {
@@ -36,23 +35,35 @@ export const NavCard = ({ item }: NavCardProps) => {
   }
 
   return (
-    <Card
-      className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-primary"
+    <div
+      className="group flex cursor-pointer items-center gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm transition-all duration-150 hover:shadow-xl hover:-translate-y-0.5"
+      style={{ borderColor: 'hsl(254 75% 92%)' }}
       onClick={handleClick}
       tabIndex={0}
       role="button"
       aria-label={item.label}
       onKeyDown={handleKeyDown}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#4b2eaa'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'hsl(254 75% 92%)'
+      }}
     >
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="relative">
-            <Icon className="h-10 w-10 text-primary" aria-hidden="true" />
-            {isTasksItem && <TasksNavBadge count={pendingCount} />}
-          </div>
-          <p className="text-lg font-semibold">{item.label}</p>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Icon chip */}
+      <div
+        className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl transition-colors duration-150"
+        style={{ background: '#f9da00', color: '#2a1568' }}
+        aria-hidden="true"
+      >
+        <Icon className="h-7 w-7" />
+        {isTasksItem && <TasksNavBadge count={pendingCount} />}
+      </div>
+
+      {/* Label */}
+      <div>
+        <p className="text-lg font-extrabold text-foreground">{item.label}</p>
+      </div>
+    </div>
   )
 }

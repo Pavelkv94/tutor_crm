@@ -1,31 +1,32 @@
 services:
   tutor_backend:
     container_name: tutor_backend
+    image: tutor_backend
     cpus: 1
     mem_limit: 512m
     restart: unless-stopped
     build:
       context: ./backend
       dockerfile: Dockerfile
+    depends_on:
+      tutor_postgres:
+        condition: service_healthy
     ports:
       - 5008:5000
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - PORT=${PORT}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_ADMIN_ID=${TELEGRAM_ADMIN_ID}
-      - TELEGRAM_BOT_NAME=${TELEGRAM_BOT_NAME}
-      - REFRESH_SECRET_KEY=${REFRESH_SECRET_KEY}
-      - REFRESH_EXPIRES_IN=${REFRESH_EXPIRES_IN}
-      - ACCESS_SECRET_KEY=${ACCESS_SECRET_KEY}
-      - ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}
-      - ADMIN_REGISTRATION_SECRET_KEY=${ADMIN_REGISTRATION_SECRET_KEY}
-      - ORIGIN_URLS=${ORIGIN_URLS}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/metrics || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 25s
     networks:
       - tutor_network
 
   tutor_frontend:
     container_name: tutor_frontend
+    image: tutor_frontend
     cpus: 1
     mem_limit: 512m
     restart: unless-stopped
@@ -35,7 +36,8 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
     depends_on:
-      - tutor_backend
+      tutor_backend:
+        condition: service_healthy
     ports:
       - 3008:3000
     networks:
@@ -47,14 +49,22 @@ services:
     cpus: 1
     mem_limit: 512m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_EXPORTER_PASSWORD: ${POSTGRES_EXPORTER_PASSWORD}
     ports:
       - "5436:5432"
     volumes:
       - tutor_postgres:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres/init-monitoring.sh:/docker-entrypoint-initdb.d/init-monitoring.sh:ro
     networks:
       - tutor_network
 
@@ -77,9 +87,107 @@ services:
     networks:
       - tutor_network
 
+  tutor_postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: tutor_postgres_exporter
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://tutor_monitoring:${POSTGRES_EXPORTER_PASSWORD}@tutor_postgres:5432/${POSTGRES_DB}?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - tutor_network
+    depends_on:
+      - tutor_postgres
+
+  tutor_node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: tutor_node_exporter
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - tutor_network
+
+  tutor_prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: tutor_prometheus
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - tutor_network
+
+  tutor_grafana:
+    image: grafana/grafana:11.4.0
+    container_name: tutor_grafana
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    networks:
+      - tutor_network
+    depends_on:
+      tutor_prometheus:
+        condition: service_healthy
+
+  tutor_jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: tutor_jaeger
+    cpus: 1
+    mem_limit: 512m
+    restart: unless-stopped
+    # root нужен, чтобы jaeger (uid 10001) мог писать в свежий named volume /badger
+    user: root
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    ports:
+      - "16686:16686" # jaeger ui
+      - "4318:4318" # jaeger http
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - tutor_network
 
 volumes:
   tutor_postgres:
+  grafana-storage:
+  prometheus-data:
+  jaeger-data:
 
 networks:
   tutor_network:

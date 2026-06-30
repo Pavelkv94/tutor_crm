@@ -11,10 +11,12 @@ import { AppConfigModule } from '@/config/app-config.module';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { ObservabilityModule } from './observability/observability.module';
 @Module({
 	imports: [
 		AppConfigModule,
 		PrismaModule,
+		ObservabilityModule,
 		ScheduleModule.forRoot(),
 		ThrottlerModule.forRoot([
 			{

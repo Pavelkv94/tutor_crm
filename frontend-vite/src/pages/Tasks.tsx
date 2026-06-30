@@ -138,7 +138,7 @@ export const Tasks = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Задачи</h1>
         </div>
         {isAdmin && (
-          <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto font-semibold">
             <Plus className="mr-2 h-4 w-4" />
             Создать задачу
           </Button>
@@ -168,7 +168,7 @@ export const Tasks = () => {
           <p className="text-muted-foreground">Задач пока нет</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-5xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {tasks.map((task) => (
             <TaskSticker
               key={task.id}

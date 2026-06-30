@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 export const Login = () => {
   const [login, setLogin] = useState('')
@@ -39,18 +39,41 @@ export const Login = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Добро пожаловать</CardTitle>
-          <CardDescription className="text-center">
+    <div
+      className="flex min-h-screen flex-col items-center justify-center p-4"
+      style={{ background: 'linear-gradient(160deg, #5634c4 0%, #421ca8 100%)' }}
+    >
+      {/* Logo */}
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <img
+          src="/logo.png"
+          alt="English Stars"
+          className="h-20 w-20 rounded-full object-cover shadow-2xl"
+          style={{ border: '2px solid rgba(255,255,255,0.2)' }}
+        />
+        <div className="text-center">
+          <p className="text-xl font-extrabold tracking-tight text-white" style={{ letterSpacing: '-0.02em' }}>
+            English Stars
+          </p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: '0.14em' }}>
+            School CRM
+          </p>
+        </div>
+      </div>
+
+      <Card className="w-full max-w-md shadow-2xl" style={{ borderRadius: '1.25rem' }}>
+        <CardHeader className="pb-2 pt-7 px-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-center text-foreground" style={{ letterSpacing: '-0.02em' }}>
+            Добро пожаловать
+          </h1>
+          <p className="text-center text-sm text-muted-foreground mt-1">
             Войдите в свой аккаунт, чтобы продолжить
-          </CardDescription>
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8 pb-8 pt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login">Логин</Label>
+              <Label htmlFor="login" className="font-bold text-sm">Логин</Label>
               <Input
                 id="login"
                 type="text"
@@ -62,7 +85,7 @@ export const Login = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
+              <Label htmlFor="password" className="font-bold text-sm">Пароль</Label>
               <Input
                 id="password"
                 type="password"
@@ -74,11 +97,11 @@ export const Login = () => {
               />
             </div>
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full font-bold text-sm h-11 mt-2" disabled={isLoading}>
               {isLoading ? 'Вход...' : 'Войти'}
             </Button>
           </form>
@@ -87,4 +110,3 @@ export const Login = () => {
     </div>
   )
 }
-

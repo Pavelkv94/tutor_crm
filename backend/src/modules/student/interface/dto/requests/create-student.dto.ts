@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
+import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
 
 
 export class CreateStudentDto {
@@ -33,4 +34,14 @@ export class CreateStudentDto {
 	@IsEnum(Timezone)
 	@IsOptional()
 	timezone: Timezone;
+
+	@ApiProperty({ description: 'Whether the student has given marketing consent', example: false, required: false })
+	@IsBoolean()
+	@IsOptional()
+	marketing_consent?: boolean;
+
+	@ApiProperty({ description: 'The payment currency of the student', example: 'BYN', enum: PaymentCurrency, required: false })
+	@IsEnum(PaymentCurrency)
+	@IsOptional()
+	payment_currency?: PaymentCurrency;
 }

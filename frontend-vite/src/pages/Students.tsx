@@ -146,7 +146,7 @@ export const Students = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Ученики</h1>
         </div>
         {isAdmin && (
-          <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto font-semibold">
             <Plus className="mr-2 h-4 w-4" />
             Добавить ученика
           </Button>
@@ -188,10 +188,7 @@ export const Students = () => {
           </Select>
         </div>
         <div className="flex items-end">
-          <Button
-            onClick={handleDownloadClick}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
+          <Button onClick={handleDownloadClick} className="font-semibold">
             Скачать
           </Button>
         </div>

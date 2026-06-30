@@ -41,6 +41,9 @@ model Student {
   class      Int
   birth_date DateTime?
 	balance    Int @default(0)
+	marketing_consent Boolean @default(false)
+	payment_currency PaymentCurrency @default(BYN)
+
 	notifyAboutBirthday Boolean @default(true)
 	notifyAboutLessons Boolean @default(true)
 	bookUntilCancellation Boolean @default(false)
@@ -177,6 +180,12 @@ model Task {
 	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
 
 	@@map("task")
+}
+
+enum PaymentCurrency {
+  EUR
+  PLN
+	BYN
 }
   
 enum TelegramType {

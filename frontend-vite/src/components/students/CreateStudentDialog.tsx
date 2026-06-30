@@ -21,9 +21,16 @@ import {
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { RegionSelect } from '@/components/shared/RegionSelect'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
-import type { CreateStudentInput } from '@/types'
+import type { CreateStudentInput, PaymentCurrency } from '@/types'
+
+const PAYMENT_CURRENCIES: { value: PaymentCurrency; label: string }[] = [
+	{ value: 'BYN', label: 'BYN 🇧🇾' },
+	{ value: 'EUR', label: 'EUR 🇪🇺' },
+	{ value: 'PLN', label: 'PLN 🇵🇱' },
+]
 
 interface CreateStudentDialogProps {
   open: boolean
@@ -36,6 +43,8 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
+	const [marketingConsent, setMarketingConsent] = useState(false)
+	const [paymentCurrency, setPaymentCurrency] = useState<PaymentCurrency>('BYN')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -59,6 +68,8 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       setBirthDate('')
       setTeacherId('')
       setTimezone('')
+			setMarketingConsent(false)
+			setPaymentCurrency('BYN')
     },
   })
 
@@ -73,6 +84,8 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
       timezone: timezone || null,
+			marketing_consent: marketingConsent,
+			payment_currency: paymentCurrency,
     }
 
     createMutation.mutate(data)
@@ -138,6 +151,32 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
               value={timezone}
               onValueChange={setTimezone}
             />
+						<div className="grid gap-2">
+							<Label htmlFor="paymentCurrency">Счет для оплаты</Label>
+							<Select value={paymentCurrency} onValueChange={(value) => setPaymentCurrency(value as PaymentCurrency)}>
+								<SelectTrigger id="paymentCurrency" aria-label="Счет для оплаты">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{PAYMENT_CURRENCIES.map((currency) => (
+										<SelectItem key={currency.value} value={currency.value}>
+											{currency.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="marketingConsent"
+								checked={marketingConsent}
+								onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+								aria-label="Согласие на маркетинг"
+							/>
+							<Label htmlFor="marketingConsent" className="cursor-pointer">
+								Согласие на маркетинг
+							</Label>
+						</div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
