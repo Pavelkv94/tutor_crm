@@ -91,7 +91,7 @@ export const Teachers = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold">Преподаватели</h1>
-        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto font-semibold">
           <Plus className="mr-2 h-4 w-4" />
           Добавить преподавателя
         </Button>

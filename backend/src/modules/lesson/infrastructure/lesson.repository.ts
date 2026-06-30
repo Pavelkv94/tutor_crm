@@ -10,6 +10,7 @@ import { Teacher } from '@/infrastructure/prisma/generated/client';
 import { CancelationStatusEnum, CancelLessonDto } from "@/modules/lesson/interface/dto/requests/cancel-lesson.dto";
 import { ManageFreeLessonStatusDto } from "@/modules/lesson/interface/dto/requests/manage-free-lesson.input.dto";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
+import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { UpdateLessonsPlanForPeriodDto } from "@/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto";
 @Injectable()
@@ -318,6 +319,8 @@ export class LessonRepository {
 				deleted_at: lesson.student.deleted_at,
 				teacher_id: lesson.student.teacher_id || null,
 				timezone: lesson.student.timezone as Timezone,
+				marketing_consent: lesson.student.marketing_consent,
+				payment_currency: lesson.student.payment_currency as PaymentCurrency,
 			},
 			plan: {
 				id: lesson.plan.id,

@@ -16,6 +16,8 @@ export interface JwtPayload {
   role: 'ADMIN' | 'TEACHER'
 }
 
+export type PaymentCurrency = 'EUR' | 'PLN' | 'BYN'
+
 export interface Student {
   id: number
   name: string
@@ -26,6 +28,8 @@ export interface Student {
   deleted_at: string | null
   teacher_id?: number | null
   timezone?: RegionCode | null
+  marketing_consent: boolean
+  payment_currency: PaymentCurrency
 }
 
 export interface StudentExtended extends Student {
@@ -50,6 +54,8 @@ export interface CreateStudentInput {
   birth_date: string | null
   teacher_id: number
   timezone?: RegionCode | null
+  marketing_consent?: boolean
+  payment_currency?: PaymentCurrency
 }
 
 export interface UpdateStudentInput {
@@ -58,6 +64,8 @@ export interface UpdateStudentInput {
   birth_date?: string
   teacher_id?: number
   timezone?: RegionCode | null
+  marketing_consent?: boolean
+  payment_currency?: PaymentCurrency
 }
 
 export interface Plan {
@@ -205,5 +213,52 @@ export interface StudentLessonsOutput {
   class: number
   canceled_lessons: number
   missed_lessons: number
+}
+
+export type TaskStatus = 'IN_PROGRESS' | 'ON_APPROVAL' | 'COMPLETED'
+
+export interface TaskStatusCount {
+  IN_PROGRESS: number
+  ON_APPROVAL: number
+  COMPLETED: number
+}
+
+export interface TaskTeacher {
+  id: number
+  name: string
+}
+
+export interface Task {
+  id: string
+  description: string
+  status: TaskStatus
+  color: string
+  teacher_id: number
+  created_at: string
+  updated_at: string
+  teacher?: TaskTeacher
+}
+
+export interface TeacherTasksSummary {
+  id: number
+  name: string
+  login: string
+  role: string
+  tasks_count: TaskStatusCount
+}
+
+export interface CreateTaskInput {
+  description: string
+  teacher_id: number
+}
+
+export interface UpdateTaskInput {
+  description?: string
+  teacher_id?: number
+  status?: TaskStatus
+}
+
+export interface TasksPendingCount {
+  count: number
 }
 

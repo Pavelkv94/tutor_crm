@@ -1420,6 +1420,297 @@
           "Telegram"
         ]
       }
+    },
+    "/tasks/teachers": {
+      "get": {
+        "operationId": "TasksController_getTeachersWithTaskCounts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Teachers with task counts have been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeacherTasksSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all active teachers with task counts by status",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks/my": {
+      "get": {
+        "operationId": "TasksController_getMyTasks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tasks have been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tasks assigned to the current user",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks/teachers/{teacherId}": {
+      "get": {
+        "operationId": "TasksController_getTasksByTeacherId",
+        "parameters": [
+          {
+            "name": "teacherId",
+            "required": true,
+            "in": "path",
+            "description": "Teacher ID",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks have been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tasks assigned to a specific teacher",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks/{id}": {
+      "get": {
+        "operationId": "TasksController_getTaskById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Task ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task has been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "Task not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a task by ID",
+        "tags": [
+          "Tasks"
+        ]
+      },
+      "patch": {
+        "description": "Admin can update description, assignee and status. Teacher can only change status from IN_PROGRESS to ON_APPROVAL for own tasks.",
+        "operationId": "TasksController_updateTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Task ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Task update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "Task or teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a task",
+        "tags": [
+          "Tasks"
+        ]
+      },
+      "delete": {
+        "operationId": "TasksController_deleteTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Task ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Task has been successfully deleted."
+          },
+          "404": {
+            "description": "Task not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a task",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks": {
+      "post": {
+        "operationId": "TasksController_createTask",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Task data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Teacher not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new task",
+        "tags": [
+          "Tasks"
+        ]
+      }
     }
   },
   "info": {
@@ -1980,7 +2271,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-06-29T16:07:14.734Z"
+            "example": "2026-06-29T18:53:19.735Z"
           },
           "status": {
             "type": "string",
@@ -2017,7 +2308,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-06-29T16:07:14.734Z",
+            "example": "2026-06-29T18:53:19.735Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -2029,14 +2320,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-06-29T16:07:14.734Z",
+            "example": "2026-06-29T18:53:19.735Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-06-29T16:07:14.734Z"
+            "example": "2026-06-29T18:53:19.735Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -2124,7 +2415,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-06-29T16:07:14.728Z"
+            "example": "2026-06-29T18:53:19.729Z"
           },
           "isFree": {
             "type": "boolean",
@@ -2158,7 +2449,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-06-29T16:07:14.740Z"
+            "example": "2026-06-29T18:53:19.742Z"
           }
         },
         "required": [
@@ -2202,13 +2493,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-06-29T16:07:14.755Z"
+            "example": "2026-06-29T18:53:19.751Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-06-29T16:07:14.755Z"
+            "example": "2026-06-29T18:53:19.751Z"
           },
           "plan": {
             "description": "Plan",
@@ -2220,7 +2511,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-06-29T16:07:14.755Z"
+              "created_at": "2026-06-29T18:53:19.751Z"
             },
             "allOf": [
               {
@@ -2277,13 +2568,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-06-29T16:07:14.756Z"
+            "example": "2026-06-29T18:53:19.753Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-06-29T16:07:14.756Z"
+            "example": "2026-06-29T18:53:19.753Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -2365,6 +2656,170 @@
           "start_date",
           "end_date"
         ]
+      },
+      "TaskStatusCountDto": {
+        "type": "object",
+        "properties": {
+          "IN_PROGRESS": {
+            "type": "number",
+            "example": 2
+          },
+          "ON_APPROVAL": {
+            "type": "number",
+            "example": 1
+          },
+          "COMPLETED": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "IN_PROGRESS",
+          "ON_APPROVAL",
+          "COMPLETED"
+        ]
+      },
+      "TeacherTasksSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "login": {
+            "type": "string",
+            "example": "john.doe"
+          },
+          "role": {
+            "type": "string",
+            "example": "TEACHER"
+          },
+          "tasks_count": {
+            "$ref": "#/components/schemas/TaskStatusCountDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "login",
+          "role",
+          "tasks_count"
+        ]
+      },
+      "TaskTeacherDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "description": {
+            "type": "string",
+            "example": "Проверить домашнее задание"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "ON_APPROVAL",
+              "COMPLETED"
+            ]
+          },
+          "color": {
+            "type": "string",
+            "example": "bg-yellow-200"
+          },
+          "teacher_id": {
+            "type": "number",
+            "example": 1
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-06-29T12:00:00.000Z"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-06-29T12:00:00.000Z"
+          },
+          "teacher": {
+            "$ref": "#/components/schemas/TaskTeacherDto"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "status",
+          "color",
+          "teacher_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateTaskDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Описание задачи",
+            "example": "Проверить домашнее задание"
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "ID исполнителя (учителя)",
+            "example": 1
+          }
+        },
+        "required": [
+          "description",
+          "teacher_id"
+        ]
+      },
+      "UpdateTaskDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Описание задачи",
+            "example": "Проверить домашнее задание"
+          },
+          "teacher_id": {
+            "type": "number",
+            "description": "ID исполнителя (учителя)",
+            "example": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "ON_APPROVAL",
+              "COMPLETED"
+            ],
+            "description": "Статус задачи"
+          }
+        }
       }
     }
   }

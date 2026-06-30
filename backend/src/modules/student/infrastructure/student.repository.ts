@@ -9,6 +9,7 @@ import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto"
 import { PlanDto } from "@/modules/plan/interface/dto/responses/plan.dto";
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { Student, Plan } from '@/infrastructure/prisma/generated/client';
+import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
 
 @Injectable()
 export class StudentRepository {
@@ -95,11 +96,11 @@ export class StudentRepository {
 	}
 
 	async updateStudentClass(): Promise<void> {
-		// Increment class for students with class < 11
+		// Increment class for students with 1 <= class < 11 (class 0 is excluded)
 		await this.prisma.student.updateMany({
 			where: {
 				deleted_at: null,
-				class: { lt: 11 }
+				class: { gt: 0, lt: 11 },
 			},
 			data: { class: { increment: 1 } },
 		});
@@ -116,6 +117,8 @@ export class StudentRepository {
 			deleted_at: student.deleted_at || null,
 			teacher_id: student.teacher_id || null,
 			timezone: student.timezone as Timezone,
+			marketing_consent: student.marketing_consent,
+			payment_currency: student.payment_currency as PaymentCurrency,
 		};
 	}
 

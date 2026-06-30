@@ -23,10 +23,17 @@ import { teachersApi } from '@/api/teachers'
 import { plansApi } from '@/api/plans'
 import { lessonsApi } from '@/api/lessons'
 import { RegionSelect } from '@/components/shared/RegionSelect'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { showSuccessToast } from '@/lib/toast'
-import type { UpdateStudentInput } from '@/types'
+import type { PaymentCurrency, UpdateStudentInput } from '@/types'
+
+const PAYMENT_CURRENCIES: { value: PaymentCurrency; label: string }[] = [
+	{ value: 'BYN', label: 'BYN 🇧🇾' },
+	{ value: 'EUR', label: 'EUR 🇪🇺' },
+	{ value: 'PLN', label: 'PLN 🇵🇱' },
+]
 
 const currencyFlags: Record<string, string> = {
   USD: '🇺🇸',
@@ -54,6 +61,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
+	const [marketingConsent, setMarketingConsent] = useState(false)
+	const [paymentCurrency, setPaymentCurrency] = useState<PaymentCurrency>('BYN')
   const [oldPlanId, setOldPlanId] = useState<string>('')
   const [newPlanId, setNewPlanId] = useState<string>('')
   const [planStartDate, setPlanStartDate] = useState('')
@@ -94,6 +103,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
         setTeacherId('')
       }
       setTimezone(student.timezone || '')
+			setMarketingConsent(student.marketing_consent)
+			setPaymentCurrency(student.payment_currency)
     }
   }, [student, open, studentId])
 
@@ -133,6 +144,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setBirthDate('')
       setTeacherId('')
       setTimezone('')
+			setMarketingConsent(false)
+			setPaymentCurrency('BYN')
     }
   }, [open])
 
@@ -157,6 +170,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : undefined,
       timezone: timezone || null,
+			marketing_consent: marketingConsent,
+			payment_currency: paymentCurrency,
     }
 
     // Only include teacher_id if admin and it's provided
@@ -242,6 +257,32 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                 value={timezone}
                 onValueChange={setTimezone}
               />
+							<div className="grid gap-2">
+								<Label htmlFor="edit-paymentCurrency">Счет для оплаты</Label>
+								<Select value={paymentCurrency} onValueChange={(value) => setPaymentCurrency(value as PaymentCurrency)}>
+									<SelectTrigger id="edit-paymentCurrency" aria-label="Счет для оплаты">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{PAYMENT_CURRENCIES.map((currency) => (
+											<SelectItem key={currency.value} value={currency.value}>
+												{currency.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex items-center gap-2">
+								<Checkbox
+									id="edit-marketingConsent"
+									checked={marketingConsent}
+									onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+									aria-label="Согласие на маркетинг"
+								/>
+								<Label htmlFor="edit-marketingConsent" className="cursor-pointer">
+									Согласие на маркетинг
+								</Label>
+							</div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

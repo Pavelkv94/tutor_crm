@@ -14,8 +14,8 @@ export const RegionDisplay = ({ region }: RegionDisplayProps) => {
 
   return (
     <div className="flex items-center gap-2">
+      {regionInfo?.flag && <span aria-hidden="true">{regionInfo.flag}</span>}
       <span>{regionInfo?.label ?? region}</span>
-      {regionInfo?.flag && <span>{regionInfo.flag}</span>}
     </div>
   )
 }

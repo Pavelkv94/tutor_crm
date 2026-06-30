@@ -8,6 +8,8 @@ import { Students } from '@/pages/Students'
 import { Plans } from '@/pages/Plans'
 import { Teachers } from '@/pages/Teachers'
 import { Schedule } from '@/pages/Schedule'
+import { Home } from '@/pages/Home'
+import { Tasks } from '@/pages/Tasks'
 import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient({
@@ -57,6 +59,16 @@ function App() {
               }
             />
             <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Tasks />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/schedule"
               element={
                 <ProtectedRoute>
@@ -66,8 +78,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/schedule" replace />} />
-            <Route path="*" element={<Navigate to="/schedule" replace />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Home />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
         </AuthProvider>

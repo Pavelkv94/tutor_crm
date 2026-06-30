@@ -1,10 +1,7 @@
-import { IsDefined, IsString, Min, Max, IsInt, MinLength } from 'class-validator';
+import { IsDefined, IsString, Min, Max, IsInt, MinLength, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class EnvSchema {
-  @IsString()
-  @IsDefined()
-  LOG_LEVEL: string;
 
   @IsString()
   @IsDefined()
@@ -75,5 +72,14 @@ export class EnvSchema {
 	@IsString()
 	@IsDefined()
 	ORIGIN_URLS: string;
+
+	//* observability — опциональные, при отсутствии применяются дефолты из observability.constants.ts
+	@IsString()
+	@IsOptional()
+	OTEL_SERVICE_NAME?: string;
+
+	@IsString()
+	@IsOptional()
+	OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?: string;
 
 }
