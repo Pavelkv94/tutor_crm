@@ -3,7 +3,8 @@ services:
     container_name: tutor_backend
     image: tutor_backend
     cpus: 1
-    mem_limit: 512m
+    mem_limit: 1g
+    mem_reservation: 512m
     restart: unless-stopped
     build:
       context: ./backend
@@ -27,8 +28,8 @@ services:
   tutor_frontend:
     container_name: tutor_frontend
     image: tutor_frontend
-    cpus: 1
-    mem_limit: 512m
+    cpus: 0.25
+    mem_limit: 128m
     restart: unless-stopped
     build:
       context: ./frontend-vite
@@ -47,7 +48,8 @@ services:
     image: postgres:17
     container_name: tutor_postgres
     cpus: 1
-    mem_limit: 512m
+    mem_limit: 1g
+    mem_reservation: 512m
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -71,8 +73,8 @@ services:
   tutor_backup:
     image: prodrigestivill/postgres-backup-local
     container_name: tutor_backup
-    cpus: 1
-    mem_limit: 512m
+    cpus: 0.5
+    mem_limit: 256m
     restart: unless-stopped
     depends_on:
       - tutor_postgres
@@ -90,8 +92,8 @@ services:
   tutor_postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     container_name: tutor_postgres_exporter
-    cpus: 1
-    mem_limit: 512m
+    cpus: 0.25
+    mem_limit: 128m
     restart: unless-stopped
     environment:
       - DATA_SOURCE_NAME=postgresql://tutor_monitoring:${POSTGRES_EXPORTER_PASSWORD}@tutor_postgres:5432/${POSTGRES_DB}?sslmode=disable
@@ -105,8 +107,8 @@ services:
   tutor_node_exporter:
     image: prom/node-exporter:v1.8.2
     container_name: tutor_node_exporter
-    cpus: 1
-    mem_limit: 512m
+    cpus: 0.25
+    mem_limit: 64m
     restart: unless-stopped
     ports:
       - "9100:9100"
@@ -117,7 +119,7 @@ services:
     image: prom/prometheus:v3.1.0
     container_name: tutor_prometheus
     cpus: 1
-    mem_limit: 512m
+    mem_limit: 768m
     restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -140,7 +142,7 @@ services:
   tutor_grafana:
     image: grafana/grafana:11.4.0
     container_name: tutor_grafana
-    cpus: 1
+    cpus: 0.5
     mem_limit: 512m
     restart: unless-stopped
     ports:
@@ -164,7 +166,7 @@ services:
   tutor_jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: tutor_jaeger
-    cpus: 1
+    cpus: 0.5
     mem_limit: 512m
     restart: unless-stopped
     # root нужен, чтобы jaeger (uid 10001) мог писать в свежий named volume /badger

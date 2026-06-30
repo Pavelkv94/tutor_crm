@@ -12,6 +12,9 @@ COPY package.json yarn.lock prisma.config.ts ./
 RUN yarn install --frozen-lockfile --production && yarn cache clean
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/infrastructure/prisma ./src/infrastructure/prisma
+# исходные файлы могут иметь урезанные права (600/700) — нормализуем, чтобы
+# пользователь node мог читать миграции при prisma migrate deploy на старте
+RUN chmod -R a+rX ./src/infrastructure/prisma
 USER node
 EXPOSE 5000
 CMD ["sh", "-c", "yarn prisma:deploy:prod && node dist/src/main"]

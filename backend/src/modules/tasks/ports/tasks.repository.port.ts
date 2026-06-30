@@ -14,4 +14,5 @@ export abstract class TasksRepositoryPort {
 	abstract createTask(data: CreateTaskDto, color: string): Promise<TaskDto>;
 	abstract updateTask(id: string, data: UpdateTaskDto): Promise<TaskDto | null>;
 	abstract deleteTask(id: string): Promise<boolean>;
+	abstract deleteCompletedTasksOlderThan(date: Date): Promise<number>;
 }

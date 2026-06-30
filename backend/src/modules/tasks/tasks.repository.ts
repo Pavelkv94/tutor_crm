@@ -175,6 +175,16 @@ export class TasksRepository implements TasksRepositoryPort {
 		return true;
 	}
 
+	async deleteCompletedTasksOlderThan(date: Date): Promise<number> {
+		const { count } = await this.prisma.task.deleteMany({
+			where: {
+				status: TaskStatus.COMPLETED,
+				updated_at: { lte: date },
+			},
+		});
+		return count;
+	}
+
 	private sortTasks(tasks: TaskDto[]): TaskDto[] {
 		return [...tasks].sort((firstTask, secondTask) => {
 			const statusOrderDiff =
