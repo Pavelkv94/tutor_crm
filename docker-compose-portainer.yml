@@ -1,0 +1,237 @@
+services:
+  tutor_backend:
+    container_name: tutor_backend
+    cpus: 1
+    mem_limit: 1g
+    mem_reservation: 512m
+    restart: unless-stopped
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      tutor_postgres:
+        condition: service_healthy
+    ports:
+      - 5008:5000
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_URI: ${POSTGRES_URI}
+      PORT: ${PORT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME}
+      TELEGRAM_ADMIN_ID: ${TELEGRAM_ADMIN_ID}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
+      REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN}
+      ACCESS_SECRET_KEY: ${ACCESS_SECRET_KEY}
+      ACCESS_EXPIRES_IN: ${ACCESS_EXPIRES_IN}
+      ADMIN_REGISTRATION_SECRET_KEY: ${ADMIN_REGISTRATION_SECRET_KEY}
+      ORIGIN_URLS: ${ORIGIN_URLS}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/metrics || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 25s
+    networks:
+      - tutor_network
+
+  tutor_frontend:
+    container_name: tutor_frontend
+    cpus: 0.25
+    mem_limit: 128m
+    restart: unless-stopped
+    build:
+      context: ./frontend-vite
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    depends_on:
+      tutor_backend:
+        condition: service_healthy
+    ports:
+      - 3008:3000
+    networks:
+      - tutor_network
+
+  tutor_postgres:
+    image: postgres:17
+    container_name: tutor_postgres
+    cpus: 1
+    mem_limit: 1g
+    mem_reservation: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_EXPORTER_PASSWORD: ${POSTGRES_EXPORTER_PASSWORD}
+    ports:
+      - "5436:5432"
+    volumes:
+      - tutor_postgres:/var/lib/postgresql/data
+    configs:
+      - source: pg_init
+        target: /docker-entrypoint-initdb.d/init.sql
+      - source: pg_init_monitoring
+        target: /docker-entrypoint-initdb.d/init-monitoring.sh
+    networks:
+      - tutor_network
+
+  tutor_backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: tutor_backup
+    cpus: 0.5
+    mem_limit: 256m
+    restart: unless-stopped
+    depends_on:
+      - tutor_postgres
+    environment:
+      POSTGRES_HOST: tutor_postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "0 3 * * *"
+    volumes:
+      - db_backups:/backups
+    networks:
+      - tutor_network
+
+  tutor_postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: tutor_postgres_exporter
+    cpus: 0.25
+    mem_limit: 128m
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://tutor_monitoring:${POSTGRES_EXPORTER_PASSWORD}@tutor_postgres:5432/${POSTGRES_DB}?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - tutor_network
+    depends_on:
+      - tutor_postgres
+
+  tutor_node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: tutor_node_exporter
+    cpus: 0.25
+    mem_limit: 64m
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - tutor_network
+
+  tutor_prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: tutor_prometheus
+    cpus: 1
+    mem_limit: 768m
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - prometheus-data:/prometheus
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - tutor_network
+
+  tutor_grafana:
+    image: grafana/grafana:11.4.0
+    container_name: tutor_grafana
+    cpus: 0.5
+    mem_limit: 512m
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    networks:
+      - tutor_network
+    depends_on:
+      tutor_prometheus:
+        condition: service_healthy
+
+  tutor_jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: tutor_jaeger
+    cpus: 0.5
+    mem_limit: 512m
+    restart: unless-stopped
+    user: root
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - tutor_network
+
+configs:
+  prometheus_config:
+    content: |
+      global:
+        scrape_interval: 5s
+
+      scrape_configs:
+        - job_name: 'tutor_backend'
+          metrics_path: '/metrics'
+          static_configs:
+            - targets: ['tutor_backend:5000']
+
+        - job_name: 'tutor_postgres_exporter'
+          static_configs:
+            - targets: ['tutor_postgres_exporter:9187']
+
+        - job_name: 'tutor_node_exporter'
+          static_configs:
+            - targets: ['tutor_node_exporter:9100']
+
+        - job_name: 'tutor_prometheus'
+          static_configs:
+            - targets: ['tutor_prometheus:9090']
+
+volumes:
+  tutor_postgres:
+  grafana-storage:
+  prometheus-data:
+  jaeger-data:
+  db_backups:
+
+networks:
+  tutor_network:
