@@ -14,8 +14,23 @@ services:
         condition: service_healthy
     ports:
       - 5008:5000
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_URI: ${POSTGRES_URI}
+      PORT: ${PORT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME}
+      TELEGRAM_ADMIN_ID: ${TELEGRAM_ADMIN_ID}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
+      REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN}
+      ACCESS_SECRET_KEY: ${ACCESS_SECRET_KEY}
+      ACCESS_EXPIRES_IN: ${ACCESS_EXPIRES_IN}
+      ADMIN_REGISTRATION_SECRET_KEY: ${ADMIN_REGISTRATION_SECRET_KEY}
+      ORIGIN_URLS: ${ORIGIN_URLS}
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/metrics || exit 1"]
       interval: 30s
