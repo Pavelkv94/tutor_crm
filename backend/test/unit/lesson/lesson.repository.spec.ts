@@ -189,6 +189,18 @@ describe('LessonRepository', () => {
 
 			expect(prisma.$transaction).toHaveBeenCalled();
 		});
+
+		it('should throw BadRequestException when lesson is rescheduled', async () => {
+			jest.spyOn(prisma.lesson, 'findUnique').mockResolvedValue({
+				...mockLesson,
+				rescheduled_to_lesson_id: 2,
+			} as any);
+			jest.spyOn(prisma, '$transaction');
+
+			await expect(repository.deleteLesson(1)).rejects.toThrow(BadRequestException);
+			await expect(repository.deleteLesson(1)).rejects.toThrow('Нельзя удалить занятие, которое перенесено. Сначала отмените перенос.');
+			expect(prisma.$transaction).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('manageFreeLessonStatus', () => {

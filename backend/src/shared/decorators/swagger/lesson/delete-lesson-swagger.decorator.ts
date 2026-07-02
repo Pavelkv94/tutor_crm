@@ -1,5 +1,5 @@
 import { applyDecorators } from "@nestjs/common";
-import { ApiBearerAuth, ApiNoContentResponse, ApiNotFoundResponse, ApiOperation } from "@nestjs/swagger";
+import { ApiBadRequestResponse, ApiBearerAuth, ApiNoContentResponse, ApiNotFoundResponse, ApiOperation } from "@nestjs/swagger";
 
 export const DeleteLessonSwagger = () => {
 	const decorators = [
@@ -11,6 +11,9 @@ export const DeleteLessonSwagger = () => {
 		}),
 		ApiNotFoundResponse({
 			description: "Lesson not found",
+		}),
+		ApiBadRequestResponse({
+			description: "Lesson is rescheduled and cannot be deleted",
 		}),
 		ApiBearerAuth()
 	];

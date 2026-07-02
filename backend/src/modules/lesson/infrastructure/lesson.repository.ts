@@ -285,6 +285,10 @@ export class LessonRepository {
 			throw new NotFoundException('Занятие не найдено');
 		}
 
+		if (lesson.rescheduled_to_lesson_id) {
+			throw new BadRequestException('Нельзя удалить занятие, которое перенесено. Сначала отмените перенос.');
+		}
+
 		await this.prisma.$transaction(async (tx) => {
 			if (lesson.rescheduled_lesson_id) {
 				await tx.lesson.update({
