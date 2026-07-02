@@ -103,7 +103,7 @@ export const TaskSticker = ({
         )}
         aria-label={`Открыть задачу: ${task.description}`}
       >
-        <p className={cn('line-clamp-5 flex-1 text-sm', isCompleted && 'text-gray-500')}>
+        <p className={cn('line-clamp-5 flex-1 text-sm whitespace-pre-wrap break-words', isCompleted && 'text-gray-500')}>
           {task.description}
         </p>
         <p className={cn('mt-2 text-xs text-gray-500', isCompleted && 'text-gray-400')}>
