@@ -26,6 +26,7 @@ import { RegionSelect } from '@/components/shared/RegionSelect'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
+import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
 import { showSuccessToast } from '@/lib/toast'
 import type { PaymentCurrency, UpdateStudentInput } from '@/types'
 
@@ -208,21 +209,25 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                   id="edit-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="Введите имя ученика"
                   required
                   aria-label="Имя ученика"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-class">Класс</Label>
-                <Input
-                  id="edit-class"
-                  type="number"
-                  min="0"
-                  value={studentClass}
-                  onChange={(e) => setStudentClass(e.target.value)}
-                  required
-                  aria-label="Класс"
-                />
+                <Select value={studentClass} onValueChange={setStudentClass} required>
+                  <SelectTrigger id="edit-class" aria-label="Класс">
+                    <SelectValue placeholder="Выберите класс" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STUDENT_CLASS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value.toString()}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-birthDate">Дата рождения</Label>

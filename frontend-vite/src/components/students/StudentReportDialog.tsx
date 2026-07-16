@@ -19,6 +19,7 @@ import {
 import { lessonsApi } from '@/api/lessons'
 import { telegramApi } from '@/api/telegram'
 import { useAuth } from '@/contexts/AuthContext'
+import { formatStudentClassPhrase, formatStudentClassShort } from '@/constants/student-class'
 import { cn } from '@/lib/utils'
 
 interface StudentReportDialogProps {
@@ -246,7 +247,7 @@ export const StudentReportDialog = ({
 		reportData && shouldFetchInfo
 			? [
 				`📋 ОТЧЁТ РОДИТЕЛЮ ЗА УЧЕБНЫЙ ГОД ${infoStartYear} — ${infoEndYear}`,
-				`👦 Ученик: ${reportData.name}, ${reportData.class} класс`,
+				`👦 Ученик: ${reportData.name}, ${formatStudentClassPhrase(reportData.class)}`,
 				`📅 Период: ${startMonthLabel} ${infoStartYear} — ${endMonthLabel} ${infoEndYear}`,
 				`━━━━━━━━━━━━━━━━━━`,
 				`📊 Посещаемость:`,
@@ -448,7 +449,7 @@ export const StudentReportDialog = ({
 												</div>
 												<div className="flex justify-between">
 													<span className="text-muted-foreground">Класс:</span>
-													<span className="font-medium">{reportData.class}кл</span>
+													<span className="font-medium">{formatStudentClassShort(reportData.class)}</span>
 												</div>
 											</div>
 										</div>

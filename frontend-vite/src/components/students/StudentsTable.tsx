@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { RegionDisplay } from '@/components/shared/RegionDisplay'
+import { formatStudentClassLabel } from '@/constants/student-class'
 import type { PaymentCurrency, Student } from '@/types'
 
 const PAYMENT_CURRENCY_LABELS: Record<PaymentCurrency, string> = {
@@ -53,10 +54,14 @@ const formatAgeLabel = (age: number): string => {
 }
 
 const formatClassWithAge = (student: Student): string => {
-  if (student.age === null || student.age === undefined) {
-    return String(student.class)
+  const classLabel = formatStudentClassLabel(student.class)
+  const isSchoolGrade = student.class >= 1 && student.class <= 11
+
+  if (!isSchoolGrade || student.age === null || student.age === undefined) {
+    return classLabel
   }
-  return `${student.class} (${formatAgeLabel(student.age)})`
+
+  return `${classLabel} (${formatAgeLabel(student.age)})`
 }
 
 const formatStudentDate = (date: string | null | undefined): string => {

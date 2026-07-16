@@ -24,6 +24,7 @@ import { RegionSelect } from '@/components/shared/RegionSelect'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
+import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
 import type { CreateStudentInput, PaymentCurrency } from '@/types'
 
 const PAYMENT_CURRENCIES: { value: PaymentCurrency; label: string }[] = [
@@ -106,19 +107,24 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="Введите имя ученика"
                 required
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="class">Класс</Label>
-              <Input
-                id="class"
-                type="number"
-                min="0"
-                value={studentClass}
-                onChange={(e) => setStudentClass(e.target.value)}
-                required
-              />
+              <Select value={studentClass} onValueChange={setStudentClass} required>
+                <SelectTrigger id="class" aria-label="Класс">
+                  <SelectValue placeholder="Выберите класс" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STUDENT_CLASS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="birthDate">Дата рождения</Label>

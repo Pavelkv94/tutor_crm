@@ -139,9 +139,17 @@ export const SalaryReportDialog = ({
 										<TableCell>{lesson.plan_name}</TableCell>
 										<TableCell>{lesson.lessons_count}</TableCell>
 										<TableCell>{lesson.plan_currency} {currencyFlags[lesson.plan_currency]}</TableCell>
-										<TableCell><Input type="number" value={prices[lesson.plan_name]} onChange={(e) => {
-											setPrices({ ...prices, [lesson.plan_name]: parseInt(e.target.value) })
-										}} /></TableCell>
+										<TableCell>
+											<Input
+												type="number"
+												value={prices[lesson.plan_name]}
+												onChange={(e) => {
+													setPrices({ ...prices, [lesson.plan_name]: parseInt(e.target.value) })
+												}}
+												placeholder="Цена"
+												aria-label={`Цена за ${lesson.plan_name}`}
+											/>
+										</TableCell>
 										<TableCell>{prices[lesson.plan_name] * lesson.lessons_count}</TableCell>
 									</TableRow>
 								))

@@ -1,7 +1,9 @@
 import { apiClient } from '@/lib/api-client'
 import type {
+  CreateTaskCommentInput,
   CreateTaskInput,
   Task,
+  TaskComment,
   TasksPendingCount,
   TeacherTasksSummary,
   UpdateTaskInput,
@@ -45,5 +47,10 @@ export const tasksApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/tasks/${id}`)
+  },
+
+  createComment: async (id: string, data: CreateTaskCommentInput): Promise<TaskComment> => {
+    const response = await apiClient.post<TaskComment>(`/tasks/${id}/comments`, data)
+    return response.data
   },
 }

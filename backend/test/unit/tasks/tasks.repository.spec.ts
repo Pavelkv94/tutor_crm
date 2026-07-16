@@ -53,6 +53,9 @@ describe('TasksRepository', () => {
 							delete: jest.fn(),
 							deleteMany: jest.fn(),
 						},
+						taskComment: {
+							create: jest.fn(),
+						},
 					},
 				},
 			],
@@ -150,6 +153,22 @@ describe('TasksRepository', () => {
 
 			expect(result).toEqual([]);
 		});
+
+		it('should map comments_count from _count.task_comments', async () => {
+			const taskWithCount = { ...mockPrismaTask, _count: { task_comments: 4 } };
+			jest.spyOn(prisma.task, 'findMany').mockResolvedValue([taskWithCount] as any);
+
+			const result = await repository.getTasksByTeacherId(1);
+
+			expect(result[0].comments_count).toBe(4);
+			expect(prisma.task.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					include: expect.objectContaining({
+						_count: { select: { task_comments: true } },
+					}),
+				}),
+			);
+		});
 	});
 
 	describe('getTaskById', () => {
@@ -176,6 +195,54 @@ describe('TasksRepository', () => {
 			const result = await repository.getTaskById('uuid-1');
 
 			expect(result?.teacher).toBeUndefined();
+		});
+
+		it('should map task_comments into comments with commenter_name', async () => {
+			const taskWithComments = {
+				...mockPrismaTask,
+				task_comments: [
+					{
+						id: 'comment-1',
+						comment: 'Готово',
+						created_at: now,
+						commenter: { name: 'Jane Roe' },
+					},
+				],
+			};
+			jest.spyOn(prisma.task, 'findUnique').mockResolvedValue(taskWithComments as any);
+
+			const result = await repository.getTaskById('uuid-1');
+
+			expect(result?.comments).toEqual([
+				{ id: 'comment-1', comment: 'Готово', created_at: now, commenter_name: 'Jane Roe' },
+			]);
+		});
+	});
+
+	describe('createComment', () => {
+		it('should create a comment and map it to DTO with commenter_name', async () => {
+			const mockCreatedComment = {
+				id: 'comment-1',
+				task_id: 'uuid-1',
+				comment: 'Готово',
+				commenter_id: 2,
+				created_at: now,
+				commenter: { name: 'Jane Roe' },
+			};
+			jest.spyOn(prisma.taskComment, 'create').mockResolvedValue(mockCreatedComment as any);
+
+			const result = await repository.createComment('uuid-1', 2, 'Готово');
+
+			expect(result).toEqual({
+				id: 'comment-1',
+				comment: 'Готово',
+				created_at: now,
+				commenter_name: 'Jane Roe',
+			});
+			expect(prisma.taskComment.create).toHaveBeenCalledWith({
+				data: { task_id: 'uuid-1', commenter_id: 2, comment: 'Готово' },
+				include: { commenter: { select: { name: true } } },
+			});
 		});
 	});
 

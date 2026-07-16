@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
+import { formatStudentClassShort } from '@/constants/student-class'
 import type { Lesson, Teacher, RescheduledLessonInput } from '@/types'
 
 // Generate minutes options with 5-minute intervals from 00 to 55
@@ -106,7 +107,7 @@ export const RescheduleLessonForm = ({
               <Label htmlFor="student">Ученик</Label>
               <Input
                 id="student"
-                value={`${lesson.student.name} - ${lesson.student.class}кл`}
+                value={`${lesson.student.name} - ${formatStudentClassShort(lesson.student.class)}`}
                 disabled
                 className="bg-gray-100"
               />

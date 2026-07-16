@@ -8,6 +8,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
+import { formatStudentClassShort } from '@/constants/student-class'
 import type { Lesson } from '@/types'
 
 interface RescheduleLessonsModalProps {
@@ -134,7 +135,7 @@ export const RescheduleLessonsModal = ({
                           </div>
                           <div>
                             <span className="text-muted-foreground">Класс:</span>{' '}
-                            <span className="font-semibold">{lesson.student.class}кл</span>
+                            <span className="font-semibold">{formatStudentClassShort(lesson.student.class)}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Преподаватель:</span>{' '}

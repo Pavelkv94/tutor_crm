@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatusEnum } from '../task-status.enum';
+import { TaskCommentDto } from './task-comment.dto';
 
 export class TaskTeacherDto {
 	@ApiProperty({ example: 1 })
@@ -33,4 +34,10 @@ export class TaskDto {
 
 	@ApiPropertyOptional({ type: TaskTeacherDto })
 	teacher?: TaskTeacherDto;
+
+	@ApiPropertyOptional({ example: 3, description: 'Количество комментариев к задаче' })
+	comments_count?: number;
+
+	@ApiPropertyOptional({ type: [TaskCommentDto], description: 'Комментарии к задаче' })
+	comments?: TaskCommentDto[];
 }

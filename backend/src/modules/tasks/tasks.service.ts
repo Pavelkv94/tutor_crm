@@ -8,8 +8,10 @@ import { JwtPayloadDto } from '@/modules/auth/dto/jwt.payload.dto';
 import { TeacherRoleEnum } from '@/modules/teacher/interface/dto/teacherRole';
 import { TeacherService } from '@/modules/teacher/application/teacher.service';
 import { pickTaskColor } from './constants/task-colors.constant';
+import { CreateTaskCommentDto } from './dto/requests/create-task-comment.dto';
 import { CreateTaskDto } from './dto/requests/create-task.dto';
 import { UpdateTaskDto } from './dto/requests/update-task.dto';
+import { TaskCommentDto } from './dto/responses/task-comment.dto';
 import { TaskDto } from './dto/responses/task.dto';
 import { TasksPendingCountDto } from './dto/responses/tasks-pending-count.dto';
 import { TeacherTasksSummaryDto } from './dto/responses/teacher-tasks-summary.dto';
@@ -93,6 +95,17 @@ export class TasksService {
 
 		this.tasksEvents.emitChanged();
 		return updatedTask;
+	}
+
+	async createComment(taskId: string, createTaskCommentDto: CreateTaskCommentDto, teacher: JwtPayloadDto): Promise<TaskCommentDto> {
+		const task = await this.tasksRepository.getTaskById(taskId);
+		if (!task) {
+			throw new NotFoundException('Задача не найдена');
+		}
+
+		this.ensureTaskAccess(task, teacher);
+
+		return await this.tasksRepository.createComment(taskId, +teacher.id, createTaskCommentDto.comment);
 	}
 
 	async deleteTask(id: string): Promise<void> {

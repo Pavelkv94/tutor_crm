@@ -20,9 +20,7 @@ export class LessonRepository {
 	async findLessonsForReschedule(teacher_id: number): Promise<LessonOutputDto[]> {
 		const lessons = await this.prisma.lesson.findMany({
 			where: {
-				student: {
-					teacher_id,
-				},
+				teacher_id,
 				status: LessonStatus.RESCHEDULED,
 				rescheduled_to_lesson_id: null
 			},

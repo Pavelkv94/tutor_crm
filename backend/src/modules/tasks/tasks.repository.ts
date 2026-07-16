@@ -1,15 +1,22 @@
 import { PrismaService } from '@/infrastructure/prisma/prisma.service';
-import { Task, TaskStatus, Teacher } from '@/infrastructure/prisma/generated/client';
+import { Task, TaskComment, TaskStatus, Teacher } from '@/infrastructure/prisma/generated/client';
 import { Injectable } from '@nestjs/common';
 import { CreateTaskDto } from './dto/requests/create-task.dto';
 import { UpdateTaskDto } from './dto/requests/update-task.dto';
+import { TaskCommentDto } from './dto/responses/task-comment.dto';
 import { TaskDto } from './dto/responses/task.dto';
 import { TaskStatusCountDto, TeacherTasksSummaryDto } from './dto/responses/teacher-tasks-summary.dto';
 import { TaskStatusEnum } from './dto/task-status.enum';
 import { TasksRepositoryPort } from './ports/tasks.repository.port';
 
+type TaskCommentWithCommenter = TaskComment & {
+	commenter: Pick<Teacher, 'name'>;
+};
+
 type TaskWithTeacher = Task & {
 	teacher: Pick<Teacher, 'id' | 'name'> | null;
+	_count?: { task_comments: number };
+	task_comments?: TaskCommentWithCommenter[];
 };
 
 const TASK_STATUS_SORT_ORDER: Record<TaskStatusEnum, number> = {
@@ -77,6 +84,9 @@ export class TasksRepository implements TasksRepositoryPort {
 				teacher: {
 					select: { id: true, name: true },
 				},
+				_count: {
+					select: { task_comments: true },
+				},
 			},
 		});
 
@@ -90,6 +100,14 @@ export class TasksRepository implements TasksRepositoryPort {
 				teacher: {
 					select: { id: true, name: true },
 				},
+				task_comments: {
+					include: {
+						commenter: {
+							select: { name: true },
+						},
+					},
+					orderBy: { created_at: 'desc' },
+				},
 			},
 		});
 
@@ -98,6 +116,23 @@ export class TasksRepository implements TasksRepositoryPort {
 		}
 
 		return this.mapTaskToDto(task);
+	}
+
+	async createComment(taskId: string, commenterId: number, comment: string): Promise<TaskCommentDto> {
+		const taskComment = await this.prisma.taskComment.create({
+			data: {
+				task_id: taskId,
+				commenter_id: commenterId,
+				comment,
+			},
+			include: {
+				commenter: {
+					select: { name: true },
+				},
+			},
+		});
+
+		return this.mapCommentToDto(taskComment);
 	}
 
 	async countTasksByTeacherAndStatus(teacherId: number, status: TaskStatusEnum): Promise<number> {
@@ -213,6 +248,19 @@ export class TasksRepository implements TasksRepositoryPort {
 						name: task.teacher.name,
 					}
 				: undefined,
+			...(task._count !== undefined && { comments_count: task._count.task_comments }),
+			...(task.task_comments !== undefined && {
+				comments: task.task_comments.map((comment) => this.mapCommentToDto(comment)),
+			}),
+		};
+	}
+
+	private mapCommentToDto(comment: TaskCommentWithCommenter): TaskCommentDto {
+		return {
+			id: comment.id,
+			comment: comment.comment,
+			created_at: comment.created_at,
+			commenter_name: comment.commenter.name,
 		};
 	}
 }

@@ -43,6 +43,7 @@ describe('TasksController', () => {
 		createTask: jest.fn(),
 		updateTask: jest.fn(),
 		deleteTask: jest.fn(),
+		createComment: jest.fn(),
 	};
 
 	const mockTasksEventsService = {
@@ -146,6 +147,24 @@ describe('TasksController', () => {
 
 			expect(result).toEqual(updatedTask);
 			expect(tasksService.updateTask).toHaveBeenCalledWith('uuid-1', dto, teacher);
+		});
+	});
+
+	describe('createTaskComment', () => {
+		it('should delegate to service with id, dto and teacher payload', async () => {
+			const dto = { comment: 'Готово, проверьте' };
+			const createdComment = {
+				id: 'comment-1',
+				comment: 'Готово, проверьте',
+				created_at: now,
+				commenter_name: 'Teacher',
+			};
+			jest.spyOn(tasksService, 'createComment').mockResolvedValue(createdComment);
+
+			const result = await controller.createTaskComment('uuid-1', dto, teacher);
+
+			expect(result).toEqual(createdComment);
+			expect(tasksService.createComment).toHaveBeenCalledWith('uuid-1', dto, teacher);
 		});
 	});
 

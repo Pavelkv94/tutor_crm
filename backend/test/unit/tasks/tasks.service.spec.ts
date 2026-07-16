@@ -64,6 +64,7 @@ describe('TasksService', () => {
 		updateTask: jest.fn(),
 		deleteTask: jest.fn(),
 		deleteCompletedTasksOlderThan: jest.fn(),
+		createComment: jest.fn(),
 	};
 
 	const mockTeacherService = {
@@ -387,6 +388,54 @@ describe('TasksService', () => {
 
 				await expect(service.updateTask('uuid-1', { status: TaskStatusEnum.ON_APPROVAL }, regularTeacher)).rejects.toThrow(NotFoundException);
 			});
+		});
+	});
+
+	describe('createComment', () => {
+		const commentDto = { comment: 'Готово, проверьте' };
+		const mockComment = {
+			id: 'comment-1',
+			comment: 'Готово, проверьте',
+			created_at: now,
+			commenter_name: 'Teacher',
+		};
+
+		it('should create a comment when teacher owns the task', async () => {
+			jest.spyOn(tasksRepository, 'getTaskById').mockResolvedValue(mockTask);
+			jest.spyOn(tasksRepository, 'createComment').mockResolvedValue(mockComment);
+
+			const result = await service.createComment('uuid-1', commentDto, regularTeacher);
+
+			expect(result).toEqual(mockComment);
+			expect(tasksRepository.createComment).toHaveBeenCalledWith('uuid-1', 1, 'Готово, проверьте');
+		});
+
+		it('should create a comment as admin for another teacher task', async () => {
+			const otherTeachersTask = { ...mockTask, teacher_id: 2 };
+			jest.spyOn(tasksRepository, 'getTaskById').mockResolvedValue(otherTeachersTask);
+			jest.spyOn(tasksRepository, 'createComment').mockResolvedValue(mockComment);
+
+			const result = await service.createComment('uuid-1', commentDto, adminTeacher);
+
+			expect(result).toEqual(mockComment);
+			expect(tasksRepository.createComment).toHaveBeenCalledWith('uuid-1', 99, 'Готово, проверьте');
+		});
+
+		it('should throw NotFoundException when task does not exist', async () => {
+			jest.spyOn(tasksRepository, 'getTaskById').mockResolvedValue(null);
+
+			await expect(service.createComment('uuid-1', commentDto, regularTeacher)).rejects.toThrow(NotFoundException);
+			await expect(service.createComment('uuid-1', commentDto, regularTeacher)).rejects.toThrow('Задача не найдена');
+			expect(tasksRepository.createComment).not.toHaveBeenCalled();
+		});
+
+		it('should throw ForbiddenException when non-admin comments on another teacher task', async () => {
+			const otherTeachersTask = { ...mockTask, teacher_id: 2 };
+			jest.spyOn(tasksRepository, 'getTaskById').mockResolvedValue(otherTeachersTask);
+
+			await expect(service.createComment('uuid-1', commentDto, regularTeacher)).rejects.toThrow(ForbiddenException);
+			await expect(service.createComment('uuid-1', commentDto, regularTeacher)).rejects.toThrow('Доступ запрещен');
+			expect(tasksRepository.createComment).not.toHaveBeenCalled();
 		});
 	});
 

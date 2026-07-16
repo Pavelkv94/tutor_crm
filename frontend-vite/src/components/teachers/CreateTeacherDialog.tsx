@@ -70,6 +70,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="Введите имя преподавателя"
                 required
               />
             </div>
@@ -79,6 +80,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
                 id="login"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
+                placeholder="Введите логин"
                 required
               />
             </div>
@@ -89,6 +91,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Введите пароль"
                 required
               />
             </div>

@@ -73,6 +73,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
                 id="edit-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="Введите имя преподавателя"
                 required
               />
             </div>

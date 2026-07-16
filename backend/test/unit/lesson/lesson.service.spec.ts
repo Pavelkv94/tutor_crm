@@ -283,15 +283,50 @@ describe('LessonService', () => {
 			teacher_id: 2,
 		};
 
-		it('should change teacher successfully', async () => {
+		it('should change teacher successfully when target slot is free', async () => {
 			const newTeacher = { ...mockTeacher, id: 2 };
 			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(newTeacher as any);
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLessonOutput as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
 			jest.spyOn(lessonRepository, 'changeTeacher').mockResolvedValue(undefined);
 
 			await service.changeTeacher(1, changeTeacherDto);
 
-			expect(teacherService.getTeacherById).toHaveBeenCalledWith(changeTeacherDto.teacher_id);
+			expect(lessonRepository.findExistingLessonsByDateAndTeacher).toHaveBeenCalledWith(mockLessonOutput.date, changeTeacherDto.teacher_id);
 			expect(lessonRepository.changeTeacher).toHaveBeenCalledWith(1, changeTeacherDto.teacher_id);
+		});
+
+		it('should throw NotFoundException if lesson not found', async () => {
+			const newTeacher = { ...mockTeacher, id: 2 };
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(newTeacher as any);
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(null);
+
+			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Урок не найден');
+		});
+
+		it('should throw BadRequestException when target slot is full', async () => {
+			const newTeacher = { ...mockTeacher, id: 2 };
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(newTeacher as any);
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(mockLessonOutput as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([
+				{ id: 2, plan_id: 1, student: { ...mockStudent, id: 2 }, plan: mockPlan },
+				{ id: 3, plan_id: 1, student: { ...mockStudent, id: 3 }, plan: mockPlan },
+			] as any);
+
+			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Максимальное количество уроков');
+			expect(lessonRepository.changeTeacher).not.toHaveBeenCalled();
+		});
+
+		it('should throw BadRequestException when same student already booked in target slot', async () => {
+			const newTeacher = { ...mockTeacher, id: 2 };
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue(newTeacher as any);
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue({ ...mockLessonOutput, plan: { ...mockPlan, plan_type: PlanTypeEnum.PAIR } } as any);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([
+				{ id: 2, plan_id: 1, student: mockStudent, plan: { ...mockPlan, plan_type: PlanTypeEnum.PAIR } },
+			] as any);
+
+			await expect(service.changeTeacher(1, changeTeacherDto)).rejects.toThrow('Это время уже назначено');
+			expect(lessonRepository.changeTeacher).not.toHaveBeenCalled();
 		});
 
 		it('should throw NotFoundException if teacher not found', async () => {

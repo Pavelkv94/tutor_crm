@@ -1,6 +1,20 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/metrics": {
+      "get": {
+        "operationId": "PrometheusController_index",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Prometheus"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -545,6 +559,7 @@
         ],
         "requestBody": {
           "required": true,
+          "description": "Student data",
           "content": {
             "application/json": {
               "schema": {
@@ -1176,6 +1191,9 @@
           "204": {
             "description": "Lesson has been successfully deleted"
           },
+          "400": {
+            "description": "Lesson is rescheduled and cannot be deleted"
+          },
           "404": {
             "description": "Lesson not found"
           }
@@ -1481,6 +1499,48 @@
         ]
       }
     },
+    "/tasks/pending-count": {
+      "get": {
+        "description": "Returns count of own IN_PROGRESS tasks for a teacher. For admin, adds the sum of ON_APPROVAL tasks assigned to other teachers.",
+        "operationId": "TasksController_getPendingTasksCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Pending tasks count has been successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasksPendingCountDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get pending tasks count for badge",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks/pending-count/stream": {
+      "get": {
+        "operationId": "TasksController_getPendingTasksCountStream",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
     "/tasks/teachers/{teacherId}": {
       "get": {
         "operationId": "TasksController_getTasksByTeacherId",
@@ -1707,6 +1767,70 @@
           }
         ],
         "summary": "Create a new task",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/tasks/{id}/comments": {
+      "post": {
+        "operationId": "TasksController_createTaskComment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Task ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Comment data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCommentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "Task not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a comment to a task",
         "tags": [
           "Tasks"
         ]
@@ -2026,8 +2150,10 @@
           },
           "class": {
             "type": "number",
-            "description": "The class of the student",
-            "example": 1
+            "description": "The class of the student: -1 adult, 0 preschooler, 1-11 school grade",
+            "example": 1,
+            "minimum": -1,
+            "maximum": 11
           },
           "birth_date": {
             "type": "object",
@@ -2043,6 +2169,21 @@
             "type": "string",
             "description": "The timezone of the student",
             "example": "BY"
+          },
+          "marketing_consent": {
+            "type": "boolean",
+            "description": "Whether the student has given marketing consent",
+            "example": false
+          },
+          "payment_currency": {
+            "type": "string",
+            "description": "The payment currency of the student",
+            "example": "BYN",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
           }
         },
         "required": [
@@ -2102,6 +2243,21 @@
             "type": "object",
             "description": "The timezone of the student",
             "example": "BY"
+          },
+          "marketing_consent": {
+            "type": "boolean",
+            "description": "Whether the student has given marketing consent",
+            "example": false
+          },
+          "payment_currency": {
+            "type": "string",
+            "description": "The payment currency of the student",
+            "example": "BYN",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
           }
         },
         "required": [
@@ -2113,7 +2269,9 @@
           "created_at",
           "deleted_at",
           "teacher_id",
-          "timezone"
+          "timezone",
+          "marketing_consent",
+          "payment_currency"
         ]
       },
       "StudentExtendedDto": {
@@ -2166,6 +2324,21 @@
             "description": "The timezone of the student",
             "example": "BY"
           },
+          "marketing_consent": {
+            "type": "boolean",
+            "description": "Whether the student has given marketing consent",
+            "example": false
+          },
+          "payment_currency": {
+            "type": "string",
+            "description": "The payment currency of the student",
+            "example": "BYN",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
+          },
           "actualPlans": {
             "description": "The actual plans of the student",
             "type": "array",
@@ -2204,6 +2377,8 @@
           "deleted_at",
           "teacher_id",
           "timezone",
+          "marketing_consent",
+          "payment_currency",
           "actualPlans",
           "balance",
           "bookUntilCancellation",
@@ -2218,11 +2393,23 @@
             "type": "object",
             "description": "The birth date of the student",
             "example": "2000-01-01T00:00:00.000Z"
+          },
+          "marketing_consent": {
+            "type": "boolean",
+            "description": "Whether the student has given marketing consent",
+            "example": false
+          },
+          "payment_currency": {
+            "type": "string",
+            "description": "The payment currency of the student",
+            "example": "BYN",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
           }
-        },
-        "required": [
-          "birth_date"
-        ]
+        }
       },
       "TeacherBasicOutputDto": {
         "type": "object",
@@ -2271,7 +2458,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-06-29T18:53:19.735Z"
+            "example": "2026-07-16T09:48:18.506Z"
           },
           "status": {
             "type": "string",
@@ -2308,7 +2495,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-06-29T18:53:19.735Z",
+            "example": "2026-07-16T09:48:18.506Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -2320,14 +2507,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-06-29T18:53:19.735Z",
+            "example": "2026-07-16T09:48:18.506Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-06-29T18:53:19.735Z"
+            "example": "2026-07-16T09:48:18.506Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -2415,7 +2602,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-06-29T18:53:19.729Z"
+            "example": "2026-07-16T09:48:18.495Z"
           },
           "isFree": {
             "type": "boolean",
@@ -2449,7 +2636,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-06-29T18:53:19.742Z"
+            "example": "2026-07-16T09:48:18.514Z"
           }
         },
         "required": [
@@ -2493,13 +2680,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-06-29T18:53:19.751Z"
+            "example": "2026-07-16T09:48:18.523Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-06-29T18:53:19.751Z"
+            "example": "2026-07-16T09:48:18.524Z"
           },
           "plan": {
             "description": "Plan",
@@ -2511,7 +2698,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-06-29T18:53:19.751Z"
+              "created_at": "2026-07-16T09:48:18.524Z"
             },
             "allOf": [
               {
@@ -2568,13 +2755,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-06-29T18:53:19.753Z"
+            "example": "2026-07-16T09:48:18.526Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-06-29T18:53:19.753Z"
+            "example": "2026-07-16T09:48:18.526Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -2727,6 +2914,34 @@
           "name"
         ]
       },
+      "TaskCommentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "comment": {
+            "type": "string",
+            "example": "Готово, проверьте пожалуйста"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-06-29T12:00:00.000Z"
+          },
+          "commenter_name": {
+            "type": "string",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "id",
+          "comment",
+          "created_at",
+          "commenter_name"
+        ]
+      },
       "TaskDto": {
         "type": "object",
         "properties": {
@@ -2766,6 +2981,18 @@
           },
           "teacher": {
             "$ref": "#/components/schemas/TaskTeacherDto"
+          },
+          "comments_count": {
+            "type": "number",
+            "example": 3,
+            "description": "Количество комментариев к задаче"
+          },
+          "comments": {
+            "description": "Комментарии к задаче",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskCommentDto"
+            }
           }
         },
         "required": [
@@ -2776,6 +3003,19 @@
           "teacher_id",
           "created_at",
           "updated_at"
+        ]
+      },
+      "TasksPendingCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "description": "For teacher: count of own IN_PROGRESS tasks. For admin: own IN_PROGRESS tasks plus ON_APPROVAL tasks of other teachers.",
+            "example": 3
+          }
+        },
+        "required": [
+          "count"
         ]
       },
       "CreateTaskDto": {
@@ -2795,6 +3035,19 @@
         "required": [
           "description",
           "teacher_id"
+        ]
+      },
+      "CreateTaskCommentDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Текст комментария",
+            "example": "Готово, проверьте пожалуйста"
+          }
+        },
+        "required": [
+          "comment"
         ]
       },
       "UpdateTaskDto": {

@@ -31,6 +31,7 @@ model Teacher {
 	deleted_at DateTime?
   telegrams  Telegram[]
 	telegram_tokens TelegramToken[]
+	task_comments TaskComment[]
 
 	@@map("teacher")
 }
@@ -178,8 +179,26 @@ model Task {
 	updated_at DateTime @updatedAt
 
 	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+	task_comments TaskComment[]
 
 	@@map("task")
+}
+
+model TaskComment {
+	id String @id @default(uuid())
+
+	task_id String
+	comment String
+
+	commenter_id Int
+
+	commenter Teacher @relation(fields: [commenter_id], references: [id])
+
+	created_at DateTime @default(now())
+
+	task     Task  @relation(fields: [task_id], references: [id])
+
+	@@map("task_comment")
 }
 
 enum PaymentCurrency {

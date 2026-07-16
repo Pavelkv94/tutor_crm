@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
+import { formatStudentClassShort } from '@/constants/student-class'
 import type { Student, Plan, Teacher, SingleLessonInput } from '@/types'
 
 const currencyFlags: Record<string, string> = {
@@ -139,7 +140,7 @@ export const CreateSingleLessonForm = ({
                 <SelectContent>
                   {activeStudents.map((student) => (
                     <SelectItem key={student.id} value={student.id.toString()}>
-                      {student.name} - {student.class}кл
+                      {student.name} - {formatStudentClassShort(student.class)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -228,6 +228,13 @@ export interface TaskTeacher {
   name: string
 }
 
+export interface TaskComment {
+  id: string
+  comment: string
+  created_at: string
+  commenter_name: string
+}
+
 export interface Task {
   id: string
   description: string
@@ -237,6 +244,12 @@ export interface Task {
   created_at: string
   updated_at: string
   teacher?: TaskTeacher
+  comments_count?: number
+  comments?: TaskComment[]
+}
+
+export interface CreateTaskCommentInput {
+  comment: string
 }
 
 export interface TeacherTasksSummary {

@@ -21,6 +21,7 @@ import { ScheduleCellModal } from '@/components/schedule/ScheduleCellModal'
 import { RescheduleCard } from '@/components/schedule/RescheduleCard'
 import { RescheduleLessonsModal } from '@/components/schedule/RescheduleLessonsModal'
 import { Button } from '@/components/ui/button'
+import { formatStudentClassShort } from '@/constants/student-class'
 import { cn } from '@/lib/utils'
 import type { Teacher, Lesson } from '@/types'
 
@@ -206,7 +207,7 @@ export const Schedule = () => {
   }
 
   const formatLessonPrimaryLine = (lesson: Lesson): string => {
-    return `[${formatLessonTime(lesson)}] ${lesson.student.name} ${lesson.student.class}кл`
+    return `[${formatLessonTime(lesson)}] ${lesson.student.name} ${formatStudentClassShort(lesson.student.class)}`
   }
 
   const formatLessonSecondaryLine = (lesson: Lesson): string => {

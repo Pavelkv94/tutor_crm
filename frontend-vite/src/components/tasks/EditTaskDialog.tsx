@@ -152,6 +152,7 @@ export const EditTaskDialog = ({
                 id="edit-task-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                placeholder="Опишите задачу..."
                 required
                 rows={10}
                 className="min-h-[240px] resize-y"

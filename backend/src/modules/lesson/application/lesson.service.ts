@@ -226,10 +226,10 @@ export class LessonService {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);
 				}
-				// if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
-				// 	await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
-				// 	throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
-				// }
+				if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
+					throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
+				}
 				if (existingLessons.filter(el => el.student.id === student_id).length > 0) {
 					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Это время уже назначено у ${existingLessons[0].student.name}: ${mergedDate}`);
@@ -261,6 +261,32 @@ export class LessonService {
 		if (teacher.deleted_at) {
 			throw new BadRequestException('Преподаватель удален');
 		}
+
+		const lesson = await this.lessonRepository.findById(lessonId);
+		if (!lesson) {
+			throw new NotFoundException('Урок не найден');
+		}
+
+		const dateLabel = lesson.date.toLocaleDateString();
+		const lessonAlreadyBooked = (
+			await this.lessonRepository.findExistingLessonsByDateAndTeacher(lesson.date, changeTeacherDto.teacher_id)
+		).filter(el => el.id !== lessonId);
+		if (lessonAlreadyBooked.length > 1) {
+			throw new BadRequestException(`Максимальное количество уроков в это время: ${dateLabel}`);
+		}
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+			throw new BadRequestException(`Это время занято индивидуальным занятием у ${lessonAlreadyBooked[0].student.name}: ${dateLabel}`);
+		}
+		if (lessonAlreadyBooked.length >= 1 && lesson.plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
+			throw new BadRequestException(`Нельзя назначить индивидуальное занятие на занятое время: ${dateLabel}`);
+		}
+		if (lessonAlreadyBooked.filter(el => el.student.id === lesson.student.id).length > 0) {
+			throw new BadRequestException(`Это время уже назначено у ${lesson.student.name}: ${dateLabel}`);
+		}
+		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== lesson.plan.id) {
+			throw new BadRequestException(`Не совпадает тарифный план: ${dateLabel}`);
+		}
+
 		await this.lessonRepository.changeTeacher(lessonId, changeTeacherDto.teacher_id);
 	}
 

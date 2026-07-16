@@ -12,10 +12,15 @@ export class CreateStudentDto {
 	@IsNotEmpty()
 	name: string;
 
-	@ApiProperty({ description: 'The class of the student', example: 1 })
+	@ApiProperty({
+		description: 'The class of the student: -1 adult, 0 preschooler, 1-11 school grade',
+		example: 1,
+		minimum: -1,
+		maximum: 11,
+	})
 	@IsInt()
 	@IsNotEmpty()
-	@Min(0)
+	@Min(-1)
 	@Max(11)
 	class: number;
 

@@ -84,6 +84,7 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 								min="0"
 								value={planPrice}
 								onChange={(e) => setPlanPrice(e.target.value)}
+								placeholder="Например, 50"
 								required
 							/>
 						</div>
@@ -135,6 +136,7 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 								min="1"
 								value={duration}
 								onChange={(e) => setDuration(e.target.value)}
+								placeholder="Например, 60"
 								required
 							/>
 						</div>

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { studentsApi } from '@/api/students'
+import { formatStudentClassLabel } from '@/constants/student-class'
 
 interface StudentInfoDialogProps {
   open: boolean
@@ -46,7 +47,7 @@ export const StudentInfoDialog = ({
             </div>
             <div className="grid gap-2">
               <Label>Класс</Label>
-              <div className="text-sm font-medium">{student.class}</div>
+              <div className="text-sm font-medium">{formatStudentClassLabel(student.class)}</div>
             </div>
             <div className="grid gap-2">
               <Label>Дата рождения</Label>

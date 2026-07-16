@@ -18,6 +18,7 @@ import { distinctUntilChanged, map, startWith, switchMap } from 'rxjs/operators'
 import { TasksEventsService } from './tasks-events.service';
 import { JwtPayloadDto } from '@/modules/auth/dto/jwt.payload.dto';
 import { ExtractTeacherFromRequest } from '@/shared/decorators/param/extract-teacher-from-request';
+import { CreateTaskCommentSwagger } from '@/shared/decorators/swagger/tasks/create-task-comment-swagger.decorator';
 import { CreateTaskSwagger } from '@/shared/decorators/swagger/tasks/create-task-swagger.decorator';
 import { DeleteTaskSwagger } from '@/shared/decorators/swagger/tasks/delete-task-swagger.decorator';
 import { GetMyTasksSwagger } from '@/shared/decorators/swagger/tasks/get-my-tasks-swagger.decorator';
@@ -28,8 +29,10 @@ import { GetTeachersWithTaskCountsSwagger } from '@/shared/decorators/swagger/ta
 import { UpdateTaskSwagger } from '@/shared/decorators/swagger/tasks/update-task-swagger.decorator';
 import { AdminAccessGuard } from '@/shared/guards/admin-access.guard';
 import { JwtAccessGuard } from '@/shared/guards/jwt-access.guard';
+import { CreateTaskCommentDto } from './dto/requests/create-task-comment.dto';
 import { CreateTaskDto } from './dto/requests/create-task.dto';
 import { UpdateTaskDto } from './dto/requests/update-task.dto';
+import { TaskCommentDto } from './dto/responses/task-comment.dto';
 import { TaskDto } from './dto/responses/task.dto';
 import { TasksPendingCountDto } from './dto/responses/tasks-pending-count.dto';
 import { TeacherTasksSummaryDto } from './dto/responses/teacher-tasks-summary.dto';
@@ -110,6 +113,18 @@ export class TasksController {
 	@UseGuards(JwtAccessGuard, AdminAccessGuard)
 	async createTask(@Body() createTaskDto: CreateTaskDto): Promise<TaskDto> {
 		return await this.tasksService.createTask(createTaskDto);
+	}
+
+	@CreateTaskCommentSwagger()
+	@Post(':id/comments')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(JwtAccessGuard)
+	async createTaskComment(
+		@Param('id') id: string,
+		@Body() createTaskCommentDto: CreateTaskCommentDto,
+		@ExtractTeacherFromRequest() teacher: JwtPayloadDto,
+	): Promise<TaskCommentDto> {
+		return await this.tasksService.createComment(id, createTaskCommentDto, teacher);
 	}
 
 	@UpdateTaskSwagger()

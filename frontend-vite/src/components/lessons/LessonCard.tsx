@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { lessonsApi } from '@/api/lessons'
+import { formatStudentClassShort } from '@/constants/student-class'
 import type { Lesson, Teacher, CancelLessonInput } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -348,7 +349,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Класс</Label>
-              <p className="text-sm font-semibold">{lesson.student.class}кл</p>
+              <p className="text-sm font-semibold">{formatStudentClassShort(lesson.student.class)}</p>
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Преподаватель</Label>
