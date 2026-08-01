@@ -183,16 +183,20 @@ export class TelegramService extends Telegraf {
 		const groupedLessonsByPlan = pendingUnpaidLessons.reduce((acc, lesson) => { const key = lesson.plan.id; if (!acc[key]) acc[key] = []; acc[key].push(lesson); return acc; }, {});
 
 		const lessonsResultMessage = Object.values(groupedLessonsByPlan)
-			.filter((lessons: LessonOutputDto[]) => lessons.length > 0)
-			.map((lessons: LessonOutputDto[]) => {
+			.filter((lessons: any) => lessons.length > 0)
+			.map((lessons: any) => {
 				const plan = lessons[0].plan;
 				return `🔸${lessons.length} урок(ов) ${(plan?.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре")} × ${plan?.plan_price}${currencySymbol} = ${lessons.length * (plan?.plan_price ?? 0)}${currencySymbol}`;
 			});
 
 		const monthsOnRus = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРАТ", "ДЕКАБРЬ"];
 		const currentMonth = monthsOnRus[report.requested_month - 1];
+		const isBynPayment = student.payment_currency === "BYN";
+		const paymentNote = isBynPayment
+			? "💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и прислать чек для подтверждения 😊"
+			: "💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊\n🔗 ССЫЛКА НА ОПЛАТУ:";
 		const message = `
-📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name.split(' ')[0]} ${student.class}кл)
+📅 РАСПИСАНИЕ НА ${currentMonth} (${report.student_name})
 
 <i>⏰ Время указано по МСК (UTC+3)</i>
 
@@ -201,27 +205,9 @@ ${lessonsMessageList.join('\n')}
 ${lessonsResultMessage.join('\n')}
 📌 Итого: ${pendingUnpaidLessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}${currencySymbol}
 
-💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊
-🔗 ССЫЛКА НА ОПЛАТУ:
+${paymentNote}
 				
 `
-
-		//  ${lessons.join('\n')}
-
-		//  ${lessonsResultMessage.join('\n')}
-		// 📌 Итого: ${report.lessons.reduce((acc, lesson) => acc + lesson.plan.plan_price, 0)}р
-
-		// 💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и  отправить чек для подтверждения 😊
-		//  		`
-
-		// // 		const message = `
-		// 📅 Период: ${formattedStartDate} - ${formattedEndDate}
-		// 👤 Ученик: ${student.name} ${student.class}кл
-		// 📚 Количество всех уроков: ${report.pending_lessons_count}
-		// 🎁 Из них количество бесплатных уроков: ${report.pending_free_lessons_count}
-		// 💳 Количество ожидающих оплату уроков: ${report.pending_unpaid_lessons_count}
-		// 💰 Стоимость ожидающих оплату уроков: ${report.pending_unpaid_lessons_cost} ${report.plan_currency}.
-		// 		`
 		await this.sendMessageToAdmin(message);
 
 	}
