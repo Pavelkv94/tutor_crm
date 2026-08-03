@@ -10,8 +10,9 @@ import { TelegramModule } from '@/modules/telegram/telegram.module';
 import { AppConfigModule } from '@/config/app-config.module';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TasksModule } from './modules/tasks/tasks.module';
+import { TasksModule } from '@/modules/tasks/tasks.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { MaterialModule } from './modules/material/material.module';
 @Module({
 	imports: [
 		AppConfigModule,
@@ -32,6 +33,7 @@ import { ObservabilityModule } from './observability/observability.module';
 		ReportsModule,
 		TelegramModule,
 		TasksModule,
+		MaterialModule,
 	],
 	controllers: [],
 	providers: [],

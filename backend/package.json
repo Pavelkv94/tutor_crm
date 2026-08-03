@@ -28,6 +28,8 @@
 		"swagger:generate": "NODE_ENV=development dotenv -e .env.development -- ts-node -r tsconfig-paths/register scripts/generate-swagger.ts"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1101.0",
+		"@aws-sdk/s3-request-presigner": "^3.1101.0",
 		"@nestjs/common": "^11.0.1",
 		"@nestjs/config": "^4.0.2",
 		"@nestjs/core": "^11.0.1",

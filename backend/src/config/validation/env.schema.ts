@@ -82,4 +82,20 @@ export class EnvSchema {
 	@IsOptional()
 	OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?: string;
 
+	@IsString()
+	@IsDefined()
+	R2_ACCOUNT_ID: string;
+
+	@IsString()
+	@IsDefined()
+	R2_BUCKET: string;
+
+	@IsString()
+	@IsDefined()
+	R2_ACCESS_KEY_ID: string;
+
+	@IsString()
+	@IsDefined()
+	R2_SECRET_ACCESS_KEY: string;
+
 }

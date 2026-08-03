@@ -70,7 +70,10 @@ export const Sidebar = () => {
       <nav className="flex flex-1 flex-col gap-1 px-2.5" aria-label="Основное меню">
         {filteredItems.map((item) => {
           const Icon = item.icon
-          const isActive = location.pathname === item.path
+          const isActive =
+            item.path === '/'
+              ? location.pathname === '/'
+              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
           const isTasksItem = item.path === '/tasks'
 
           return (

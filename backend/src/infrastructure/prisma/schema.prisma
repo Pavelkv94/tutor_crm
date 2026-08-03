@@ -32,6 +32,7 @@ model Teacher {
   telegrams  Telegram[]
 	telegram_tokens TelegramToken[]
 	task_comments TaskComment[]
+	file_accesses FileAccess[]
 
 	@@map("teacher")
 }
@@ -199,6 +200,63 @@ model TaskComment {
 	task     Task  @relation(fields: [task_id], references: [id])
 
 	@@map("task_comment")
+}
+
+model Course {
+	id Int @id @default(autoincrement())
+	name String
+
+	created_at DateTime @default(now())
+
+	files File[]
+
+	@@map("file_category")
+}
+model File {
+	id Int @id @default(autoincrement())
+
+	storage_key String
+	original_name String
+	mime_type String
+	size_bytes Int
+
+	type FileType
+	course_id Int
+
+	upload_status UploadStatus @default(UPLOADING)
+	
+	course Course @relation(fields: [course_id], references: [id])
+	file_accesses FileAccess[]
+
+	created_at DateTime @default(now())
+
+	@@map("file")
+}
+
+model FileAccess {
+	id Int @id @default(autoincrement())
+	
+	teacher_id Int
+	file_id Int
+
+	created_at DateTime @default(now())
+
+	teacher Teacher @relation(fields: [teacher_id], references: [id])
+	file File @relation(fields: [file_id], references: [id])
+
+	@@map("file_access")
+}
+
+
+enum UploadStatus {
+	UPLOADING
+	UPLOADED
+	FAILED
+}
+
+enum FileType {
+	PDF
+	HTML
 }
 
 enum PaymentCurrency {

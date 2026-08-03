@@ -275,3 +275,49 @@ export interface TasksPendingCount {
   count: number
 }
 
+export interface Course {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface CreateCourseInput {
+  name: string
+}
+
+export interface UpdateCourseInput {
+  name: string
+}
+
+export type MaterialFileType = 'PDF' | 'HTML'
+export type MaterialUploadStatus = 'UPLOADING' | 'UPLOADED' | 'FAILED'
+
+export interface Material {
+  id: number
+  courseId: number
+  originalName: string
+  mimeType: string
+  sizeBytes: number
+  type: MaterialFileType
+  status: MaterialUploadStatus
+  created_at: string
+}
+
+export interface UploadInitInput {
+  courseId: number
+  teachers: number[]
+  fileName: string
+  mimeType: string
+  contentType: string
+  sizeBytes: number
+}
+
+export interface UploadInitResponse {
+  materialId: number
+  uploadUrl: string
+}
+
+export interface ViewUrlResponse {
+  url: string
+}
+

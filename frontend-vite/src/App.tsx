@@ -10,6 +10,9 @@ import { Teachers } from '@/pages/Teachers'
 import { Schedule } from '@/pages/Schedule'
 import { Home } from '@/pages/Home'
 import { Tasks } from '@/pages/Tasks'
+import { Materials } from '@/pages/Materials'
+import { CourseMaterials } from '@/pages/CourseMaterials'
+import { MaterialViewerPage } from '@/pages/MaterialViewerPage'
 import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient({
@@ -69,6 +72,34 @@ function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <Tasks />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/materials"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Materials />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/materials/view/:materialId"
+              element={
+                <ProtectedRoute>
+                  <MaterialViewerPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/materials/:courseId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CourseMaterials />
                   </MainLayout>
                 </ProtectedRoute>
               }

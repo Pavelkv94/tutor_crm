@@ -6,12 +6,21 @@ import { telegramConfig } from '@/config/namespaces/telegram.config';
 import { corsConfig } from '@/config/namespaces/cors.config';
 import { httpConfig } from '@/config/namespaces/http.config';
 import { observabilityConfig } from '@/observability/observability.config';
+import { storageConfig } from '@/config/namespaces/storage.config';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       ignoreEnvFile: true,
-			load: [databaseConfig, authConfig, telegramConfig, corsConfig, httpConfig, observabilityConfig],
+			load: [
+				databaseConfig,
+				authConfig,
+				telegramConfig,
+				corsConfig,
+				httpConfig,
+				observabilityConfig,
+				storageConfig,
+			],
     }),
   ],
 })

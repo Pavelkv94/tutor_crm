@@ -5,6 +5,7 @@ import {
   UserCog,
   LayoutDashboard,
   ClipboardList,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export const navItems: NavItem[] = [
   { icon: FileText, label: 'Тарифы', path: '/plans', adminOnly: true },
   { icon: UserCog, label: 'Преподаватели', path: '/teachers', adminOnly: true },
   { icon: ClipboardList, label: 'Задачи', path: '/tasks' },
+  { icon: BookOpen, label: 'Материалы', path: '/materials' },
 ]
 
 export const getVisibleNavItems = (isAdmin: boolean) =>
