@@ -3,6 +3,8 @@ import type {
   Course,
   CreateCourseInput,
   Material,
+  MaterialsSize,
+  UpdateAccessInput,
   UpdateCourseInput,
   UploadInitInput,
   UploadInitResponse,
@@ -32,11 +34,19 @@ export const materialsApi = {
 
   getCourseMaterials: async (courseId: number): Promise<Material[]> => {
     const response = await apiClient.get<Material[]>(`/materials/courses/${courseId}/materials`)
-    return response.data
+    return response.data.map((material) => ({
+      ...material,
+      teachers: material.teachers ?? [],
+    }))
   },
 
   getViewUrl: async (materialId: number): Promise<ViewUrlResponse> => {
     const response = await apiClient.post<ViewUrlResponse>(`/materials/${materialId}/view-url`)
+    return response.data
+  },
+
+  getMaterialsSize: async (): Promise<MaterialsSize> => {
+    const response = await apiClient.get<MaterialsSize>('/materials/size')
     return response.data
   },
 
@@ -61,5 +71,25 @@ export const materialsApi = {
 
   uploadComplete: async (materialId: number): Promise<void> => {
     await apiClient.post(`/materials/upload/${materialId}/complete`)
+  },
+
+  deleteMaterial: async (materialId: number): Promise<void> => {
+    await apiClient.delete(`/materials/upload/${materialId}`)
+  },
+
+  grantCourseAccess: async (courseId: number, data: UpdateAccessInput): Promise<void> => {
+    await apiClient.post(`/materials/courses/${courseId}/access`, data)
+  },
+
+  revokeCourseAccess: async (courseId: number, data: UpdateAccessInput): Promise<void> => {
+    await apiClient.delete(`/materials/courses/${courseId}/access`, { data })
+  },
+
+  grantMaterialAccess: async (materialId: number, data: UpdateAccessInput): Promise<void> => {
+    await apiClient.post(`/materials/${materialId}/access`, data)
+  },
+
+  revokeMaterialAccess: async (materialId: number, data: UpdateAccessInput): Promise<void> => {
+    await apiClient.delete(`/materials/${materialId}/access`, { data })
   },
 }

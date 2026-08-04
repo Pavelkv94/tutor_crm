@@ -35,6 +35,11 @@ describe("MaterialController", () => {
 		uploadInit: jest.fn(),
 		uploadComplete: jest.fn(),
 		getViewUrl: jest.fn(),
+		getMaterialsSize: jest.fn(),
+		grantMaterialAccess: jest.fn(),
+		revokeMaterialAccess: jest.fn(),
+		grantCourseAccess: jest.fn(),
+		revokeCourseAccess: jest.fn(),
 	};
 
 	beforeEach(async () => {
@@ -121,6 +126,7 @@ describe("MaterialController", () => {
 				type: "PDF",
 				status: "UPLOADED",
 				created_at: new Date(),
+				teachers: [{ id: 5, name: "Teacher Five" }],
 			};
 			jest.spyOn(materialService, "getCourseMaterials").mockResolvedValue([mockMaterialEntity as any]);
 
@@ -137,6 +143,7 @@ describe("MaterialController", () => {
 					type: mockMaterialEntity.type,
 					status: mockMaterialEntity.status,
 					created_at: mockMaterialEntity.created_at,
+					teachers: mockMaterialEntity.teachers,
 				},
 			]);
 		});
@@ -182,6 +189,57 @@ describe("MaterialController", () => {
 
 			expect(materialService.getViewUrl).toHaveBeenCalledWith(10, 5, "TEACHER");
 			expect(result).toEqual(response);
+		});
+	});
+
+	describe("getMaterialsSize", () => {
+		it("should return the total size of all materials wrapped in a response dto", async () => {
+			jest.spyOn(materialService, "getMaterialsSize").mockResolvedValue(3072);
+
+			const result = await controller.getMaterialsSize();
+
+			expect(materialService.getMaterialsSize).toHaveBeenCalled();
+			expect(result).toEqual({ totalSizeBytes: 3072 });
+		});
+	});
+
+	describe("grantMaterialAccess", () => {
+		it("should delegate to material service", async () => {
+			jest.spyOn(materialService, "grantMaterialAccess").mockResolvedValue(undefined);
+
+			await controller.grantMaterialAccess("10", { teacherIds: [5, 6] });
+
+			expect(materialService.grantMaterialAccess).toHaveBeenCalledWith(10, [5, 6]);
+		});
+	});
+
+	describe("revokeMaterialAccess", () => {
+		it("should delegate to material service", async () => {
+			jest.spyOn(materialService, "revokeMaterialAccess").mockResolvedValue(undefined);
+
+			await controller.revokeMaterialAccess("10", { teacherIds: [5] });
+
+			expect(materialService.revokeMaterialAccess).toHaveBeenCalledWith(10, [5]);
+		});
+	});
+
+	describe("grantCourseAccess", () => {
+		it("should delegate to material service", async () => {
+			jest.spyOn(materialService, "grantCourseAccess").mockResolvedValue(undefined);
+
+			await controller.grantCourseAccess("1", { teacherIds: [5, 6] });
+
+			expect(materialService.grantCourseAccess).toHaveBeenCalledWith(1, [5, 6]);
+		});
+	});
+
+	describe("revokeCourseAccess", () => {
+		it("should delegate to material service", async () => {
+			jest.spyOn(materialService, "revokeCourseAccess").mockResolvedValue(undefined);
+
+			await controller.revokeCourseAccess("1", { teacherIds: [5] });
+
+			expect(materialService.revokeCourseAccess).toHaveBeenCalledWith(1, [5]);
 		});
 	});
 });

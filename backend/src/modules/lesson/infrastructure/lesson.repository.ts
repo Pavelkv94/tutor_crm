@@ -185,6 +185,42 @@ export class LessonRepository {
 		});
 	}
 
+	async findExistingLessonsByDatesAndTeacher(
+		dates: Date[],
+		teacher_id: number,
+	): Promise<Map<number, Array<Lesson & { student: Student } & { plan: Plan }>>> {
+		const lessonsByDate = new Map<number, Array<Lesson & { student: Student } & { plan: Plan }>>();
+		if (dates.length === 0) {
+			return lessonsByDate;
+		}
+
+		const existingLessons = await this.prisma.lesson.findMany({
+			where: {
+				date: { in: dates },
+				teacher_id,
+				status: {
+					in: [LessonStatusEnum.PENDING_UNPAID, LessonStatusEnum.PENDING_PAID, LessonStatusEnum.COMPLETED_PAID, LessonStatusEnum.COMPLETED_UNPAID],
+				},
+			},
+			include: {
+				student: true,
+				plan: true,
+			},
+		});
+
+		for (const lesson of existingLessons) {
+			const dateKey = lesson.date.getTime();
+			const lessonsForDate = lessonsByDate.get(dateKey);
+			if (lessonsForDate) {
+				lessonsForDate.push(lesson);
+			} else {
+				lessonsByDate.set(dateKey, [lesson]);
+			}
+		}
+
+		return lessonsByDate;
+	}
+
 	async updatePendingLessonsStatus(): Promise<void> {
 		const now = new Date();
 		await this.prisma.lesson.updateMany({

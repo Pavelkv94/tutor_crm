@@ -226,4 +226,36 @@ describe('LessonRepository', () => {
 			expect(prisma.lesson.updateMany).toHaveBeenCalled();
 		});
 	});
+
+	describe('findExistingLessonsByDatesAndTeacher', () => {
+		it('should group existing lessons by date timestamp', async () => {
+			const date1 = new Date('2024-01-01T10:00:00.000Z');
+			const date2 = new Date('2024-01-08T10:00:00.000Z');
+			jest.spyOn(prisma.lesson, 'findMany').mockResolvedValue([
+				{ ...mockLesson, date: date1 },
+				{ ...mockLesson, id: 2, date: date1 },
+				{ ...mockLesson, id: 3, date: date2 },
+			] as any);
+
+			const result = await repository.findExistingLessonsByDatesAndTeacher([date1, date2], 1);
+
+			expect(result.get(date1.getTime())).toHaveLength(2);
+			expect(result.get(date2.getTime())).toHaveLength(1);
+			expect(prisma.lesson.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						date: { in: [date1, date2] },
+						teacher_id: 1,
+					}),
+				}),
+			);
+		});
+
+		it('should return empty map when dates list is empty', async () => {
+			const result = await repository.findExistingLessonsByDatesAndTeacher([], 1);
+
+			expect(result.size).toBe(0);
+			expect(prisma.lesson.findMany).not.toHaveBeenCalled();
+		});
+	});
 });

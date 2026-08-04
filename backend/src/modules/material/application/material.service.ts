@@ -101,4 +101,49 @@ export class MaterialService {
 
 		return { url };
 	}
+
+	async deleteMaterial(id: number): Promise<void> {
+		const material = await this.materialRepository.getMaterialById(id);
+		if (!material) {
+			throw new NotFoundException("Материал не найден");
+		}
+		await this.r2Service.deleteObject(material.storageKey);
+		await this.materialRepository.deleteMaterial(id);
+	}
+
+	async getMaterialsSize(): Promise<number> {
+		return await this.materialRepository.getMaterialsSize();
+	}
+
+	async grantMaterialAccess(materialId: number, teacherIds: number[]): Promise<void> {
+		const material = await this.materialRepository.getMaterialById(materialId);
+		if (!material) {
+			throw new NotFoundException("Материал не найден");
+		}
+		await this.materialRepository.createFileAccess(teacherIds, materialId);
+	}
+
+	async revokeMaterialAccess(materialId: number, teacherIds: number[]): Promise<void> {
+		const material = await this.materialRepository.getMaterialById(materialId);
+		if (!material) {
+			throw new NotFoundException("Материал не найден");
+		}
+		await this.materialRepository.revokeFileAccess(teacherIds, materialId);
+	}
+
+	async grantCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
+		const course = await this.courseRepository.getCourseById(courseId);
+		if (!course) {
+			throw new NotFoundException("Курс не найден");
+		}
+		await this.materialRepository.grantCourseAccess(courseId, teacherIds);
+	}
+
+	async revokeCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
+		const course = await this.courseRepository.getCourseById(courseId);
+		if (!course) {
+			throw new NotFoundException("Курс не найден");
+		}
+		await this.materialRepository.revokeCourseAccess(courseId, teacherIds);
+	}
 }

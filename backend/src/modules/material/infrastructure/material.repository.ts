@@ -38,9 +38,22 @@ export class MaterialRepository implements MaterialRepositoryPort {
 	async getMaterialsByCourseId(courseId: number): Promise<MaterialEntity[]> {
 		const files = await this.prisma.file.findMany({
 			where: { course_id: courseId, upload_status: UploadStatus.UPLOADED },
+			include: {
+				file_accesses: {
+					include: {
+						teacher: true,
+					},
+				},
+			},
 			orderBy: { created_at: "desc" },
 		});
-		return files.map((file) => this.mapFileToEntity(file));
+		return files.map((file) => ({
+			...this.mapFileToEntity(file),
+			teachers: file.file_accesses.map((access) => ({
+				id: access.teacher.id,
+				name: access.teacher.name,
+			})),
+		}));
 	}
 
 	async updateMaterial(id: number, params: UpdateMaterialParams): Promise<MaterialEntity> {
@@ -76,6 +89,57 @@ export class MaterialRepository implements MaterialRepositoryPort {
 			data: teacherIds.map((teacherId) => ({ teacher_id: teacherId, file_id: materialId })),
 			skipDuplicates: true,
 		});
+	}
+
+	async revokeFileAccess(teacherIds: number[], materialId: number): Promise<void> {
+		if (teacherIds.length === 0) {
+			return;
+		}
+		await this.prisma.fileAccess.deleteMany({
+			where: { teacher_id: { in: teacherIds }, file_id: materialId },
+		});
+	}
+
+	async grantCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
+		if (teacherIds.length === 0) {
+			return;
+		}
+		const files = await this.prisma.file.findMany({
+			where: { course_id: courseId },
+			select: { id: true },
+		});
+		if (files.length === 0) {
+			return;
+		}
+		await this.prisma.fileAccess.createMany({
+			data: files.flatMap((file) => teacherIds.map((teacherId) => ({ teacher_id: teacherId, file_id: file.id }))),
+			skipDuplicates: true,
+		});
+	}
+
+	async revokeCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
+		if (teacherIds.length === 0) {
+			return;
+		}
+		await this.prisma.fileAccess.deleteMany({
+			where: { teacher_id: { in: teacherIds }, file: { course_id: courseId } },
+		});
+	}
+
+	async deleteMaterial(id: number): Promise<void> {
+		await this.prisma.file.delete({
+			where: { id },
+		});
+	}
+
+	async getMaterialsSize(): Promise<number> {
+		const materialsSize = await this.prisma.file.aggregate({
+			_sum: {
+				size_bytes: true,
+			},
+			where: { upload_status: UploadStatus.UPLOADED },
+		});
+		return materialsSize._sum.size_bytes ?? 0;
 	}
 
 	private resolveFileType(mimeType: string): PrismaFileType {

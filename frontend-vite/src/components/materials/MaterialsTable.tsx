@@ -5,6 +5,8 @@ import {
   FileCode2,
   FileText,
   Loader2,
+  Trash2,
+  Users,
   XCircle,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -16,18 +18,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 import type { Material, MaterialFileType, MaterialUploadStatus } from '@/types'
 
 interface MaterialsTableProps {
   materials: Material[]
   onOpen: (material: Material) => void
+  showActions?: boolean
+  onAccess?: (material: Material) => void
+  onDelete?: (material: Material) => void
+  isDeleting?: boolean
 }
 
 type SortField = 'originalName' | 'type' | 'sizeBytes' | 'created_at' | 'status'
 type SortDirection = 'asc' | 'desc'
 
 const headerCellClass =
-  'h-auto px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground'
+  'h-auto px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground'
+
+const bodyCellClass = 'px-4 py-2'
 
 const STATUS_ORDER: Record<MaterialUploadStatus, number> = {
   UPLOADED: 0,
@@ -72,7 +81,7 @@ const StatusIcon = ({ status }: { status: MaterialUploadStatus }) => {
   if (status === 'UPLOADED') {
     return (
       <span title={label} aria-label={label} className="inline-flex">
-        <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+        <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
       </span>
     )
   }
@@ -80,19 +89,26 @@ const StatusIcon = ({ status }: { status: MaterialUploadStatus }) => {
   if (status === 'UPLOADING') {
     return (
       <span title={label} aria-label={label} className="inline-flex">
-        <Loader2 className="h-5 w-5 animate-spin text-amber-500" aria-hidden="true" />
+        <Loader2 className="h-4 w-4 animate-spin text-amber-500" aria-hidden="true" />
       </span>
     )
   }
 
   return (
     <span title={label} aria-label={label} className="inline-flex">
-      <XCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+      <XCircle className="h-4 w-4 text-red-500" aria-hidden="true" />
     </span>
   )
 }
 
-export const MaterialsTable = ({ materials, onOpen }: MaterialsTableProps) => {
+export const MaterialsTable = ({
+  materials,
+  onOpen,
+  showActions = false,
+  onAccess,
+  onDelete,
+  isDeleting = false,
+}: MaterialsTableProps) => {
   const [sortField, setSortField] = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
@@ -195,12 +211,13 @@ export const MaterialsTable = ({ materials, onOpen }: MaterialsTableProps) => {
                   <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </TableHead>
+              {showActions && <TableHead className={`${headerCellClass} w-24`} />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedMaterials.map((material) => (
               <TableRow key={material.id} className="border-b border-border bg-card hover:bg-card">
-                <TableCell className="px-5 py-4 font-extrabold text-foreground">
+                <TableCell className={`${bodyCellClass} font-semibold text-foreground`}>
                   <div className="flex items-center gap-2">
                     <TypeIcon type={material.type} />
                     {material.status === 'UPLOADED' ? (
@@ -217,18 +234,47 @@ export const MaterialsTable = ({ materials, onOpen }: MaterialsTableProps) => {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="px-5 py-4 font-medium">
+                <TableCell className={`${bodyCellClass} font-medium`}>
                   {getTypeLabel(material.type)}
                 </TableCell>
-                <TableCell className="px-5 py-4 text-muted-foreground">
+                <TableCell className={`${bodyCellClass} text-muted-foreground`}>
                   {formatFileSize(material.sizeBytes)}
                 </TableCell>
-                <TableCell className="px-5 py-4">
+                <TableCell className={bodyCellClass}>
                   <StatusIcon status={material.status} />
                 </TableCell>
-                <TableCell className="px-5 py-4 text-muted-foreground">
+                <TableCell className={`${bodyCellClass} text-muted-foreground`}>
                   {formatMaterialDate(material.created_at)}
                 </TableCell>
+                {showActions && (
+                  <TableCell className={`${bodyCellClass} text-right`}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => onAccess?.(material)}
+                        title="Доступы"
+                        aria-label={`Управление доступами материала ${material.originalName}`}
+                        className="h-8 w-8 rounded-lg border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      >
+                        <Users className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => onDelete?.(material)}
+                        disabled={isDeleting}
+                        title="Удалить"
+                        aria-label={`Удалить материал ${material.originalName}`}
+                        className="h-8 w-8 rounded-lg border-red-200 bg-card text-red-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

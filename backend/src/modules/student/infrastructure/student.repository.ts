@@ -33,10 +33,6 @@ export class StudentRepository {
 			where.deleted_at = { not: null };
 		}
 		const students = await this.prisma.student.findMany({
-			include: {
-				telegrams: true,
-				lessons: true,
-			},
 			where: { ...where, teacher_id: teacher_id },
 			orderBy: [{ deleted_at: 'desc' }, { class: 'asc' }, { name: 'asc' }],
 		});

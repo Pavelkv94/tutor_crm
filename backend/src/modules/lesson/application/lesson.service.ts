@@ -196,51 +196,42 @@ export class LessonService {
 			if (!plan) {
 				throw new NotFoundException('План не найден');
 			}
-			const regularLesson: RegularLessonOutputDto = await this.lessonRegularRepository.createRegularLesson(lesson, student_id);
-			regularLessons.push(regularLesson);
 
-			// Generate all dates for the specified week_day between start_period_date and end_period_date
 			const lessonDates = this.getDatesForWeekDay(week_day, start_period_date, end_period_date);
-
-			// Parse start_time as ISO date string and extract UTC hours and minutes
 			const startTimeDate = parseISO(start_time);
 			const hours = startTimeDate.getUTCHours();
 			const minutes = startTimeDate.getUTCMinutes();
 
-			// Create individual lessons for each date
-			for (const lessonDate of lessonDates) {
-				// Merge date with time from start_time using Date.UTC to ensure correct timezone handling
-				const mergedDate = new Date(Date.UTC(
-					lessonDate.getUTCFullYear(),
-					lessonDate.getUTCMonth(),
-					lessonDate.getUTCDate(),
-					hours,
-					minutes,
-					0,
-					0
-				));
+			const mergedDates = lessonDates.map((lessonDate) => new Date(Date.UTC(
+				lessonDate.getUTCFullYear(),
+				lessonDate.getUTCMonth(),
+				lessonDate.getUTCDate(),
+				hours,
+				minutes,
+				0,
+				0,
+			)));
 
-				// Check if lesson already exists
-				const existingLessons = await this.lessonRepository.findExistingLessonsByDateAndTeacher(mergedDate, teacher_id);
+			const existingLessonsByDate = await this.lessonRepository.findExistingLessonsByDatesAndTeacher(mergedDates, teacher_id);
+
+			for (const mergedDate of mergedDates) {
+				const existingLessons = existingLessonsByDate.get(mergedDate.getTime()) ?? [];
 				if (existingLessons.length > 1) {
-					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Максимальное количество уроков в это время: ${mergedDate}`);
 				}
 				if (existingLessons.length === 1 && existingLessons[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
-					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Это время занято индивидуальным занятием у ${existingLessons[0].student.name}: ${mergedDate}`);
 				}
 				if (existingLessons.filter(el => el.student.id === student_id).length > 0) {
-					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Это время уже назначено у ${existingLessons[0].student.name}: ${mergedDate}`);
 				}
 				if (existingLessons.length > 0 && existingLessons[0].plan_id !== plan_id) {
-					await this.lessonRegularRepository.deleteRegularLesson(regularLesson.id);
 					throw new BadRequestException(`Не совпадает тарифный план: ${mergedDate}`);
 				}
-				// Create the lesson
-				await this.lessonRepository.createRegularLesson(student_id, teacher_id, plan_id, mergedDate, regularLesson);
 			}
+
+			const regularLesson = await this.lessonRegularRepository.createRegularLessonWithLessons(lesson, student_id, mergedDates);
+			regularLessons.push(regularLesson);
 		}
 		return regularLessons;
 	}

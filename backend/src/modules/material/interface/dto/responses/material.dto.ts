@@ -2,6 +2,14 @@ import { ApiProperty } from "@nestjs/swagger";
 import { FileType } from "@/modules/material/domain/file-type.enum";
 import { UploadStatus } from "@/modules/material/domain/upload-status.enum";
 
+export class MaterialTeacherDto {
+	@ApiProperty({ description: "The id of the teacher", example: 1 })
+	id: number;
+
+	@ApiProperty({ description: "The name of the teacher", example: "John Doe" })
+	name: string;
+}
+
 export class MaterialDto {
 	@ApiProperty({ description: "The id of the material", example: 1 })
 	id: number;
@@ -19,4 +27,6 @@ export class MaterialDto {
 	status: UploadStatus;
 	@ApiProperty({ description: "The creation date of the material", example: "2026-01-01T00:00:00.000Z" })
 	created_at: Date;
+	@ApiProperty({ description: "Teachers who have access to this material", type: [MaterialTeacherDto] })
+	teachers: MaterialTeacherDto[];
 }

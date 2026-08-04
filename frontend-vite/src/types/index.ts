@@ -292,6 +292,11 @@ export interface UpdateCourseInput {
 export type MaterialFileType = 'PDF' | 'HTML'
 export type MaterialUploadStatus = 'UPLOADING' | 'UPLOADED' | 'FAILED'
 
+export interface MaterialTeacher {
+  id: number
+  name: string
+}
+
 export interface Material {
   id: number
   courseId: number
@@ -301,6 +306,11 @@ export interface Material {
   type: MaterialFileType
   status: MaterialUploadStatus
   created_at: string
+  teachers: MaterialTeacher[]
+}
+
+export interface UpdateAccessInput {
+  teacherIds: number[]
 }
 
 export interface UploadInitInput {
@@ -319,5 +329,9 @@ export interface UploadInitResponse {
 
 export interface ViewUrlResponse {
   url: string
+}
+
+export interface MaterialsSize {
+  totalSizeBytes: number
 }
 

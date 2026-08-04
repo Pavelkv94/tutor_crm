@@ -1,29 +1,36 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { AdminAccessGuard } from "@/shared/guards/admin-access.guard";
-import { JwtAccessGuard } from "@/shared/guards/jwt-access.guard";
-import { CourseService } from "../application/course.service";
-import { MaterialService } from "../application/material.service";
+import { JwtPayloadDto } from "@/modules/auth/dto/jwt.payload.dto";
+import { ExtractTeacherFromRequest } from "@/shared/decorators/param/extract-teacher-from-request";
 import { CreateCourseSwagger } from "@/shared/decorators/swagger/material/create-course-swagger.decorator";
 import { DeleteCourseSwagger } from "@/shared/decorators/swagger/material/delete-course-swagger.decorator";
 import { DeleteFileSwagger } from "@/shared/decorators/swagger/material/delete-file-swagger.decorator";
 import { GetCourseMaterialsSwagger } from "@/shared/decorators/swagger/material/get-course-materials-swagger.decorator";
 import { GetCoursesSwagger } from "@/shared/decorators/swagger/material/get-courses-swagger.decorator";
-import { UpdateCourseSwagger } from "@/shared/decorators/swagger/material/update-course-swagger.decorator";
+import { GetMaterialsSizeSwagger } from "@/shared/decorators/swagger/material/get-materials-size-swagger.decorator";
+import { GrantCourseAccessSwagger } from "@/shared/decorators/swagger/material/grant-course-access-swagger.decorator";
+import { GrantMaterialAccessSwagger } from "@/shared/decorators/swagger/material/grant-material-access-swagger.decorator";
 import { OpenMaterialSwagger } from "@/shared/decorators/swagger/material/open-material-swagger.decorator";
+import { RevokeCourseAccessSwagger } from "@/shared/decorators/swagger/material/revoke-course-access-swagger.decorator";
+import { RevokeMaterialAccessSwagger } from "@/shared/decorators/swagger/material/revoke-material-access-swagger.decorator";
+import { UpdateCourseSwagger } from "@/shared/decorators/swagger/material/update-course-swagger.decorator";
 import { UploadCompleteSwagger } from "@/shared/decorators/swagger/material/upload-complete-swagger.decorator";
 import { UploadInitSwagger } from "@/shared/decorators/swagger/material/upload-init-swagger.decorator";
+import { AdminAccessGuard } from "@/shared/guards/admin-access.guard";
+import { JwtAccessGuard } from "@/shared/guards/jwt-access.guard";
+import { CourseService } from "../application/course.service";
+import { MaterialService } from "../application/material.service";
 import { CreateCourseDto } from "./dto/requests/create-course.dto";
+import { UpdateAccessDto } from "./dto/requests/update-access.dto";
 import { UpdateCourseDto } from "./dto/requests/update-course.dto";
 import { UploadInitDto } from "./dto/requests/upload-init.dto";
 import { CourseDto } from "./dto/responses/course.dto";
 import { MaterialDto } from "./dto/responses/material.dto";
+import { MaterialsSizeDto } from "./dto/responses/materials-size.dto";
 import { UploadInitResponseDto } from "./dto/responses/upload-init-response.dto";
+import { ViewUrlDto } from "./dto/responses/view-url.dto";
 import { mapCourseToResponse } from "./mappers/course-response.mapper";
 import { mapMaterialToResponse } from "./mappers/material-response.mapper";
-import { JwtPayloadDto } from "@/modules/auth/dto/jwt.payload.dto";
-import { ExtractTeacherFromRequest } from "@/shared/decorators/param/extract-teacher-from-request";
-import { ViewUrlDto } from "./dto/responses/view-url.dto";
 
 @ApiTags("Materials")
 @Controller("materials")
@@ -31,7 +38,7 @@ export class MaterialController {
 	constructor(
 		private readonly courseService: CourseService,
 		private readonly materialService: MaterialService,
-	) { }
+	) {}
 
 	@GetCoursesSwagger()
 	@Get("courses")
@@ -77,6 +84,22 @@ export class MaterialController {
 		return materials.map(mapMaterialToResponse);
 	}
 
+	@GrantCourseAccessSwagger()
+	@Post("courses/:id/access")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async grantCourseAccess(@Param("id") id: string, @Body() updateAccessDto: UpdateAccessDto): Promise<void> {
+		return await this.materialService.grantCourseAccess(+id, updateAccessDto.teacherIds);
+	}
+
+	@RevokeCourseAccessSwagger()
+	@Delete("courses/:id/access")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async revokeCourseAccess(@Param("id") id: string, @Body() updateAccessDto: UpdateAccessDto): Promise<void> {
+		return await this.materialService.revokeCourseAccess(+id, updateAccessDto.teacherIds);
+	}
+
 	@UploadInitSwagger()
 	@Post("upload/init")
 	@UseGuards(JwtAccessGuard, AdminAccessGuard)
@@ -101,18 +124,36 @@ export class MaterialController {
 		return await this.materialService.getViewUrl(+id, +teacher.id, teacher.role);
 	}
 
+	@GrantMaterialAccessSwagger()
+	@Post(":id/access")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async grantMaterialAccess(@Param("id") id: string, @Body() updateAccessDto: UpdateAccessDto): Promise<void> {
+		return await this.materialService.grantMaterialAccess(+id, updateAccessDto.teacherIds);
+	}
+
+	@RevokeMaterialAccessSwagger()
+	@Delete(":id/access")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async revokeMaterialAccess(@Param("id") id: string, @Body() updateAccessDto: UpdateAccessDto): Promise<void> {
+		return await this.materialService.revokeMaterialAccess(+id, updateAccessDto.teacherIds);
+	}
+
 	@DeleteFileSwagger()
 	@Delete("upload/:id")
 	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async deleteFile(@Param("id") id: string): Promise<void> {
+		return await this.materialService.deleteMaterial(+id);
+	}
+
+	@GetMaterialsSizeSwagger()
+	@Get("size")
+	@UseGuards(JwtAccessGuard)
 	@HttpCode(HttpStatus.OK)
-	async deleteFile(@Param("id") id: string) { }
-
-	// @Post('courses/:id/materials')
-	// async createFile() {}
-
-	// @Delete('courses/:id/materials/:fileId')
-	// async deleteFile() {}
-
-	// @Get('courses/:id/materials/size')
-	// async getMaterialsSize() {}
+	async getMaterialsSize(): Promise<MaterialsSizeDto> {
+		const totalSizeBytes = await this.materialService.getMaterialsSize();
+		return { totalSizeBytes };
+	}
 }

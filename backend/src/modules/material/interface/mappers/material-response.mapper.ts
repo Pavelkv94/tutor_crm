@@ -11,5 +11,6 @@ export function mapMaterialToResponse(material: MaterialEntity): MaterialDto {
 		type: material.type,
 		status: material.status,
 		created_at: material.created_at,
+		teachers: material.teachers ?? [],
 	};
 }

@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   Table,
@@ -16,6 +16,7 @@ interface CoursesTableProps {
   showActions: boolean
   onEdit: (course: Course) => void
   onDelete: (course: Course) => void
+  onAccess: (course: Course) => void
   isDeleting: boolean
 }
 
@@ -24,6 +25,7 @@ export const CoursesTable = ({
   showActions,
   onEdit,
   onDelete,
+  onAccess,
   isDeleting,
 }: CoursesTableProps) => {
   return (
@@ -36,7 +38,7 @@ export const CoursesTable = ({
                 Название
               </TableHead>
               {showActions && (
-                <TableHead className="h-auto w-28 px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="h-auto w-36 px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Действия
                 </TableHead>
               )}
@@ -57,6 +59,17 @@ export const CoursesTable = ({
                 {showActions && (
                   <TableCell className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => onAccess(course)}
+                        title="Доступы"
+                        aria-label={`Управление доступами курса ${course.name}`}
+                        className="h-9 w-9 rounded-lg border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      >
+                        <Users className="h-4 w-4" aria-hidden="true" />
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"

@@ -23,4 +23,9 @@ export abstract class MaterialRepositoryPort {
 	abstract hasFiles(courseId: number): Promise<boolean>;
 	abstract hasAccess(teacherId: number, materialId: number): Promise<boolean>;
 	abstract createFileAccess(teacherIds: number[], materialId: number): Promise<void>;
+	abstract revokeFileAccess(teacherIds: number[], materialId: number): Promise<void>;
+	abstract grantCourseAccess(courseId: number, teacherIds: number[]): Promise<void>;
+	abstract revokeCourseAccess(courseId: number, teacherIds: number[]): Promise<void>;
+	abstract deleteMaterial(id: number): Promise<void>;
+	abstract getMaterialsSize(): Promise<number>;
 }

@@ -42,6 +42,10 @@ describe('LessonRegularRepository', () => {
 							delete: jest.fn(),
 							findMany: jest.fn(),
 						},
+						lesson: {
+							createMany: jest.fn(),
+						},
+						$transaction: jest.fn(),
 					},
 				},
 			],
@@ -72,6 +76,42 @@ describe('LessonRegularRepository', () => {
 			expect(result.id).toBe(1);
 			expect(result.week_day).toBe(WeekDay.MONDAY);
 			expect(prisma.regularLesson.create).toHaveBeenCalled();
+		});
+	});
+
+	describe('createRegularLessonWithLessons', () => {
+		it('should create regular lesson and lessons in a transaction', async () => {
+			const dto: RegularLessonInputDto = {
+				plan_id: 1,
+				start_time: '2024-01-01T10:00:00.000Z',
+				week_day: WeekDay.MONDAY,
+				start_period_date: '2024-01-01T00:00:00.000Z',
+				end_period_date: '2024-01-31T00:00:00.000Z',
+				teacher_id: 1,
+			};
+			const mergedDates = [new Date('2024-01-01T10:00:00.000Z'), new Date('2024-01-08T10:00:00.000Z')];
+			const tx = {
+				regularLesson: { create: jest.fn().mockResolvedValue(mockRegularLesson) },
+				lesson: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+			};
+			jest.spyOn(prisma, '$transaction').mockImplementation(async (callback: any) => callback(tx));
+
+			const result = await repository.createRegularLessonWithLessons(dto, 1, mergedDates);
+
+			expect(result.id).toBe(1);
+			expect(tx.regularLesson.create).toHaveBeenCalled();
+			expect(tx.lesson.createMany).toHaveBeenCalledWith({
+				data: expect.arrayContaining([
+					expect.objectContaining({
+						student_id: 1,
+						teacher_id: 1,
+						plan_id: 1,
+						is_regular: true,
+						regular_lesson_id: 1,
+					}),
+				]),
+			});
+			expect(tx.lesson.createMany.mock.calls[0][0].data).toHaveLength(2);
 		});
 	});
 

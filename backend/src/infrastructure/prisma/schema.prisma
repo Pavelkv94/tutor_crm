@@ -62,6 +62,7 @@ model Student {
 
 	deleted_at DateTime?
 
+	@@index([teacher_id, deleted_at])
 	@@map("student")
 }
 
@@ -115,6 +116,9 @@ model Lesson {
 
 	regular_lesson RegularLesson? @relation(fields: [regular_lesson_id], references: [id])
 
+	@@index([teacher_id, date])
+	@@index([student_id, date])
+	@@index([status, date])
 	@@map("lesson")
 }
 
@@ -182,6 +186,7 @@ model Task {
 	teacher     Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
 	task_comments TaskComment[]
 
+	@@index([teacher_id, status])
 	@@map("task")
 }
 
@@ -225,11 +230,12 @@ model File {
 
 	upload_status UploadStatus @default(UPLOADING)
 	
-	course Course @relation(fields: [course_id], references: [id])
+	course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
 	file_accesses FileAccess[]
 
 	created_at DateTime @default(now())
 
+	@@index([course_id, upload_status])
 	@@map("file")
 }
 
@@ -244,6 +250,7 @@ model FileAccess {
 	teacher Teacher @relation(fields: [teacher_id], references: [id])
 	file File @relation(fields: [file_id], references: [id])
 
+	@@unique([teacher_id, file_id])
 	@@map("file_access")
 }
 

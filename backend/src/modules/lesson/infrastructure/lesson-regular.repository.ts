@@ -1,7 +1,7 @@
 import { PrismaService } from '@/infrastructure/prisma/prisma.service';
 import { RegularLessonInputDto } from "@/modules/lesson/interface/dto/requests/regular-lesson.input.dto";
 import { Injectable } from "@nestjs/common";
-import { Plan, RegularLesson } from '@/infrastructure/prisma/generated/client';
+import { LessonStatus, Plan, RegularLesson } from '@/infrastructure/prisma/generated/client';
 import { RegularLessonOutputDto } from "@/modules/lesson/interface/dto/responses/regular-lesson.output.dto";
 import { WeekDay } from "@/modules/lesson/interface/dto/requests/regular-lesson.input.dto";
 
@@ -25,6 +25,45 @@ export class LessonRegularRepository {
 			},
 		});
 		return this.mapRegularLessonToView(regularLesson);
+	}
+
+	async createRegularLessonWithLessons(
+		regularLessonInputDto: RegularLessonInputDto,
+		student_id: number,
+		mergedDates: Date[],
+	): Promise<RegularLessonOutputDto> {
+		return await this.prisma.$transaction(async (tx) => {
+			const regularLesson = await tx.regularLesson.create({
+				data: {
+					plan_id: regularLessonInputDto.plan_id,
+					student_id,
+					teacher_id: regularLessonInputDto.teacher_id,
+					start_time: regularLessonInputDto.start_time,
+					week_day: regularLessonInputDto.week_day,
+					start_period_date: regularLessonInputDto.start_period_date,
+					end_period_date: regularLessonInputDto.end_period_date,
+				},
+				include: {
+					plan: true,
+				},
+			});
+
+			if (mergedDates.length > 0) {
+				await tx.lesson.createMany({
+					data: mergedDates.map((mergedDate) => ({
+						student_id,
+						teacher_id: regularLessonInputDto.teacher_id,
+						plan_id: regularLessonInputDto.plan_id,
+						date: mergedDate,
+						is_regular: true,
+						regular_lesson_id: regularLesson.id,
+						status: LessonStatus.PENDING_UNPAID,
+					})),
+				});
+			}
+
+			return this.mapRegularLessonToView(regularLesson);
+		});
 	}
 
 	async deleteRegularLesson(regularLesson_id: number): Promise<void> {

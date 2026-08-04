@@ -55,6 +55,10 @@ describe("MaterialService", () => {
 						updateMaterial: jest.fn(),
 						hasAccess: jest.fn(),
 						createFileAccess: jest.fn(),
+						revokeFileAccess: jest.fn(),
+						grantCourseAccess: jest.fn(),
+						revokeCourseAccess: jest.fn(),
+						getMaterialsSize: jest.fn(),
 					},
 				},
 				{
@@ -241,6 +245,85 @@ describe("MaterialService", () => {
 
 			await expect(service.getViewUrl(10, 5, "TEACHER")).rejects.toThrow(ForbiddenException);
 			await expect(service.getViewUrl(10, 5, "TEACHER")).rejects.toThrow("Нет доступа к этому материалу");
+		});
+	});
+
+	describe("getMaterialsSize", () => {
+		it("should return the total size of all uploaded materials", async () => {
+			jest.spyOn(materialRepository, "getMaterialsSize").mockResolvedValue(3072);
+
+			const result = await service.getMaterialsSize();
+
+			expect(result).toBe(3072);
+			expect(materialRepository.getMaterialsSize).toHaveBeenCalled();
+		});
+	});
+
+	describe("grantMaterialAccess", () => {
+		it("should grant access when the material exists", async () => {
+			jest.spyOn(materialRepository, "getMaterialById").mockResolvedValue(mockUploadingMaterial);
+
+			await service.grantMaterialAccess(10, [5, 6]);
+
+			expect(materialRepository.createFileAccess).toHaveBeenCalledWith([5, 6], 10);
+		});
+
+		it("should throw NotFoundException if material not found", async () => {
+			jest.spyOn(materialRepository, "getMaterialById").mockResolvedValue(null);
+
+			await expect(service.grantMaterialAccess(10, [5])).rejects.toThrow(NotFoundException);
+			expect(materialRepository.createFileAccess).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("revokeMaterialAccess", () => {
+		it("should revoke access when the material exists", async () => {
+			jest.spyOn(materialRepository, "getMaterialById").mockResolvedValue(mockUploadingMaterial);
+
+			await service.revokeMaterialAccess(10, [5, 6]);
+
+			expect(materialRepository.revokeFileAccess).toHaveBeenCalledWith([5, 6], 10);
+		});
+
+		it("should throw NotFoundException if material not found", async () => {
+			jest.spyOn(materialRepository, "getMaterialById").mockResolvedValue(null);
+
+			await expect(service.revokeMaterialAccess(10, [5])).rejects.toThrow(NotFoundException);
+			expect(materialRepository.revokeFileAccess).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("grantCourseAccess", () => {
+		it("should grant access when the course exists", async () => {
+			jest.spyOn(courseRepository, "getCourseById").mockResolvedValue(mockCourse);
+
+			await service.grantCourseAccess(1, [5, 6]);
+
+			expect(materialRepository.grantCourseAccess).toHaveBeenCalledWith(1, [5, 6]);
+		});
+
+		it("should throw NotFoundException if course not found", async () => {
+			jest.spyOn(courseRepository, "getCourseById").mockResolvedValue(null);
+
+			await expect(service.grantCourseAccess(1, [5])).rejects.toThrow(NotFoundException);
+			expect(materialRepository.grantCourseAccess).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("revokeCourseAccess", () => {
+		it("should revoke access when the course exists", async () => {
+			jest.spyOn(courseRepository, "getCourseById").mockResolvedValue(mockCourse);
+
+			await service.revokeCourseAccess(1, [5, 6]);
+
+			expect(materialRepository.revokeCourseAccess).toHaveBeenCalledWith(1, [5, 6]);
+		});
+
+		it("should throw NotFoundException if course not found", async () => {
+			jest.spyOn(courseRepository, "getCourseById").mockResolvedValue(null);
+
+			await expect(service.revokeCourseAccess(1, [5])).rejects.toThrow(NotFoundException);
+			expect(materialRepository.revokeCourseAccess).not.toHaveBeenCalled();
 		});
 	});
 });

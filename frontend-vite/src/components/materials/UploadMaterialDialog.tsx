@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
+import { PDFDocument } from 'pdf-lib'
 import { Upload } from 'lucide-react'
 import {
   Dialog,
@@ -43,6 +44,61 @@ const isAcceptedMaterialFile = (file: File): boolean => {
   return hasAcceptedExtension && resolveContentType(file) !== null
 }
 
+const COPYRIGHT_MARKER = 'English Stars School. All rights reserved.'
+
+const buildCopyrightComment = (year: number): string => `<!-- 
+© ${year} English Stars School. All rights reserved.
+Owner: Anna Mintel.
+
+This HTML file and its contents are the intellectual property of English Stars School.
+Any reproduction, redistribution, or alteration without explicit written permission from the owner is prohibited.
+-->
+`
+
+const buildCopyrightSubject = (year: number): string =>
+  `© ${year} English Stars School. All rights reserved. Owner: Anna Mintel.`
+
+const preparePdfFile = async (file: File): Promise<File> => {
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdfDoc = await PDFDocument.load(arrayBuffer)
+
+    const existingSubject = pdfDoc.getSubject() ?? ''
+    if (existingSubject.includes(COPYRIGHT_MARKER)) return file
+
+    const year = new Date().getFullYear()
+    pdfDoc.setProducer('English Stars School')
+    pdfDoc.setCreator('English Stars School')
+    pdfDoc.setSubject(buildCopyrightSubject(year))
+    pdfDoc.setKeywords(['English Stars School', 'confidential'])
+
+    const pdfBytes = await pdfDoc.save()
+    const buffer = pdfBytes.buffer.slice(
+      pdfBytes.byteOffset,
+      pdfBytes.byteOffset + pdfBytes.byteLength,
+    ) as ArrayBuffer
+    return new File([buffer], file.name, { type: 'application/pdf', lastModified: Date.now() })
+  } catch {
+    // Если PDF не удаётся обработать (шифрование, повреждение и т.п.) — загружаем как есть
+    return file
+  }
+}
+
+const prepareUploadFile = async (file: File, contentType: string): Promise<File> => {
+  if (contentType === 'application/pdf') {
+    return preparePdfFile(file)
+  }
+
+  if (contentType !== 'text/html') return file
+
+  const text = await file.text()
+  if (text.includes(COPYRIGHT_MARKER)) return file
+
+  const year = new Date().getFullYear()
+  const blob = new Blob([buildCopyrightComment(year) + text], { type: 'text/html' })
+  return new File([blob], file.name, { type: 'text/html', lastModified: Date.now() })
+}
+
 interface UploadMaterialDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -82,20 +138,23 @@ export const UploadMaterialDialog = ({
         throw new Error('Можно загружать только HTML и PDF файлы')
       }
 
+      const uploadFile = await prepareUploadFile(file, contentType)
+
       const initResponse = await materialsApi.uploadInit({
         courseId,
         teachers: teacherIds,
-        fileName: file.name,
+        fileName: uploadFile.name,
         mimeType: contentType,
         contentType,
-        sizeBytes: file.size,
+        sizeBytes: uploadFile.size,
       })
 
-      await materialsApi.uploadToR2(initResponse.uploadUrl, file, contentType)
+      await materialsApi.uploadToR2(initResponse.uploadUrl, uploadFile, contentType)
       await materialsApi.uploadComplete(initResponse.materialId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials', 'courses', courseId, 'materials'] })
+      queryClient.invalidateQueries({ queryKey: ['materials', 'size'] })
       showSuccessToast('Материал загружен')
       onOpenChange(false)
     },

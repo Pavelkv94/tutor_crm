@@ -93,6 +93,7 @@ describe('LessonService', () => {
 					provide: LessonRepository,
 					useValue: {
 						findExistingLessonsByDateAndTeacher: jest.fn(),
+						findExistingLessonsByDatesAndTeacher: jest.fn(),
 						createSingleLesson: jest.fn(),
 						findLessonsForPeriod: jest.fn(),
 						findLessonsForPeriodForSalary: jest.fn(),
@@ -132,6 +133,7 @@ describe('LessonService', () => {
 					provide: LessonRegularRepository,
 					useValue: {
 						createRegularLesson: jest.fn(),
+						createRegularLessonWithLessons: jest.fn(),
 						deleteRegularLesson: jest.fn(),
 						getRegularLessons: jest.fn(),
 					},
@@ -666,14 +668,14 @@ describe('LessonService', () => {
 
 		it('should create regular lessons successfully', async () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
-			jest.spyOn(lessonRegularRepository, 'createRegularLesson').mockResolvedValue(mockRegularLesson as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([]);
-			jest.spyOn(lessonRepository, 'createRegularLesson').mockResolvedValue(undefined);
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDatesAndTeacher').mockResolvedValue(new Map());
+			jest.spyOn(lessonRegularRepository, 'createRegularLessonWithLessons').mockResolvedValue(mockRegularLesson as any);
 
 			const result = await service.createRegularLessons(regularLessonsDto, 1);
 
 			expect(result).toEqual([mockRegularLesson]);
-			expect(lessonRegularRepository.createRegularLesson).toHaveBeenCalled();
+			expect(lessonRepository.findExistingLessonsByDatesAndTeacher).toHaveBeenCalled();
+			expect(lessonRegularRepository.createRegularLessonWithLessons).toHaveBeenCalled();
 		});
 
 		it('should throw NotFoundException if plan not found', async () => {
@@ -682,16 +684,15 @@ describe('LessonService', () => {
 			await expect(service.createRegularLessons(regularLessonsDto, 1)).rejects.toThrow(NotFoundException);
 		});
 
-		it('should rollback regular lesson on conflict', async () => {
+		it('should throw BadRequestException on conflict without creating regular lesson', async () => {
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
-			jest.spyOn(lessonRegularRepository, 'createRegularLesson').mockResolvedValue(mockRegularLesson as any);
-			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([
-				{ ...mockLesson, student: { ...mockStudent, id: 1 } },
-			] as any);
-			jest.spyOn(lessonRegularRepository, 'deleteRegularLesson').mockResolvedValue(undefined);
+			const conflictDate = new Date(Date.UTC(2024, 0, 1, 10, 0, 0, 0));
+			jest.spyOn(lessonRepository, 'findExistingLessonsByDatesAndTeacher').mockResolvedValue(
+				new Map([[conflictDate.getTime(), [{ ...mockLesson, student: { ...mockStudent, id: 1 } }] as any]]),
+			);
 
 			await expect(service.createRegularLessons(regularLessonsDto, 1)).rejects.toThrow(BadRequestException);
-			expect(lessonRegularRepository.deleteRegularLesson).toHaveBeenCalledWith(mockRegularLesson.id);
+			expect(lessonRegularRepository.createRegularLessonWithLessons).not.toHaveBeenCalled();
 		});
 	});
 

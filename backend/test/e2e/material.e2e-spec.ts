@@ -32,6 +32,7 @@ describe('MaterialController (e2e)', () => {
 		'Test Course With Materials E2E',
 		'Test Course Upload Init E2E',
 		'Test Course View Url E2E',
+		'Test Course Access E2E',
 	];
 
 	const cleanupTestData = async () => {
@@ -181,8 +182,11 @@ describe('MaterialController (e2e)', () => {
 	});
 
 	describe('GET /materials/courses/:id/materials', () => {
-		it('should return only uploaded materials of the course for any authenticated user', async () => {
+		it('should return only uploaded materials of the course with teachers who have access', async () => {
 			const course = await prisma.course.create({ data: { name: 'Test Course With Materials E2E' } });
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: await bcryptService.generateHash(testTeacher.password), role: TeacherRole.TEACHER },
+			});
 			const uploadedFile = await prisma.file.create({
 				data: {
 					storage_key: 'test-storage-key-uploaded.pdf',
@@ -194,6 +198,7 @@ describe('MaterialController (e2e)', () => {
 					upload_status: 'UPLOADED',
 				},
 			});
+			await prisma.fileAccess.create({ data: { teacher_id: teacher.id, file_id: uploadedFile.id } });
 			await prisma.file.create({
 				data: {
 					storage_key: 'test-storage-key-uploading.pdf',
@@ -205,7 +210,7 @@ describe('MaterialController (e2e)', () => {
 					upload_status: 'UPLOADING',
 				},
 			});
-			const teacherToken = await createTeacherToken();
+			const teacherToken = await createTokenForTeacher(teacher);
 
 			const response = await request(app.getHttpServer())
 				.get(`/materials/courses/${course.id}/materials`)
@@ -213,7 +218,12 @@ describe('MaterialController (e2e)', () => {
 				.expect(200);
 
 			expect(response.body).toHaveLength(1);
-			expect(response.body[0]).toMatchObject({ id: uploadedFile.id, originalName: 'uploaded.pdf', status: 'UPLOADED' });
+			expect(response.body[0]).toMatchObject({
+				id: uploadedFile.id,
+				originalName: 'uploaded.pdf',
+				status: 'UPLOADED',
+				teachers: [{ id: teacher.id, name: teacher.name }],
+			});
 		});
 
 		it('should return 401 without token', async () => {
@@ -532,6 +542,260 @@ describe('MaterialController (e2e)', () => {
 			await request(app.getHttpServer())
 				.delete('/materials/courses/999999')
 				.set('Authorization', `Bearer ${adminToken}`)
+				.expect(404);
+		});
+	});
+
+	describe('GET /materials/size', () => {
+		it('should return the total size of only the uploaded materials', async () => {
+			const course = await prisma.course.create({ data: { name: 'Test Course With Materials E2E' } });
+			const teacherToken = await createTeacherToken();
+
+			const baseline = await prisma.file.aggregate({
+				_sum: { size_bytes: true },
+				where: { upload_status: 'UPLOADED' },
+			});
+			const baselineSize = baseline._sum.size_bytes ?? 0;
+
+			await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-size-uploaded.pdf',
+					original_name: 'size-uploaded.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 2048,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADED',
+				},
+			});
+			await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-size-uploading.pdf',
+					original_name: 'size-uploading.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 4096,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADING',
+				},
+			});
+
+			const response = await request(app.getHttpServer())
+				.get('/materials/size')
+				.set('Authorization', `Bearer ${teacherToken}`)
+				.expect(200);
+
+			expect(response.body).toEqual({ totalSizeBytes: baselineSize + 2048 });
+		});
+
+		it('should return 401 without token', async () => {
+			await request(app.getHttpServer()).get('/materials/size').expect(401);
+		});
+	});
+
+	describe('POST /materials/:id/access', () => {
+		it('should grant access to a material for the given teachers', async () => {
+			const course = await prisma.course.create({ data: { name: 'Test Course Access E2E' } });
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: await bcryptService.generateHash(testTeacher.password), role: TeacherRole.TEACHER },
+			});
+			const file = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-grant.pdf',
+					original_name: 'grant.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 1024,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADED',
+				},
+			});
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.post(`/materials/${file.id}/access`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [teacher.id] })
+				.expect(204);
+
+			const fileAccess = await prisma.fileAccess.findFirst({
+				where: { teacher_id: teacher.id, file_id: file.id },
+			});
+			expect(fileAccess).not.toBeNull();
+		});
+
+		it('should return 404 if material not found', async () => {
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.post('/materials/999999/access')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [1] })
+				.expect(404);
+		});
+
+		it('should return 401 with non-admin token', async () => {
+			const teacherToken = await createTeacherToken();
+
+			await request(app.getHttpServer())
+				.post('/materials/1/access')
+				.set('Authorization', `Bearer ${teacherToken}`)
+				.send({ teacherIds: [1] })
+				.expect(401);
+		});
+	});
+
+	describe('DELETE /materials/:id/access', () => {
+		it('should revoke access from a material for the given teachers', async () => {
+			const course = await prisma.course.create({ data: { name: 'Test Course Access E2E' } });
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: await bcryptService.generateHash(testTeacher.password), role: TeacherRole.TEACHER },
+			});
+			const file = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-revoke.pdf',
+					original_name: 'revoke.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 1024,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADED',
+				},
+			});
+			await prisma.fileAccess.create({ data: { teacher_id: teacher.id, file_id: file.id } });
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.delete(`/materials/${file.id}/access`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [teacher.id] })
+				.expect(204);
+
+			const fileAccess = await prisma.fileAccess.findFirst({
+				where: { teacher_id: teacher.id, file_id: file.id },
+			});
+			expect(fileAccess).toBeNull();
+		});
+
+		it('should return 404 if material not found', async () => {
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.delete('/materials/999999/access')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [1] })
+				.expect(404);
+		});
+	});
+
+	describe('POST /materials/courses/:id/access', () => {
+		it('should grant access to all course materials for the given teachers', async () => {
+			const course = await prisma.course.create({ data: { name: 'Test Course Access E2E' } });
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: await bcryptService.generateHash(testTeacher.password), role: TeacherRole.TEACHER },
+			});
+			const file1 = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-course-grant-1.pdf',
+					original_name: 'course-grant-1.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 1024,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADED',
+				},
+			});
+			const file2 = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-course-grant-2.pdf',
+					original_name: 'course-grant-2.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 2048,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADING',
+				},
+			});
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.post(`/materials/courses/${course.id}/access`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [teacher.id] })
+				.expect(204);
+
+			const access1 = await prisma.fileAccess.findFirst({ where: { teacher_id: teacher.id, file_id: file1.id } });
+			const access2 = await prisma.fileAccess.findFirst({ where: { teacher_id: teacher.id, file_id: file2.id } });
+			expect(access1).not.toBeNull();
+			expect(access2).not.toBeNull();
+		});
+
+		it('should return 404 if course not found', async () => {
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.post('/materials/courses/999999/access')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [1] })
+				.expect(404);
+		});
+	});
+
+	describe('DELETE /materials/courses/:id/access', () => {
+		it('should revoke access from all course materials for the given teachers', async () => {
+			const course = await prisma.course.create({ data: { name: 'Test Course Access E2E' } });
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: await bcryptService.generateHash(testTeacher.password), role: TeacherRole.TEACHER },
+			});
+			const file1 = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-course-revoke-1.pdf',
+					original_name: 'course-revoke-1.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 1024,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADED',
+				},
+			});
+			const file2 = await prisma.file.create({
+				data: {
+					storage_key: 'test-storage-key-course-revoke-2.pdf',
+					original_name: 'course-revoke-2.pdf',
+					mime_type: 'application/pdf',
+					size_bytes: 2048,
+					type: FileType.PDF,
+					course_id: course.id,
+					upload_status: 'UPLOADING',
+				},
+			});
+			await prisma.fileAccess.createMany({
+				data: [
+					{ teacher_id: teacher.id, file_id: file1.id },
+					{ teacher_id: teacher.id, file_id: file2.id },
+				],
+			});
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.delete(`/materials/courses/${course.id}/access`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [teacher.id] })
+				.expect(204);
+
+			const access1 = await prisma.fileAccess.findFirst({ where: { teacher_id: teacher.id, file_id: file1.id } });
+			const access2 = await prisma.fileAccess.findFirst({ where: { teacher_id: teacher.id, file_id: file2.id } });
+			expect(access1).toBeNull();
+			expect(access2).toBeNull();
+		});
+
+		it('should return 404 if course not found', async () => {
+			const adminToken = await createAdminToken();
+
+			await request(app.getHttpServer())
+				.delete('/materials/courses/999999/access')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ teacherIds: [1] })
 				.expect(404);
 		});
 	});
