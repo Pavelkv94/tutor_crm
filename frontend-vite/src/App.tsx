@@ -10,6 +10,7 @@ import { Teachers } from '@/pages/Teachers'
 import { Schedule } from '@/pages/Schedule'
 import { Home } from '@/pages/Home'
 import { Tasks } from '@/pages/Tasks'
+import { Payments } from '@/pages/Payments'
 import { Materials } from '@/pages/Materials'
 import { CourseMaterials } from '@/pages/CourseMaterials'
 import { MaterialViewerPage } from '@/pages/MaterialViewerPage'
@@ -62,6 +63,16 @@ function App() {
                 <ProtectedRoute adminOnly>
                   <MainLayout>
                     <Teachers />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute adminOnly>
+                  <MainLayout>
+                    <Payments />
                   </MainLayout>
                 </ProtectedRoute>
               }

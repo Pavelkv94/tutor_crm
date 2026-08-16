@@ -10,6 +10,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { studentsApi } from '@/api/students'
 import { formatStudentClassLabel } from '@/constants/student-class'
+import { formatMoney } from '@/constants/currency'
 
 interface StudentInfoDialogProps {
   open: boolean
@@ -57,7 +58,9 @@ export const StudentInfoDialog = ({
             </div>
             <div className="grid gap-2">
               <Label>Баланс</Label>
-              <div className="text-sm font-medium">{student.balance}</div>
+              <div className="text-sm font-medium">
+                {formatMoney(student.balance, student.balance_currency)}
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Бронировать до отмены</Label>

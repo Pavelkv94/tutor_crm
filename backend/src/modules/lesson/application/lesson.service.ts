@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { addDays, endOfMonth, parseISO, getDay, startOfDay, format } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CancelationStatusEnum } from '@/modules/lesson/interface/dto/requests/cancel-lesson.dto';
@@ -22,15 +22,19 @@ import { StudentLessonsOutputDto } from '@/modules/lesson/interface/dto/response
 import { UpdateLessonsPlanForPeriodDto } from '@/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto';
 import { CancelLessonDto } from '@/modules/lesson/interface/dto/requests/cancel-lesson.dto';
 import { ChangeTeacherDto } from '@/modules/lesson/interface/dto/requests/change-teacher.dto';
+import { BalanceService } from '@/modules/balance/application/balance.service';
 
 @Injectable()
 export class LessonService {
+	private readonly logger = new Logger(LessonService.name);
+
 	constructor(
 		private readonly lessonRepository: LessonRepository,
 		private readonly planService: PlanService,
 		private readonly studentService: StudentService,
 		private readonly teacherService: TeacherService,
 		private readonly lessonRegularRepository: LessonRegularRepository,
+		private readonly balanceService: BalanceService,
 	) { }
 
 	async createSingleLessonByAdmin(singleLessonInputDto: SingleLessonInputDto): Promise<LessonOutputDto> {
@@ -63,6 +67,15 @@ export class LessonService {
 			throw new BadRequestException(`Не совпадает тарифный план: ${date.toLocaleDateString()}`);
 		}
 
+		await this.balanceService.assertLessonCurrencyAllowed({
+			studentId: student_id,
+			planCurrency: plan.plan_currency,
+			planPrice: plan.plan_price,
+			lessonDate: date,
+			isFree,
+			isTrial,
+		});
+
 		const newLesson = {
 			student_id,
 			teacher_id,
@@ -73,7 +86,10 @@ export class LessonService {
 			status: LessonInputStatusEnum.PENDING_UNPAID,
 			is_trial: isTrial,
 		}
-		return await this.lessonRepository.createSingleLesson(newLesson as Lesson);
+		const createdLesson = await this.lessonRepository.createSingleLesson(newLesson as Lesson);
+		// Если на балансе остались деньги — новое занятие закрывается ими сразу.
+		await this.settleFromBalance(student_id, 'lesson:created');
+		return createdLesson;
 	}
 
 	async createRescheduledLesson(rescheduledLessonInputDto: RescheduledLessonInputDto, teacher: JwtPayloadDto): Promise<LessonOutputDto> {
@@ -109,18 +125,33 @@ export class LessonService {
 			throw new BadRequestException(`Нельзя поставить отработку занятия вместе с другим занятием`);
 		}
 
-		const newLesson = {
-			student_id: lesson.student.id,
-			teacher_id: teacher_id || lesson.teacher.id,
-			plan_id: lesson.plan.id,
-			date: new Date(start_date),
-			is_regular: false,
-			status: LessonInputStatusEnum.PENDING_UNPAID,
-			rescheduled_lesson_id: lesson.id,
-			rescheduled_lesson_date: lesson.date,
-		}
-		const createdLesson = await this.lessonRepository.createSingleLesson(newLesson as Lesson);
-		await this.lessonRepository.updateRescheduledLesson(lesson.id, createdLesson);
+		const studentId = lesson.student.id;
+
+		// Оплачен ли оригинал — определяем по активной аллокации, а не по статусу: к этому моменту
+		// он уже переведён в RESCHEDULED, и статус про оплату ничего не говорит.
+		const createdLesson = await this.balanceService.withStudentTransaction(studentId, async (tx) => {
+			const allocation = await this.balanceService.getActiveAllocationInTx(tx, lesson.id);
+
+			const newLesson = {
+				student_id: studentId,
+				teacher_id: teacher_id || lesson.teacher.id,
+				plan_id: lesson.plan.id,
+				date: new Date(start_date),
+				is_regular: false,
+				status: allocation ? LessonInputStatusEnum.PENDING_PAID : LessonInputStatusEnum.PENDING_UNPAID,
+				rescheduled_lesson_id: lesson.id,
+				rescheduled_lesson_date: lesson.date,
+			}
+			const created = await this.lessonRepository.createSingleLesson(newLesson as Lesson, tx);
+			await this.lessonRepository.updateRescheduledLesson(lesson.id, created, tx);
+
+			if (allocation) {
+				await this.balanceService.transferAllocationInTx(tx, studentId, lesson.id, created.id);
+			}
+			return created;
+		});
+
+		await this.settleFromBalance(studentId, 'lesson:rescheduled');
 		return createdLesson;
 	}
 
@@ -136,7 +167,44 @@ export class LessonService {
 		if (plan.deleted_at) {
 			throw new BadRequestException('План уже удален');
 		}
-		await this.lessonRepository.updateLessonsPlanForPeriod(updateLessonsPlanForPeriodDto);
+
+		const affected = await this.lessonRepository.findLessonsForPlanChange(updateLessonsPlanForPeriodDto);
+		if (affected.length === 0) {
+			return;
+		}
+
+		for (const lesson of affected) {
+			await this.balanceService.assertLessonCurrencyAllowed({
+				studentId: updateLessonsPlanForPeriodDto.student_id,
+				planCurrency: plan.plan_currency,
+				planPrice: plan.plan_price,
+				lessonDate: lesson.date,
+			});
+		}
+
+		await this.balanceService.withStudentTransaction(updateLessonsPlanForPeriodDto.student_id, async (tx) => {
+			// Цена меняется, поэтому аллокация на старую цену недействительна: снимаем её и
+			// возвращаем деньги на баланс, но НЕ раскладываем — до updateMany занятия ещё стоят
+			// по старой цене, и аллокация тут же легла бы на неё, разойдясь с новым планом.
+			for (const lesson of affected) {
+				await this.balanceService.releaseLessonInTx(tx, {
+					studentId: updateLessonsPlanForPeriodDto.student_id,
+					lessonId: lesson.id,
+					reason: 'lesson:plan-changed',
+					redistribute: false,
+				});
+			}
+			await this.lessonRepository.updateLessonsPlanForPeriod(updateLessonsPlanForPeriodDto, tx);
+
+			// Цены актуальны — теперь раскладываем баланс, в той же транзакции и под тем же локом.
+			await this.balanceService.reconcileInTx(tx, {
+				studentId: updateLessonsPlanForPeriodDto.student_id,
+				delta: 0,
+				currency: null,
+				reason: 'lesson:plan-changed',
+				payment: { kind: 'none' },
+			});
+		});
 	}
 
 	async findLessonsForPeriod(start_date: string, end_date: string, teacher_id: number): Promise<LessonOutputDto[]> {
@@ -198,6 +266,14 @@ export class LessonService {
 			}
 
 			const lessonDates = this.getDatesForWeekDay(week_day, start_period_date, end_period_date);
+			for (const lessonDate of lessonDates) {
+				await this.balanceService.assertLessonCurrencyAllowed({
+					studentId: student_id,
+					planCurrency: plan.plan_currency,
+					planPrice: plan.plan_price,
+					lessonDate,
+				});
+			}
 			const startTimeDate = parseISO(start_time);
 			const hours = startTimeDate.getUTCHours();
 			const minutes = startTimeDate.getUTCMinutes();
@@ -233,6 +309,7 @@ export class LessonService {
 			const regularLesson = await this.lessonRegularRepository.createRegularLessonWithLessons(lesson, student_id, mergedDates);
 			regularLessons.push(regularLesson);
 		}
+		await this.settleFromBalance(student_id, 'lesson:regular-created');
 		return regularLessons;
 	}
 
@@ -302,7 +379,23 @@ export class LessonService {
 		if (teacher.role !== TeacherRoleEnum.ADMIN && lesson.student.teacher_id !== +teacher.id) {
 			throw new BadRequestException('Вы не можете отменить этот урок');
 		}
-		await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto, lesson.rescheduled_lesson_id);
+		const studentId = lesson.student.id;
+		await this.balanceService.withStudentTransaction(studentId, async (tx) => {
+			await this.lessonRepository.cancelLesson(lessonId, cancelLessonDto, lesson.rescheduled_lesson_id, tx);
+
+			// CANCELLED — деньги возвращаются на баланс и уходят на другие неоплаченные занятия.
+			// MISSED — оплата сгорает вместе с занятием, аллокация остаётся.
+			// RESCHEDULED — оплата ждёт переезда на новое занятие, трогать её нельзя.
+			if (cancelLessonDto.status === CancelationStatusEnum.CANCELLED) {
+				await this.balanceService.releaseLessonInTx(tx, {
+					studentId,
+					lessonId,
+					reason: 'lesson:cancelled',
+					// Занятие уже переведено в CANCELLED — возвращать ему «неоплаченный» статус не нужно.
+					revertLessonStatus: false,
+				});
+			}
+		});
 	}
 
 	async deleteLesson(lessonId: number): Promise<void> {
@@ -310,7 +403,19 @@ export class LessonService {
 		if (!lesson) {
 			throw new NotFoundException('Урок не найден');
 		}
-		await this.lessonRepository.deleteLesson(lessonId);
+
+		const studentId = lesson.student.id;
+		// У lesson_payment стоит ON DELETE CASCADE: не сняв аллокацию заранее, мы бы потеряли
+		// её вместе с занятием, и баланс разошёлся бы с суммой платежей.
+		await this.balanceService.withStudentTransaction(studentId, async (tx) => {
+			await this.balanceService.releaseLessonInTx(tx, {
+				studentId,
+				lessonId,
+				reason: 'lesson:deleted',
+				revertLessonStatus: false,
+			});
+			await this.lessonRepository.deleteLesson(lessonId, tx);
+		});
 	}
 
 	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
@@ -321,7 +426,38 @@ export class LessonService {
 		if (lesson.is_trial) {
 			throw new BadRequestException('Пробное занятие не может быть изменено');
 		}
-		await this.lessonRepository.manageFreeLessonStatus(lessonId, manageFreeLessonStatusDto);
+
+		const studentId = lesson.student.id;
+		await this.balanceService.withStudentTransaction(studentId, async (tx) => {
+			await this.lessonRepository.manageFreeLessonStatus(lessonId, manageFreeLessonStatusDto, tx);
+
+			if (manageFreeLessonStatusDto.isFree) {
+				// Бесплатное занятие не должно удерживать деньги — возвращаем их на баланс.
+				await this.balanceService.releaseLessonInTx(tx, { studentId, lessonId, reason: 'lesson:marked-free' });
+			}
+		});
+
+		// Занятие снова стало платным — возможно, его закроет остаток баланса.
+		await this.settleFromBalance(studentId, 'lesson:free-status-changed');
+	}
+
+	/**
+	 * Раскладывает остаток баланса по неоплаченным занятиям. Вызывается после любых изменений
+	 * расписания: деньги, оставшиеся от переплаты, должны сами закрывать новые занятия.
+	 * Сбой здесь не должен ронять уже выполненную операцию с занятием.
+	 */
+	private async settleFromBalance(studentId: number, reason: string): Promise<void> {
+		try {
+			await this.balanceService.reconcile({
+				studentId,
+				delta: 0,
+				currency: null,
+				reason,
+				payment: { kind: 'none' },
+			});
+		} catch (error) {
+			this.logger.error(`Не удалось разложить баланс ученика ${studentId} (${reason}): ${(error as Error).message}`);
+		}
 	}
 
 	private getDatesForWeekDay(weekDay: WeekDay, startDate: string, endDate: string): Date[] {

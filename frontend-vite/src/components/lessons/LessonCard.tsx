@@ -25,6 +25,7 @@ import { lessonsApi } from '@/api/lessons'
 import { formatStudentClassShort } from '@/constants/student-class'
 import type { Lesson, Teacher, CancelLessonInput } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
+import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 
 interface LessonCardProps {
   lesson: Lesson
@@ -153,7 +154,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
       await lessonsApi.cancelLesson(lesson.id, cancelData)
       
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      invalidateMoneyQueries(queryClient, lesson.student.id)
       
       setIsCancelling(false)
       setComment('')
@@ -209,7 +210,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
       await lessonsApi.changeTeacher(lesson.id, parseInt(selectedTeacherId, 10))
       
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      invalidateMoneyQueries(queryClient, lesson.student.id)
       
       setIsChangingTeacher(false)
       setSelectedTeacherId('')
@@ -248,7 +249,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
       await lessonsApi.manageFreeLessonStatus(lesson.id, !lesson.is_free)
       
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      invalidateMoneyQueries(queryClient, lesson.student.id)
     } catch (err: unknown) {
       console.error('Error toggling free status:', err)
       if (err && typeof err === 'object' && 'response' in err) {
@@ -287,7 +288,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
       await lessonsApi.deleteLesson(lesson.id)
       
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      invalidateMoneyQueries(queryClient, lesson.student.id)
       
       setIsDeleteDialogOpen(false)
       setDeleteConfirmationText('')
@@ -534,6 +535,9 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       >
                         Перенос
                       </Label>
+                      <span className="text-xs text-muted-foreground">
+                        — оплата переедет на новое занятие
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -550,6 +554,9 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       <Label htmlFor="missed" className="text-sm font-normal cursor-pointer">
                         Прогул
                       </Label>
+                      <span className="text-xs text-muted-foreground">
+                        — оплата за занятие сгорает
+                      </span>
                     </div>
 											{isAdmin && <div className="flex items-center space-x-2">
                       <Checkbox
@@ -566,6 +573,9 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
                       <Label htmlFor="fullCancel" className="text-sm font-normal cursor-pointer">
                         Отменить
                       </Label>
+                      <span className="text-xs text-muted-foreground">
+                        — деньги вернутся на баланс
+                      </span>
 											</div>}
                   </div>
                   <div className="flex gap-2">

@@ -1396,49 +1396,6 @@
         ]
       }
     },
-    "/telegram/send-lessons-cost-to-admin": {
-      "post": {
-        "operationId": "TelegramController_sendLessonsCostToAdmin",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LessonsCostFiltersDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Lessons cost has been successfully sent to admin."
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Student not found"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Send lessons cost to admin",
-        "tags": [
-          "Telegram"
-        ]
-      }
-    },
     "/tasks/teachers": {
       "get": {
         "operationId": "TasksController_getTeachersWithTaskCounts",
@@ -1835,6 +1792,1092 @@
           "Tasks"
         ]
       }
+    },
+    "/materials/courses": {
+      "get": {
+        "operationId": "MaterialController_getCourses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Courses have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all courses",
+        "tags": [
+          "Materials"
+        ]
+      },
+      "post": {
+        "operationId": "MaterialController_createCourse",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Course created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new course",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/courses/{id}": {
+      "put": {
+        "operationId": "MaterialController_updateCourse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCourseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a course",
+        "tags": [
+          "Materials"
+        ]
+      },
+      "delete": {
+        "operationId": "MaterialController_deleteCourse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course has been successfully deleted."
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "409": {
+            "description": "Course has files and cannot be deleted"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a course",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/courses/{id}/materials": {
+      "get": {
+        "operationId": "MaterialController_getCourseMaterials",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Materials have been successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all materials of a course",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/courses/{id}/access": {
+      "get": {
+        "operationId": "MaterialController_getCourseAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of teachers with course-level access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseAccessTeacherDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get teachers who have access to the whole course",
+        "tags": [
+          "Materials"
+        ]
+      },
+      "post": {
+        "operationId": "MaterialController_grantCourseAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Access has been successfully granted to all course materials"
+          },
+          "400": {
+            "description": "Bad request (e.g. invalid teacher id)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grant teachers access to a course, including materials added later. Resets per-material restrictions of the course",
+        "tags": [
+          "Materials"
+        ]
+      },
+      "delete": {
+        "operationId": "MaterialController_revokeCourseAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Access has been successfully revoked from all course materials"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke teachers access to a course together with per-material grants and restrictions of that course",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/upload/init": {
+      "post": {
+        "operationId": "MaterialController_uploadInit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadInitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload has been successfully initialized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadInitResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a material upload and get a presigned URL to upload the file to R2",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/upload/{id}/complete": {
+      "post": {
+        "operationId": "MaterialController_uploadComplete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload has been successfully completed"
+          },
+          "400": {
+            "description": "Upload already completed, file missing in storage or size mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm that a material has been uploaded to R2 and persist its actual size",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/{id}/view-url": {
+      "post": {
+        "operationId": "MaterialController_openMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presigned view URL has been successfully generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewUrlDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Material upload is not completed yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The teacher has no access to this material"
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a temporary presigned URL to view a material",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/{id}": {
+      "put": {
+        "operationId": "MaterialController_renameMaterial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Material has been successfully renamed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a material",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/{id}/access": {
+      "post": {
+        "operationId": "MaterialController_grantMaterialAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Access has been successfully granted"
+          },
+          "400": {
+            "description": "Bad request (e.g. invalid teacher id)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grant teachers access to a material: lifts the restriction for teachers with course access, grants it personally to the rest",
+        "tags": [
+          "Materials"
+        ]
+      },
+      "delete": {
+        "operationId": "MaterialController_revokeMaterialAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Access has been successfully revoked"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke teachers access to a material: restricts it for teachers with course access, removes the personal grant from the rest",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/upload/{id}": {
+      "delete": {
+        "operationId": "MaterialController_deleteFile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Material has been successfully deleted"
+          },
+          "404": {
+            "description": "Material not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a material",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/materials/size": {
+      "get": {
+        "operationId": "MaterialController_getMaterialsSize",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Total size of all uploaded materials has been successfully calculated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialsSizeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the total size of all uploaded materials",
+        "tags": [
+          "Materials"
+        ]
+      }
+    },
+    "/payments/invoices": {
+      "post": {
+        "description": "Сначала расходует остаток баланса, затем считает неоплаченные занятия периода. Валюта берётся из планов занятий. Для PLN/EUR создаёт Payment Link, для BYN — счёт без ссылки. Отчёт уходит администратору в Telegram.",
+        "operationId": "PaymentsController_createInvoice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Счёт выставлен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет занятий к оплате, занятия в разных валютах или остаток баланса в другой валюте",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Студент не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Выставить счёт за период",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/payments/invoices/{id}": {
+      "delete": {
+        "operationId": "PaymentsController_cancelInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Счёт отменён"
+          },
+          "400": {
+            "description": "Счёт уже оплачен или отменён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Счёт не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Отменить неоплаченный счёт и деактивировать его ссылку",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/payments": {
+      "get": {
+        "operationId": "PaymentsController_list",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "SUCCEEDED",
+                "CANCELED",
+                "FAILED",
+                "REQUIRES_ATTENTION"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "STRIPE_PAYMENT",
+                "STRIPE_REFUND",
+                "MANUAL_ADJUSTMENT",
+                "LEGACY_OPENING_BALANCE"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список операций",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "История платежей и корректировок баланса",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/payments/students/{student_id}/balance": {
+      "get": {
+        "operationId": "PaymentsController_getBalance",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Баланс и активные аллокации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Студент не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Баланс ученика и занятия, оплаченные с него",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/payments/students/{student_id}/balance/adjust": {
+      "post": {
+        "description": "Знаковая дельта. Пополнение сразу закрывает неоплаченные занятия, списание откатывает оплату с самых поздних. Уйти в минус нельзя.",
+        "operationId": "PaymentsController_adjustBalance",
+        "parameters": [
+          {
+            "name": "student_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustBalanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Новый баланс и затронутые занятия",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustBalanceResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Недостаточно средств или конфликт валют",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Студент не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ручная корректировка баланса",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/payments/{id}/apply": {
+      "post": {
+        "description": "Для платежей в статусе REQUIRES_ATTENTION: применяются после того, как администратор разрулил конфликт валют.",
+        "operationId": "PaymentsController_applyPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Платёж применён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustBalanceResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Платёж не в статусе REQUIRES_ATTENTION или конфликт не разрешён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Платёж не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Применить отложенный платёж",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/telegram/send-lessons-cost-to-admin": {
+      "post": {
+        "operationId": "LegacyInvoiceController_sendLessonsCostToAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lessons cost has been successfully sent to admin."
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send lessons cost to admin",
+        "tags": [
+          "Telegram"
+        ]
+      }
     }
   },
   "info": {
@@ -2062,7 +3105,6 @@
           "plan_currency": {
             "type": "string",
             "enum": [
-              "USD",
               "EUR",
               "PLN",
               "BYN"
@@ -2105,7 +3147,12 @@
           "plan_currency": {
             "type": "string",
             "description": "The currency of the plan",
-            "example": "USD"
+            "example": "PLN",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
           },
           "duration": {
             "type": "number",
@@ -2174,16 +3221,6 @@
             "type": "boolean",
             "description": "Whether the student has given marketing consent",
             "example": false
-          },
-          "payment_currency": {
-            "type": "string",
-            "description": "The payment currency of the student",
-            "example": "BYN",
-            "enum": [
-              "EUR",
-              "PLN",
-              "BYN"
-            ]
           }
         },
         "required": [
@@ -2249,15 +3286,38 @@
             "description": "Whether the student has given marketing consent",
             "example": false
           },
-          "payment_currency": {
+          "marketing_consent_at": {
+            "type": "object",
+            "description": "Когда получен ответ про маркетинговое согласие. null — вопрос ещё не задавали, он будет показан на странице оплаты.",
+            "example": "2026-01-01T00:00:00.000Z",
+            "nullable": true
+          },
+          "terms_accepted": {
+            "type": "boolean",
+            "description": "Приняты ли условия обслуживания",
+            "example": false
+          },
+          "terms_accepted_at": {
+            "type": "object",
+            "description": "Когда приняты условия обслуживания",
+            "example": "2026-01-01T00:00:00.000Z",
+            "nullable": true
+          },
+          "balance_currency": {
             "type": "string",
-            "description": "The payment currency of the student",
+            "description": "Валюта остатка на балансе. null, когда баланс равен нулю.",
             "example": "BYN",
             "enum": [
               "EUR",
               "PLN",
               "BYN"
-            ]
+            ],
+            "nullable": true
+          },
+          "balance": {
+            "type": "number",
+            "description": "The balance of the student",
+            "example": 0
           }
         },
         "required": [
@@ -2271,7 +3331,11 @@
           "teacher_id",
           "timezone",
           "marketing_consent",
-          "payment_currency"
+          "marketing_consent_at",
+          "terms_accepted",
+          "terms_accepted_at",
+          "balance_currency",
+          "balance"
         ]
       },
       "StudentExtendedDto": {
@@ -2329,15 +3393,38 @@
             "description": "Whether the student has given marketing consent",
             "example": false
           },
-          "payment_currency": {
+          "marketing_consent_at": {
+            "type": "object",
+            "description": "Когда получен ответ про маркетинговое согласие. null — вопрос ещё не задавали, он будет показан на странице оплаты.",
+            "example": "2026-01-01T00:00:00.000Z",
+            "nullable": true
+          },
+          "terms_accepted": {
+            "type": "boolean",
+            "description": "Приняты ли условия обслуживания",
+            "example": false
+          },
+          "terms_accepted_at": {
+            "type": "object",
+            "description": "Когда приняты условия обслуживания",
+            "example": "2026-01-01T00:00:00.000Z",
+            "nullable": true
+          },
+          "balance_currency": {
             "type": "string",
-            "description": "The payment currency of the student",
+            "description": "Валюта остатка на балансе. null, когда баланс равен нулю.",
             "example": "BYN",
             "enum": [
               "EUR",
               "PLN",
               "BYN"
-            ]
+            ],
+            "nullable": true
+          },
+          "balance": {
+            "type": "number",
+            "description": "The balance of the student",
+            "example": 0
           },
           "actualPlans": {
             "description": "The actual plans of the student",
@@ -2345,11 +3432,6 @@
             "items": {
               "$ref": "#/components/schemas/PlanDto"
             }
-          },
-          "balance": {
-            "type": "number",
-            "description": "The balance of the student",
-            "example": 0
           },
           "bookUntilCancellation": {
             "type": "boolean",
@@ -2378,9 +3460,12 @@
           "teacher_id",
           "timezone",
           "marketing_consent",
-          "payment_currency",
-          "actualPlans",
+          "marketing_consent_at",
+          "terms_accepted",
+          "terms_accepted_at",
+          "balance_currency",
           "balance",
+          "actualPlans",
           "bookUntilCancellation",
           "notifyAboutBirthday",
           "notifyAboutLessons"
@@ -2396,18 +3481,13 @@
           },
           "marketing_consent": {
             "type": "boolean",
-            "description": "Whether the student has given marketing consent",
+            "description": "Согласие на использование фото/видео. Дата ответа проставляется автоматически при изменении значения.",
             "example": false
           },
-          "payment_currency": {
-            "type": "string",
-            "description": "The payment currency of the student",
-            "example": "BYN",
-            "enum": [
-              "EUR",
-              "PLN",
-              "BYN"
-            ]
+          "terms_accepted": {
+            "type": "boolean",
+            "description": "Приняты ли условия обслуживания. Снятие флага обнуляет дату — вопрос снова появится на странице оплаты.",
+            "example": false
           }
         }
       },
@@ -2458,7 +3538,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-07-16T09:48:18.506Z"
+            "example": "2026-08-16T14:31:33.770Z"
           },
           "status": {
             "type": "string",
@@ -2495,7 +3575,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-07-16T09:48:18.506Z",
+            "example": "2026-08-16T14:31:33.771Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -2507,14 +3587,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-07-16T09:48:18.506Z",
+            "example": "2026-08-16T14:31:33.771Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-07-16T09:48:18.506Z"
+            "example": "2026-08-16T14:31:33.771Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -2602,7 +3682,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-07-16T09:48:18.495Z"
+            "example": "2026-08-16T14:31:33.765Z"
           },
           "isFree": {
             "type": "boolean",
@@ -2636,7 +3716,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-07-16T09:48:18.514Z"
+            "example": "2026-08-16T14:31:33.777Z"
           }
         },
         "required": [
@@ -2680,13 +3760,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-07-16T09:48:18.523Z"
+            "example": "2026-08-16T14:31:33.785Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-07-16T09:48:18.524Z"
+            "example": "2026-08-16T14:31:33.785Z"
           },
           "plan": {
             "description": "Plan",
@@ -2698,7 +3778,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-07-16T09:48:18.524Z"
+              "created_at": "2026-08-16T14:31:33.785Z"
             },
             "allOf": [
               {
@@ -2755,13 +3835,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-07-16T09:48:18.526Z"
+            "example": "2026-08-16T14:31:33.787Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-07-16T09:48:18.526Z"
+            "example": "2026-08-16T14:31:33.787Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -2817,31 +3897,6 @@
         },
         "required": [
           "link"
-        ]
-      },
-      "LessonsCostFiltersDto": {
-        "type": "object",
-        "properties": {
-          "student_id": {
-            "type": "number",
-            "description": "The student id",
-            "example": 1
-          },
-          "start_date": {
-            "type": "string",
-            "description": "The start date",
-            "example": "2024-01-01"
-          },
-          "end_date": {
-            "type": "string",
-            "description": "The end date",
-            "example": "2024-01-01"
-          }
-        },
-        "required": [
-          "student_id",
-          "start_date",
-          "end_date"
         ]
       },
       "TaskStatusCountDto": {
@@ -3073,6 +4128,598 @@
             "description": "Статус задачи"
           }
         }
+      },
+      "CourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the course",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the course",
+            "example": "Course 1"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The creation date of the course",
+            "example": "2026-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ]
+      },
+      "CreateCourseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the course",
+            "example": "Course 1"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCourseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the course",
+            "example": "Course 1"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "MaterialTeacherDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the teacher",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          },
+          "accessSource": {
+            "type": "string",
+            "description": "Where the access comes from: the whole course or this material only",
+            "enum": [
+              "COURSE",
+              "FILE"
+            ],
+            "example": "COURSE"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "accessSource"
+        ]
+      },
+      "TeacherRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the teacher",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "MaterialDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the material",
+            "example": 1
+          },
+          "courseId": {
+            "type": "number",
+            "description": "The id of the course this material belongs to",
+            "example": 1
+          },
+          "originalName": {
+            "type": "string",
+            "description": "The original name of the file",
+            "example": "lesson5.pdf"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "The MIME type of the file",
+            "example": "application/pdf"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "The size of the file in bytes",
+            "example": 12345678
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of the file",
+            "enum": [
+              "PDF",
+              "HTML"
+            ],
+            "example": "PDF"
+          },
+          "status": {
+            "type": "string",
+            "description": "The upload status of the file",
+            "enum": [
+              "UPLOADING",
+              "UPLOADED",
+              "FAILED"
+            ],
+            "example": "UPLOADED"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The creation date of the material",
+            "example": "2026-01-01T00:00:00.000Z"
+          },
+          "teachers": {
+            "description": "Teachers who have access to this material",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaterialTeacherDto"
+            }
+          },
+          "restrictedTeachers": {
+            "description": "Teachers with course access whose access to this material has been restricted",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherRefDto"
+            }
+          },
+          "hasAccess": {
+            "type": "boolean",
+            "description": "Whether the requesting user has access to this material",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "courseId",
+          "originalName",
+          "mimeType",
+          "sizeBytes",
+          "type",
+          "status",
+          "created_at",
+          "teachers",
+          "restrictedTeachers",
+          "hasAccess"
+        ]
+      },
+      "CourseAccessTeacherDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The id of the teacher",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the teacher",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "UpdateAccessDto": {
+        "type": "object",
+        "properties": {
+          "teacherIds": {
+            "description": "Ids of teachers to grant or revoke access for",
+            "example": [
+              1,
+              2,
+              3
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "teacherIds"
+        ]
+      },
+      "UploadInitDto": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "number",
+            "description": "The id of the course the file belongs to",
+            "example": 1
+          },
+          "teachers": {
+            "description": "Ids of teachers who will have access to the file",
+            "example": [
+              1,
+              2,
+              3
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The original name of the file",
+            "example": "lesson5.pdf"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "The MIME type of the file",
+            "example": "application/pdf"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "The content type of the file",
+            "example": "application/pdf"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "The size of the file in bytes",
+            "example": 12345678
+          }
+        },
+        "required": [
+          "courseId",
+          "teachers",
+          "fileName",
+          "mimeType",
+          "contentType",
+          "sizeBytes"
+        ]
+      },
+      "UploadInitResponseDto": {
+        "type": "object",
+        "properties": {
+          "materialId": {
+            "type": "number",
+            "description": "The id of the created material",
+            "example": 1
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "The presigned URL to upload the file to",
+            "example": "https://bucket.r2.cloudflarestorage.com/..."
+          }
+        },
+        "required": [
+          "materialId",
+          "uploadUrl"
+        ]
+      },
+      "ViewUrlDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The presigned URL to view the material",
+            "example": "https://bucket.r2.cloudflarestorage.com/..."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "RenameMaterialDto": {
+        "type": "object",
+        "properties": {
+          "originalName": {
+            "type": "string",
+            "description": "The new name of the file",
+            "example": "lesson5.pdf"
+          }
+        },
+        "required": [
+          "originalName"
+        ]
+      },
+      "MaterialsSizeDto": {
+        "type": "object",
+        "properties": {
+          "totalSizeBytes": {
+            "type": "number",
+            "description": "Total size of all uploaded materials in bytes",
+            "example": 10485760
+          }
+        },
+        "required": [
+          "totalSizeBytes"
+        ]
+      },
+      "CreateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "number",
+            "description": "Идентификатор ученика",
+            "example": 1
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Начало периода",
+            "example": "2026-08-01"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Конец периода",
+            "example": "2026-08-31"
+          }
+        },
+        "required": [
+          "student_id",
+          "start_date",
+          "end_date"
+        ]
+      },
+      "InvoiceDto": {
+        "type": "object",
+        "properties": {
+          "payment_id": {
+            "type": "number",
+            "example": 12
+          },
+          "student_id": {
+            "type": "number",
+            "example": 1
+          },
+          "amount": {
+            "type": "number",
+            "description": "Сумма к оплате в целых единицах валюты",
+            "example": 160
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
+          },
+          "lessons_count": {
+            "type": "number",
+            "description": "Количество платных занятий в счёте",
+            "example": 4
+          },
+          "link": {
+            "type": "object",
+            "description": "Ссылка на оплату. null для BYN и при недоступности Stripe — отчёт админу уходит в любом случае.",
+            "nullable": true,
+            "example": "https://buy.stripe.com/test_xxx"
+          }
+        },
+        "required": [
+          "payment_id",
+          "student_id",
+          "amount",
+          "currency",
+          "lessons_count",
+          "link"
+        ]
+      },
+      "PaymentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "student_id": {
+            "type": "number",
+            "example": 1
+          },
+          "student_name": {
+            "type": "string",
+            "example": "Иван Петров"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "STRIPE_PAYMENT",
+              "STRIPE_REFUND",
+              "MANUAL_ADJUSTMENT",
+              "LEGACY_OPENING_BALANCE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SUCCEEDED",
+              "CANCELED",
+              "FAILED",
+              "REQUIRES_ATTENTION"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Знаковая сумма в целых единицах валюты",
+            "example": 160
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
+          },
+          "period_start": {
+            "type": "object",
+            "nullable": true,
+            "example": "2026-08-01T00:00:00.000Z"
+          },
+          "period_end": {
+            "type": "object",
+            "nullable": true,
+            "example": "2026-08-31T23:59:59.999Z"
+          },
+          "lessons_count": {
+            "type": "object",
+            "nullable": true,
+            "example": 4
+          },
+          "comment": {
+            "type": "object",
+            "nullable": true,
+            "example": "Оплата наличными за август"
+          },
+          "paid_at": {
+            "type": "object",
+            "nullable": true,
+            "example": "2026-08-03T12:00:00.000Z"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-08-01T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "student_name",
+          "type",
+          "status",
+          "amount",
+          "currency",
+          "period_start",
+          "period_end",
+          "lessons_count",
+          "comment",
+          "paid_at",
+          "created_at"
+        ]
+      },
+      "BalanceDto": {
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "number",
+            "example": 1
+          },
+          "balance": {
+            "type": "number",
+            "example": 40
+          },
+          "balance_currency": {
+            "type": "string",
+            "description": "null, когда баланс равен нулю",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ],
+            "nullable": true
+          },
+          "allocations": {
+            "type": "array",
+            "description": "Занятия, оплаченные с баланса и не откаченные",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "student_id",
+          "balance",
+          "balance_currency",
+          "allocations"
+        ]
+      },
+      "AdjustBalanceDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Знаковая дельта баланса в целых единицах валюты. Отрицательная — списание.",
+            "example": 100
+          },
+          "currency": {
+            "type": "string",
+            "description": "Валюта операции. Обязательна при нулевом балансе; при ненулевом должна совпадать с валютой баланса.",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "description": "Причина корректировки. Попадает в историю операций.",
+            "example": "Оплата наличными за август"
+          }
+        },
+        "required": [
+          "amount",
+          "comment"
+        ]
+      },
+      "AdjustBalanceResultDto": {
+        "type": "object",
+        "properties": {
+          "balance": {
+            "type": "number",
+            "example": 40
+          },
+          "balance_currency": {
+            "type": "string",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ],
+            "nullable": true
+          },
+          "affected_lessons": {
+            "type": "array",
+            "description": "Занятия, статус оплаты которых изменился",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "balance",
+          "balance_currency",
+          "affected_lessons"
+        ]
       }
     }
   }

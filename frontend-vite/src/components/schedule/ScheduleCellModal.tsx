@@ -23,6 +23,7 @@ import { studentsApi } from '@/api/students'
 import { plansApi } from '@/api/plans'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
+import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 import type { Lesson } from '@/types'
 
 interface ScheduleCellModalProps {
@@ -197,7 +198,7 @@ export const ScheduleCellModal = ({
     setShowCreateForm(false)
     refetchLessons()
     // Invalidate schedule page lessons query to refresh the schedule
-    queryClient.invalidateQueries({ queryKey: ['lessons'] })
+    invalidateMoneyQueries(queryClient)
   }
 
 	const handleRescheduleSuccess = () => {
@@ -205,7 +206,7 @@ export const ScheduleCellModal = ({
 		setSelectedRescheduleLesson(null)
 		refetchLessons()
 		// Invalidate schedule page lessons query to refresh the schedule
-		queryClient.invalidateQueries({ queryKey: ['lessons'] })
+		invalidateMoneyQueries(queryClient)
 		// Also invalidate reschedule lessons query
 		queryClient.invalidateQueries({ queryKey: ['lessons', 'rescheduled'] })
 	}
@@ -233,7 +234,7 @@ export const ScheduleCellModal = ({
   const handleLessonCancel = () => {
     refetchLessons()
     // Invalidate schedule page lessons query to refresh the schedule
-    queryClient.invalidateQueries({ queryKey: ['lessons'] })
+    invalidateMoneyQueries(queryClient)
   }
 
   // Format date and time for display

@@ -10,12 +10,25 @@ import { Teacher } from '@/infrastructure/prisma/generated/client';
 import { CancelationStatusEnum, CancelLessonDto } from "@/modules/lesson/interface/dto/requests/cancel-lesson.dto";
 import { ManageFreeLessonStatusDto } from "@/modules/lesson/interface/dto/requests/manage-free-lesson.input.dto";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
-import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
+import { Currency } from '@/shared/enums/currency.enum';
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { UpdateLessonsPlanForPeriodDto } from "@/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto";
+import { Prisma } from '@/infrastructure/prisma/generated/client';
+
+/**
+ * Часть операций должна выполняться в одной транзакции с изменением баланса
+ * (перенос оплаты, откат аллокации перед удалением занятия), поэтому такие методы
+ * принимают транзакционный клиент снаружи.
+ */
+type TxClient = Prisma.TransactionClient;
+
 @Injectable()
 export class LessonRepository {
 	constructor(private readonly prisma: PrismaService) {}
+
+	private client(tx?: TxClient) {
+		return tx ?? this.prisma;
+	}
 
 	async findLessonsForReschedule(teacher_id: number): Promise<LessonOutputDto[]> {
 		const lessons = await this.prisma.lesson.findMany({
@@ -93,9 +106,9 @@ export class LessonRepository {
 		});
 	}
 
-	async createSingleLesson(newLesson: Lesson): Promise<LessonOutputDto> {
+	async createSingleLesson(newLesson: Lesson, tx?: TxClient): Promise<LessonOutputDto> {
 		try {
-		const lesson = await this.prisma.lesson.create({
+		const lesson = await this.client(tx).lesson.create({
 			data: newLesson,
 			include: {
 				student: true,
@@ -110,15 +123,24 @@ export class LessonRepository {
 		}
 	}
 
-	async updateRescheduledLesson(rescheduled_lesson_id: number, createdLesson: LessonOutputDto): Promise<void> {
-		await this.prisma.lesson.update({
+	async updateRescheduledLesson(rescheduled_lesson_id: number, createdLesson: LessonOutputDto, tx?: TxClient): Promise<void> {
+		await this.client(tx).lesson.update({
 			where: { id: rescheduled_lesson_id },
 			data: { rescheduled_to_lesson_id: createdLesson.id, rescheduled_to_lesson_date: createdLesson.date },
 		});
 	}
 
-	async updateLessonsPlanForPeriod(dto: UpdateLessonsPlanForPeriodDto): Promise<void> {
-		await this.prisma.lesson.updateMany({
+	/** Занятия, которых коснётся смена плана, — чтобы откатить у оплаченных аллокацию на старую цену. */
+	async findLessonsForPlanChange(dto: UpdateLessonsPlanForPeriodDto, tx?: TxClient): Promise<Array<{ id: number; date: Date }>> {
+		return await this.client(tx).lesson.findMany({
+			where: { student_id: dto.student_id, date: { gte: dto.start_date, lte: dto.end_date }, plan_id: dto.old_plan_id },
+			select: { id: true, date: true },
+			orderBy: { date: 'asc' },
+		});
+	}
+
+	async updateLessonsPlanForPeriod(dto: UpdateLessonsPlanForPeriodDto, tx?: TxClient): Promise<void> {
+		await this.client(tx).lesson.updateMany({
 			where: { student_id: dto.student_id, date: { gte: dto.start_date, lte: dto.end_date }, plan_id: dto.old_plan_id },
 			data: { plan_id: dto.new_plan_id },
 		});
@@ -269,7 +291,8 @@ export class LessonRepository {
 		return this.mapLessonToView(lesson);
 	}
 
-	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto, rescheduled_lesson_id: number | null): Promise<void> {
+	async cancelLesson(lessonId: number, cancelLessonDto: CancelLessonDto, rescheduled_lesson_id: number | null, tx?: TxClient): Promise<void> {
+		const client = this.client(tx);
 		const data: { status?: LessonStatus, rescheduled_lesson_id?: number | null, rescheduled_lesson_date?: string | null } = {};
 
 
@@ -282,13 +305,13 @@ export class LessonRepository {
 			data.rescheduled_lesson_id = null;
 			data.rescheduled_lesson_date = null;
 			if (rescheduled_lesson_id) {
-				const lessonForReschedule = await this.prisma.lesson.findUnique({
+				const lessonForReschedule = await client.lesson.findUnique({
 					where: { id: rescheduled_lesson_id },
 				});
 				if (!lessonForReschedule) {
 					throw new NotFoundException('Занятие для переноса не найдено');
 				}
-				await this.prisma.lesson.update({
+				await client.lesson.update({
 					where: { id: rescheduled_lesson_id },
 					data: {
 						rescheduled_to_lesson_date: null,
@@ -304,15 +327,16 @@ export class LessonRepository {
 			data.rescheduled_lesson_date = null;
 		}
 
-		await this.prisma.lesson.update({
+		await client.lesson.update({
 			where: { id: lessonId },
 			data: { ...data, comment: cancelLessonDto.comment },
 		});
 
 	}
 
-	async deleteLesson(lessonId: number): Promise<void> {
-		const lesson = await this.prisma.lesson.findUnique({
+	async deleteLesson(lessonId: number, tx?: TxClient): Promise<void> {
+		const client = this.client(tx);
+		const lesson = await client.lesson.findUnique({
 			where: { id: lessonId },
 		});
 		if (!lesson) {
@@ -323,22 +347,20 @@ export class LessonRepository {
 			throw new BadRequestException('Нельзя удалить занятие, которое перенесено. Сначала отмените перенос.');
 		}
 
-		await this.prisma.$transaction(async (tx) => {
-			if (lesson.rescheduled_lesson_id) {
-				await tx.lesson.update({
-					where: { id: lesson.rescheduled_lesson_id },
-					data: { rescheduled_to_lesson_id: null, rescheduled_to_lesson_date: null },
-				});
-			}
-			await tx.lesson.delete({
-				where: { id: lessonId },
+		if (lesson.rescheduled_lesson_id) {
+			await client.lesson.update({
+				where: { id: lesson.rescheduled_lesson_id },
+				data: { rescheduled_to_lesson_id: null, rescheduled_to_lesson_date: null },
 			});
+		}
+		await client.lesson.delete({
+			where: { id: lessonId },
 		});
 	}
 
 
-	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto): Promise<void> {
-		await this.prisma.lesson.update({
+	async manageFreeLessonStatus(lessonId: number, manageFreeLessonStatusDto: ManageFreeLessonStatusDto, tx?: TxClient): Promise<void> {
+		await this.client(tx).lesson.update({
 			where: { id: lessonId },
 			data: { is_free: manageFreeLessonStatusDto.isFree },
 		});
@@ -358,13 +380,17 @@ export class LessonRepository {
 				teacher_id: lesson.student.teacher_id || null,
 				timezone: lesson.student.timezone as Timezone,
 				marketing_consent: lesson.student.marketing_consent,
-				payment_currency: lesson.student.payment_currency as PaymentCurrency,
+				marketing_consent_at: lesson.student.marketing_consent_at,
+				terms_accepted: lesson.student.terms_accepted_at !== null,
+				terms_accepted_at: lesson.student.terms_accepted_at,
+				balance_currency: lesson.student.balance_currency as Currency | null,
+				balance: lesson.student.balance,
 			},
 			plan: {
 				id: lesson.plan.id,
 				plan_name: lesson.plan.plan_name,
 				plan_price: lesson.plan.plan_price,
-				plan_currency: lesson.plan.plan_currency,
+				plan_currency: lesson.plan.plan_currency as Currency,
 				duration: lesson.plan.duration,
 				plan_type: lesson.plan.plan_type,
 				deleted_at: lesson.plan.deleted_at,

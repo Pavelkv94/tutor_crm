@@ -4,6 +4,7 @@ import { Injectable } from "@nestjs/common";
 import { LessonStatus, Plan, RegularLesson } from '@/infrastructure/prisma/generated/client';
 import { RegularLessonOutputDto } from "@/modules/lesson/interface/dto/responses/regular-lesson.output.dto";
 import { WeekDay } from "@/modules/lesson/interface/dto/requests/regular-lesson.input.dto";
+import { Currency } from '@/shared/enums/currency.enum';
 
 @Injectable()
 export class LessonRegularRepository {
@@ -103,7 +104,7 @@ export class LessonRegularRepository {
 				id: regularLesson.plan.id,
 				plan_name: regularLesson.plan.plan_name,
 				plan_price: regularLesson.plan.plan_price,
-				plan_currency: regularLesson.plan.plan_currency,
+				plan_currency: regularLesson.plan.plan_currency as Currency,
 				duration: regularLesson.plan.duration,
 				plan_type: regularLesson.plan.plan_type,
 				deleted_at: regularLesson.plan.deleted_at,

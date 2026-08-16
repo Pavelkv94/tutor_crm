@@ -5,12 +5,14 @@ import { ExtractTeacherFromRequest } from "@/shared/decorators/param/extract-tea
 import { CreateCourseSwagger } from "@/shared/decorators/swagger/material/create-course-swagger.decorator";
 import { DeleteCourseSwagger } from "@/shared/decorators/swagger/material/delete-course-swagger.decorator";
 import { DeleteFileSwagger } from "@/shared/decorators/swagger/material/delete-file-swagger.decorator";
+import { GetCourseAccessSwagger } from "@/shared/decorators/swagger/material/get-course-access-swagger.decorator";
 import { GetCourseMaterialsSwagger } from "@/shared/decorators/swagger/material/get-course-materials-swagger.decorator";
 import { GetCoursesSwagger } from "@/shared/decorators/swagger/material/get-courses-swagger.decorator";
 import { GetMaterialsSizeSwagger } from "@/shared/decorators/swagger/material/get-materials-size-swagger.decorator";
 import { GrantCourseAccessSwagger } from "@/shared/decorators/swagger/material/grant-course-access-swagger.decorator";
 import { GrantMaterialAccessSwagger } from "@/shared/decorators/swagger/material/grant-material-access-swagger.decorator";
 import { OpenMaterialSwagger } from "@/shared/decorators/swagger/material/open-material-swagger.decorator";
+import { RenameMaterialSwagger } from "@/shared/decorators/swagger/material/rename-material-swagger.decorator";
 import { RevokeCourseAccessSwagger } from "@/shared/decorators/swagger/material/revoke-course-access-swagger.decorator";
 import { RevokeMaterialAccessSwagger } from "@/shared/decorators/swagger/material/revoke-material-access-swagger.decorator";
 import { UpdateCourseSwagger } from "@/shared/decorators/swagger/material/update-course-swagger.decorator";
@@ -21,9 +23,11 @@ import { JwtAccessGuard } from "@/shared/guards/jwt-access.guard";
 import { CourseService } from "../application/course.service";
 import { MaterialService } from "../application/material.service";
 import { CreateCourseDto } from "./dto/requests/create-course.dto";
+import { RenameMaterialDto } from "./dto/requests/rename-material.dto";
 import { UpdateAccessDto } from "./dto/requests/update-access.dto";
 import { UpdateCourseDto } from "./dto/requests/update-course.dto";
 import { UploadInitDto } from "./dto/requests/upload-init.dto";
+import { CourseAccessTeacherDto } from "./dto/responses/course-access.dto";
 import { CourseDto } from "./dto/responses/course.dto";
 import { MaterialDto } from "./dto/responses/material.dto";
 import { MaterialsSizeDto } from "./dto/responses/materials-size.dto";
@@ -79,9 +83,17 @@ export class MaterialController {
 	@Get("courses/:id/materials")
 	@UseGuards(JwtAccessGuard)
 	@HttpCode(HttpStatus.OK)
-	async getCourseMaterials(@Param("id") id: string): Promise<MaterialDto[]> {
-		const materials = await this.materialService.getCourseMaterials(+id);
+	async getCourseMaterials(@Param("id") id: string, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<MaterialDto[]> {
+		const materials = await this.materialService.getCourseMaterials(+id, +teacher.id, teacher.role);
 		return materials.map(mapMaterialToResponse);
+	}
+
+	@GetCourseAccessSwagger()
+	@Get("courses/:id/access")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.OK)
+	async getCourseAccess(@Param("id") id: string): Promise<CourseAccessTeacherDto[]> {
+		return await this.materialService.getCourseAccess(+id);
 	}
 
 	@GrantCourseAccessSwagger()
@@ -122,6 +134,15 @@ export class MaterialController {
 	@HttpCode(HttpStatus.OK)
 	async openMaterial(@Param("id") id: string, @ExtractTeacherFromRequest() teacher: JwtPayloadDto): Promise<ViewUrlDto> {
 		return await this.materialService.getViewUrl(+id, +teacher.id, teacher.role);
+	}
+
+	@RenameMaterialSwagger()
+	@Put(":id")
+	@UseGuards(JwtAccessGuard, AdminAccessGuard)
+	@HttpCode(HttpStatus.OK)
+	async renameMaterial(@Param("id") id: string, @Body() renameMaterialDto: RenameMaterialDto): Promise<MaterialDto> {
+		const material = await this.materialService.renameMaterial(+id, renameMaterialDto.originalName);
+		return mapMaterialToResponse(material);
 	}
 
 	@GrantMaterialAccessSwagger()

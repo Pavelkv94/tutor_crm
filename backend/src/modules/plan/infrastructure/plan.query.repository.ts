@@ -5,6 +5,7 @@ import { FilterPlanQuery } from "@/modules/plan/interface/dto/requests/filter.qu
 import { Prisma } from "@/infrastructure/prisma/generated/client";
 import { PlanQueryRepositoryPort } from '../application/ports/plan.query.repository.port';
 import { PlanDto } from '../interface/dto/responses/plan.dto';
+import { Currency } from '@/shared/enums/currency.enum';
 
 @Injectable()
 export class PlanQueryRepository implements PlanQueryRepositoryPort {
@@ -40,7 +41,7 @@ export class PlanQueryRepository implements PlanQueryRepositoryPort {
 			id: plan.id,
 			plan_name: plan.plan_name,
 			plan_price: plan.plan_price,
-			plan_currency: plan.plan_currency,
+			plan_currency: plan.plan_currency as Currency,
 			duration: plan.duration,
 			plan_type: plan.plan_type,
 			deleted_at: plan.deleted_at || null,

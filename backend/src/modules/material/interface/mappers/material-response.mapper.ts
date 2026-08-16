@@ -12,5 +12,7 @@ export function mapMaterialToResponse(material: MaterialEntity): MaterialDto {
 		status: material.status,
 		created_at: material.created_at,
 		teachers: material.teachers ?? [],
+		restrictedTeachers: material.restrictedTeachers ?? [],
+		hasAccess: material.hasAccess ?? false,
 	};
 }

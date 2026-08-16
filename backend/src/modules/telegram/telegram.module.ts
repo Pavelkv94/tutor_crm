@@ -5,7 +5,6 @@ import { TelegramRepository } from '@/modules/telegram/infrastructure/telegram.r
 import { TeacherModule } from '@/modules/teacher/teacher.module';
 import { StudentModule } from '@/modules/student/student.module';
 import { TelegramController } from '@/modules/telegram/interface/telegram.controller';
-import { LessonModule } from '@/modules/lesson/lesson.module';
 import { telegramConfig, TelegramConfig } from '@/config/namespaces/telegram.config';
 
 @Module({
@@ -18,7 +17,6 @@ import { telegramConfig, TelegramConfig } from '@/config/namespaces/telegram.con
     }),
 		TeacherModule,
 		StudentModule,
-		LessonModule,
   ],
 	controllers: [TelegramController],
   providers: [TelegramService, TelegramRepository],

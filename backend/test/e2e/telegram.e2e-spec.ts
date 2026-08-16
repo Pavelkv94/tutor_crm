@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
 import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
 import { telegramConfig, TelegramConfig } from '../../src/config/namespaces/telegram.config';
-import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { TeacherRole, PlanType, Currency } from '../../src/infrastructure/prisma/generated/client';
 import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 import { TelegramService } from '../../src/modules/telegram/application/telegram.service';
 import { TelegramUserEnum } from '../../src/modules/telegram/interface/dto/telegram-user.enum';
@@ -384,7 +384,7 @@ describe('TelegramController (e2e)', () => {
 				data: {
 					plan_name: 'Test Plan',
 					plan_price: 100,
-					plan_currency: PlanCurrency.BYN,
+					plan_currency: Currency.BYN,
 					plan_type: PlanType.INDIVIDUAL,
 					duration: 60,
 				},

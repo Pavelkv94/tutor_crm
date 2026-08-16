@@ -9,7 +9,16 @@ import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto"
 import { PlanDto } from "@/modules/plan/interface/dto/responses/plan.dto";
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { Student, Plan } from '@/infrastructure/prisma/generated/client';
-import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
+import { Currency } from '@/shared/enums/currency.enum';
+
+/**
+ * Поля ученика в том виде, в каком они лежат в БД: `terms_accepted` наружу отдаётся булевым,
+ * но хранится датой, поэтому DTO нельзя спредить в Prisma как есть.
+ */
+export type StudentUpdateData = Omit<UpdateStudentDto, 'terms_accepted'> & {
+	marketing_consent_at?: Date | null;
+	terms_accepted_at?: Date | null;
+};
 
 @Injectable()
 export class StudentRepository {
@@ -20,6 +29,9 @@ export class StudentRepository {
 			data: {
 				...createStudentDto,
 				birth_date: createStudentDto.birth_date ? new Date(createStudentDto.birth_date) : null,
+				// Проставленная при заведении галочка — это уже полученный ответ; без даты
+				// ученик всё равно увидел бы вопрос на первой оплате.
+				marketing_consent_at: createStudentDto.marketing_consent ? new Date() : null,
 			},
 		});
 		return this.mapStudentToView(student);
@@ -77,13 +89,34 @@ export class StudentRepository {
 		return students;
 	}
 
-	async updateStudent(id: number, updateStudentDto: UpdateStudentDto): Promise<boolean> {
-		const updateData: any = { ...updateStudentDto };
-		if (updateStudentDto.birth_date) {
-			updateData.birth_date = new Date(updateStudentDto.birth_date);
+	async updateStudent(id: number, updateStudentData: StudentUpdateData): Promise<boolean> {
+		const updateData: any = { ...updateStudentData };
+		if (updateStudentData.birth_date) {
+			updateData.birth_date = new Date(updateStudentData.birth_date);
 		}
 		const result = await this.prisma.student.update({ where: { id }, data: updateData });
 		return result !== null;
+	}
+
+	/**
+	 * Записывает согласия, полученные на странице оплаты. Условие `*_at: null` в `where`
+	 * делает операцию идемпотентной без чтения состояния: Stripe ретраит упавшие события,
+	 * и read-modify-write здесь ловил бы гонку. «Ноль обновлённых строк» — нормальный исход,
+	 * поэтому updateMany, а не update.
+	 */
+	async applyCheckoutConsents(id: number, consents: { termsAccepted?: boolean; marketingConsent?: boolean }, at: Date): Promise<void> {
+		if (consents.termsAccepted) {
+			await this.prisma.student.updateMany({
+				where: { id, terms_accepted_at: null },
+				data: { terms_accepted_at: at },
+			});
+		}
+		if (consents.marketingConsent !== undefined) {
+			await this.prisma.student.updateMany({
+				where: { id, marketing_consent_at: null },
+				data: { marketing_consent: consents.marketingConsent, marketing_consent_at: at },
+			});
+		}
 	}
 
 	async deleteStudent(id: number): Promise<boolean> {
@@ -114,7 +147,12 @@ export class StudentRepository {
 			teacher_id: student.teacher_id || null,
 			timezone: student.timezone as Timezone,
 			marketing_consent: student.marketing_consent,
-			payment_currency: student.payment_currency as PaymentCurrency,
+			marketing_consent_at: student.marketing_consent_at,
+			// Отдельной колонки нет: приняты — значит дата есть.
+			terms_accepted: student.terms_accepted_at !== null,
+			terms_accepted_at: student.terms_accepted_at,
+			balance_currency: student.balance_currency as Currency | null,
+			balance: student.balance,
 		};
 	}
 
@@ -122,7 +160,6 @@ export class StudentRepository {
 		return {
 			...this.mapStudentToView(student),
 			actualPlans: uniquePlans.map(this.mapPlanToView),
-			balance: student.balance,
 			bookUntilCancellation: student.bookUntilCancellation,
 			// telegrams: student.telegrams,
 			notifyAboutBirthday: student.notifyAboutBirthday,
@@ -134,7 +171,7 @@ export class StudentRepository {
 			id: plan.id,
 			plan_name: plan.plan_name,
 			plan_price: plan.plan_price,
-			plan_currency: plan.plan_currency,
+			plan_currency: plan.plan_currency as Currency,
 			duration: plan.duration,
 			plan_type: plan.plan_type,
 			deleted_at: plan.deleted_at || null,

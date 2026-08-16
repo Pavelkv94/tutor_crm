@@ -19,7 +19,7 @@ describe('StudentController', () => {
 		teacher_id: 1,
 		balance: 0,
 		marketing_consent: false,
-		payment_currency: 'BYN',
+		balance_currency: null,
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,

@@ -176,18 +176,31 @@ describe('LessonRepository', () => {
 	});
 
 	describe('deleteLesson', () => {
+		// Транзакцию теперь открывает вызывающий код (LessonService) — вместе с откатом
+		// аллокации баланса, поэтому репозиторий работает на переданном клиенте.
 		it('should delete lesson', async () => {
 			jest.spyOn(prisma.lesson, 'findUnique').mockResolvedValue(mockLesson as any);
-			jest.spyOn(prisma, '$transaction').mockImplementation(async (callback: any) => callback({
-				lesson: {
-					update: jest.fn().mockResolvedValue(undefined),
-					delete: jest.fn().mockResolvedValue(mockLesson),
-				},
-			}));
+			const deleteMock = jest.fn().mockResolvedValue(mockLesson);
+			jest.spyOn(prisma.lesson, 'delete').mockImplementation(deleteMock as any);
 
 			await repository.deleteLesson(1);
 
-			expect(prisma.$transaction).toHaveBeenCalled();
+			expect(deleteMock).toHaveBeenCalledWith({ where: { id: 1 } });
+		});
+
+		it('should delete lesson using the provided transaction client', async () => {
+			const tx = {
+				lesson: {
+					findUnique: jest.fn().mockResolvedValue(mockLesson),
+					update: jest.fn().mockResolvedValue(undefined),
+					delete: jest.fn().mockResolvedValue(mockLesson),
+				},
+			};
+
+			await repository.deleteLesson(1, tx as any);
+
+			expect(tx.lesson.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+			expect(prisma.lesson.delete).not.toHaveBeenCalled();
 		});
 
 		it('should throw BadRequestException when lesson is rescheduled', async () => {
@@ -195,11 +208,11 @@ describe('LessonRepository', () => {
 				...mockLesson,
 				rescheduled_to_lesson_id: 2,
 			} as any);
-			jest.spyOn(prisma, '$transaction');
+			jest.spyOn(prisma.lesson, 'delete');
 
 			await expect(repository.deleteLesson(1)).rejects.toThrow(BadRequestException);
 			await expect(repository.deleteLesson(1)).rejects.toThrow('Нельзя удалить занятие, которое перенесено. Сначала отмените перенос.');
-			expect(prisma.$transaction).not.toHaveBeenCalled();
+			expect(prisma.lesson.delete).not.toHaveBeenCalled();
 		});
 	});
 

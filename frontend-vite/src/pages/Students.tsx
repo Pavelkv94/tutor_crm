@@ -17,6 +17,7 @@ import { EditStudentDialog } from '@/components/students/EditStudentDialog'
 import { DeleteStudentDialog } from '@/components/students/DeleteStudentDialog'
 import { AssignRegularLessonsDialog } from '@/components/students/AssignRegularLessonsDialog'
 import { StudentReportDialog } from '@/components/students/StudentReportDialog'
+import { BalanceAdjustDialog } from '@/components/payments/BalanceAdjustDialog'
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,6 +28,7 @@ export const Students = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [assignLessonsDialogOpen, setAssignLessonsDialogOpen] = useState(false)
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
+  const [balanceDialogOpen, setBalanceDialogOpen] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [filter, setFilter] = useState<'all' | 'active' | 'deleted'>('active')
@@ -80,6 +82,11 @@ export const Students = () => {
   const handleReportClick = (id: number) => {
     setSelectedStudentId(id)
     setReportDialogOpen(true)
+  }
+
+  const handleBalanceClick = (id: number) => {
+    setSelectedStudentId(id)
+    setBalanceDialogOpen(true)
   }
 
   const handleDownloadClick = async () => {
@@ -200,8 +207,9 @@ export const Students = () => {
         onEdit={handleEditClick}
         onAssignLessons={handleAssignLessonsClick}
         onReport={handleReportClick}
+        onBalance={handleBalanceClick}
         isDeleting={deleteMutation.isPending}
-        showBalance={isAdmin}
+        showAdminColumns={isAdmin}
         showActions={isAdmin}
       />
 
@@ -227,6 +235,12 @@ export const Students = () => {
         open={reportDialogOpen}
         onOpenChange={setReportDialogOpen}
         studentId={selectedStudentId}
+      />
+      <BalanceAdjustDialog
+        open={balanceDialogOpen}
+        onOpenChange={setBalanceDialogOpen}
+        studentId={selectedStudentId}
+        studentName={selectedStudent?.name}
       />
     </div>
   )

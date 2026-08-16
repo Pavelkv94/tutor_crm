@@ -13,10 +13,13 @@ import { CancelLessonDto, CancelationStatusEnum } from '../../../src/modules/les
 import { PlanTypeEnum } from '../../../src/modules/plan/interface/dto/requests/create-plan.dto';
 import { LessonStatusEnum } from '../../../src/modules/lesson/interface/dto/lesson-status.enum';
 import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
+import { BalanceService } from '../../../src/modules/balance/application/balance.service';
 import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
 import { RescheduledLessonInputDto } from '../../../src/modules/lesson/interface/dto/requests/rescheduled-lesson.input.dto';
 import { ManageFreeLessonStatusDto } from '../../../src/modules/lesson/interface/dto/requests/manage-free-lesson.input.dto';
 import { UpdateLessonsPlanForPeriodDto } from '../../../src/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto';
+import { PlanEntity } from '../../../src/modules/plan/domain/plan.entity';
+import { Currency } from '../../../src/shared/enums/currency.enum';
 
 describe('LessonService', () => {
 	let service: LessonService;
@@ -25,16 +28,19 @@ describe('LessonService', () => {
 	let studentService: StudentService;
 	let teacherService: TeacherService;
 	let lessonRegularRepository: LessonRegularRepository;
+	let balanceService: BalanceService;
 
-	const mockPlan = {
+	const mockPlan: PlanEntity = {
 		id: 1,
 		plan_type: PlanTypeEnum.INDIVIDUAL,
-		plan_currency: 'USD',
+		plan_currency: Currency.EUR,
 		plan_price: 100000,
 		duration: 10,
 		plan_name: 'Test Plan',
 		deleted_at: null,
 		created_at: new Date(),
+		stripe_product_id: null,
+		stripe_price_id: null,
 	};
 
 	const mockStudent = {
@@ -44,6 +50,7 @@ describe('LessonService', () => {
 		birth_date: new Date('2010-01-15'),
 		teacher_id: 1,
 		balance: 0,
+		balance_currency: 'EUR',
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,
@@ -109,6 +116,7 @@ describe('LessonService', () => {
 						updateLessonsPlanForPeriod: jest.fn(),
 						deleteLesson: jest.fn(),
 						manageFreeLessonStatus: jest.fn(),
+						findLessonsForPlanChange: jest.fn().mockResolvedValue([]),
 					},
 				},
 				{
@@ -138,6 +146,20 @@ describe('LessonService', () => {
 						getRegularLessons: jest.fn(),
 					},
 				},
+				{
+					provide: BalanceService,
+					useValue: {
+						// withStudentTransaction прогоняет колбэк на фейковом транзакционном клиенте,
+						// чтобы проверять сам порядок вызовов, а не работу Prisma.
+						withStudentTransaction: jest.fn(async (_studentId: number, fn: any) => fn({})),
+						reconcile: jest.fn().mockResolvedValue({ outcome: 'APPLIED', balance: 0, balance_currency: null, allocated: [], reverted: [], payment_id: null }),
+						reconcileInTx: jest.fn().mockResolvedValue({ outcome: 'APPLIED', balance: 0, balance_currency: null, allocated: [], reverted: [], payment_id: null }),
+						assertLessonCurrencyAllowed: jest.fn().mockResolvedValue(undefined),
+						getActiveAllocationInTx: jest.fn().mockResolvedValue(null),
+						transferAllocationInTx: jest.fn().mockResolvedValue(false),
+						releaseLessonInTx: jest.fn().mockResolvedValue(null),
+					},
+				},
 			],
 		}).compile();
 
@@ -147,6 +169,7 @@ describe('LessonService', () => {
 		studentService = module.get<StudentService>(StudentService);
 		teacherService = module.get<TeacherService>(TeacherService);
 		lessonRegularRepository = module.get<LessonRegularRepository>(LessonRegularRepository);
+		balanceService = module.get<BalanceService>(BalanceService);
 	});
 
 	it('should be defined', () => {
@@ -381,7 +404,7 @@ describe('LessonService', () => {
 			await service.cancelLesson(1, missedLessonDto, teacherPayload);
 
 			expect(lessonRepository.findById).toHaveBeenCalledWith(1);
-			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, missedLessonDto, null);
+			expect(lessonRepository.cancelLesson).toHaveBeenCalledWith(1, missedLessonDto, null, expect.anything());
 		});
 
 		it('should throw NotFoundException if lesson not found', async () => {
@@ -543,10 +566,37 @@ describe('LessonService', () => {
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
 			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
 			jest.spyOn(lessonRepository, 'updateLessonsPlanForPeriod').mockResolvedValue(undefined);
+			// Без затронутых занятий сервис выходит раньше: менять план не у чего.
+			jest.spyOn(lessonRepository, 'findLessonsForPlanChange').mockResolvedValue([{ id: 1, date: new Date('2026-08-05T10:00:00Z') }]);
 
 			await service.updateLessonsPlanForPeriod(dto);
 
-			expect(lessonRepository.updateLessonsPlanForPeriod).toHaveBeenCalledWith(dto);
+			expect(lessonRepository.updateLessonsPlanForPeriod).toHaveBeenCalledWith(dto, expect.anything());
+		});
+
+		it('releases allocations without redistributing them until the new price is in place', async () => {
+			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
+			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
+			jest.spyOn(lessonRepository, 'findLessonsForPlanChange').mockResolvedValue([{ id: 1, date: new Date('2026-08-05T10:00:00Z') }]);
+
+			const order: string[] = [];
+			(balanceService.releaseLessonInTx as jest.Mock).mockImplementation(async () => {
+				order.push('release');
+				return null;
+			});
+			jest.spyOn(lessonRepository, 'updateLessonsPlanForPeriod').mockImplementation(async () => {
+				order.push('update-plan');
+			});
+			(balanceService.reconcileInTx as jest.Mock).mockImplementation(async () => {
+				order.push('reconcile');
+				return { outcome: 'APPLIED', balance: 0, balance_currency: null, allocated: [], reverted: [], payment_id: null };
+			});
+
+			await service.updateLessonsPlanForPeriod(dto);
+
+			// Разложить деньги можно только после смены плана, иначе аллокация ляжет на старую цену.
+			expect(order).toEqual(['release', 'update-plan', 'reconcile']);
+			expect(balanceService.releaseLessonInTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ redistribute: false }));
 		});
 
 		it('should throw NotFoundException if student not found', async () => {
@@ -721,7 +771,7 @@ describe('LessonService', () => {
 
 			await service.deleteLesson(1);
 
-			expect(lessonRepository.deleteLesson).toHaveBeenCalledWith(1);
+			expect(lessonRepository.deleteLesson).toHaveBeenCalledWith(1, expect.anything());
 		});
 
 		it('should throw NotFoundException if lesson not found', async () => {
@@ -740,7 +790,7 @@ describe('LessonService', () => {
 
 			await service.manageFreeLessonStatus(1, dto);
 
-			expect(lessonRepository.manageFreeLessonStatus).toHaveBeenCalledWith(1, dto);
+			expect(lessonRepository.manageFreeLessonStatus).toHaveBeenCalledWith(1, dto, expect.anything());
 		});
 
 		it('should throw BadRequestException for trial lesson', async () => {
@@ -782,5 +832,73 @@ describe('LessonService', () => {
 			expect(lessonRepository.updatePendingLessonsStatus).toHaveBeenCalled();
 		});
 	});
-});
+	describe('balance hooks', () => {
+		const paidLesson = { ...mockLessonOutput, id: 10, student: { ...mockLessonOutput.student, id: 1 } };
 
+		beforeEach(() => {
+			jest.spyOn(lessonRepository, 'findById').mockResolvedValue(paidLesson as any);
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue({ id: 1, deleted_at: null } as any);
+		});
+
+		it('returns money to the balance when a paid lesson is cancelled', async () => {
+			const dto: CancelLessonDto = { status: CancelationStatusEnum.CANCELLED, comment: 'отмена' };
+
+			await service.cancelLesson(10, dto, { id: '1', login: 'a', name: 'a', role: TeacherRoleEnum.ADMIN });
+
+			expect(balanceService.releaseLessonInTx).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({ studentId: 1, lessonId: 10, reason: 'lesson:cancelled' }),
+			);
+		});
+
+		it('burns the money when a paid lesson is marked as missed', async () => {
+			const dto: CancelLessonDto = { status: CancelationStatusEnum.MISSED, comment: 'пропуск' };
+
+			await service.cancelLesson(10, dto, { id: '1', login: 'a', name: 'a', role: TeacherRoleEnum.ADMIN });
+
+			// Пропуск оплаченного занятия — деньги сгорают, аллокация остаётся на месте.
+			expect(balanceService.releaseLessonInTx).not.toHaveBeenCalled();
+		});
+
+		it('keeps the allocation when a lesson is moved to another date', async () => {
+			const dto: CancelLessonDto = { status: CancelationStatusEnum.RESCHEDULED, comment: 'перенос' };
+
+			await service.cancelLesson(10, dto, { id: '1', login: 'a', name: 'a', role: TeacherRoleEnum.ADMIN });
+
+			// Оплата ждёт переезда на новое занятие через transferAllocation.
+			expect(balanceService.releaseLessonInTx).not.toHaveBeenCalled();
+		});
+
+		it('releases the allocation before deleting a lesson', async () => {
+			const releaseOrder: string[] = [];
+			(balanceService.releaseLessonInTx as jest.Mock).mockImplementation(async () => {
+				releaseOrder.push('release');
+				return null;
+			});
+			jest.spyOn(lessonRepository, 'deleteLesson').mockImplementation(async () => {
+				releaseOrder.push('delete');
+			});
+
+			await service.deleteLesson(10);
+
+			// У lesson_payment стоит ON DELETE CASCADE: снять аллокацию нужно строго до удаления.
+			expect(releaseOrder).toEqual(['release', 'delete']);
+		});
+
+		it('releases the allocation when a lesson becomes free', async () => {
+			await service.manageFreeLessonStatus(10, { isFree: true });
+
+			expect(balanceService.releaseLessonInTx).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({ lessonId: 10, reason: 'lesson:marked-free' }),
+			);
+		});
+
+		it('does not release the allocation when a lesson becomes paid again', async () => {
+			await service.manageFreeLessonStatus(10, { isFree: false });
+
+			expect(balanceService.releaseLessonInTx).not.toHaveBeenCalled();
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: 0 }));
+		});
+	});
+});

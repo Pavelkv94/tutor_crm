@@ -2,7 +2,9 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
 import { MaterialRepository } from "../../../src/modules/material/infrastructure/material.repository";
 import { PrismaService } from "../../../src/infrastructure/prisma/prisma.service";
-import { FileType, UploadStatus } from "../../../src/infrastructure/prisma/generated/client";
+import { FileAccessType, FileType, UploadStatus } from "../../../src/infrastructure/prisma/generated/client";
+import { AccessSource } from "../../../src/modules/material/domain/access-source.enum";
+import { FileAccessType as DomainFileAccessType } from "../../../src/modules/material/domain/file-access-type.enum";
 import { CreateMaterialParams, UpdateMaterialParams } from "../../../src/modules/material/application/ports/material.repository.port";
 
 describe("MaterialRepository", () => {
@@ -33,6 +35,7 @@ describe("MaterialRepository", () => {
 							findUnique: jest.fn(),
 							findMany: jest.fn(),
 							update: jest.fn(),
+							delete: jest.fn(),
 							count: jest.fn(),
 							aggregate: jest.fn(),
 						},
@@ -41,6 +44,12 @@ describe("MaterialRepository", () => {
 							createMany: jest.fn(),
 							deleteMany: jest.fn(),
 						},
+						courseAccess: {
+							findMany: jest.fn(),
+							createMany: jest.fn(),
+							deleteMany: jest.fn(),
+						},
+						$transaction: jest.fn().mockResolvedValue([]),
 					},
 				},
 			],
@@ -126,11 +135,12 @@ describe("MaterialRepository", () => {
 				...mockFile,
 				upload_status: UploadStatus.UPLOADED,
 				file_accesses: [
-					{ teacher: { id: 5, name: "Teacher Five" } },
-					{ teacher: { id: 6, name: "Teacher Six" } },
+					{ teacher_id: 5, type: FileAccessType.ALLOW, teacher: { id: 5, name: "Teacher Five" } },
+					{ teacher_id: 6, type: FileAccessType.ALLOW, teacher: { id: 6, name: "Teacher Six" } },
 				],
 			};
 			jest.spyOn(prisma.file, "findMany").mockResolvedValue([uploadedFile] as any);
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([] as any);
 
 			const result = await repository.getMaterialsByCourseId(1);
 
@@ -146,9 +156,10 @@ describe("MaterialRepository", () => {
 					status: uploadedFile.upload_status,
 					created_at: uploadedFile.created_at,
 					teachers: [
-						{ id: 5, name: "Teacher Five" },
-						{ id: 6, name: "Teacher Six" },
+						{ id: 5, name: "Teacher Five", accessSource: AccessSource.FILE },
+						{ id: 6, name: "Teacher Six", accessSource: AccessSource.FILE },
 					],
+					restrictedTeachers: [],
 				},
 			]);
 			expect(prisma.file.findMany).toHaveBeenCalledWith({
@@ -160,8 +171,51 @@ describe("MaterialRepository", () => {
 						},
 					},
 				},
-				orderBy: { created_at: "desc" },
+				orderBy: { original_name: "asc" },
 			});
+			expect(prisma.courseAccess.findMany).toHaveBeenCalledWith({
+				where: { course_id: 1 },
+				include: { teacher: true },
+			});
+		});
+
+		it("should mark teachers with course access and skip their duplicate personal grants", async () => {
+			const uploadedFile = {
+				...mockFile,
+				upload_status: UploadStatus.UPLOADED,
+				file_accesses: [{ teacher_id: 5, type: FileAccessType.ALLOW, teacher: { id: 5, name: "Teacher Five" } }],
+			};
+			jest.spyOn(prisma.file, "findMany").mockResolvedValue([uploadedFile] as any);
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([
+				{ teacher_id: 5, teacher: { id: 5, name: "Teacher Five" } },
+				{ teacher_id: 7, teacher: { id: 7, name: "Teacher Seven" } },
+			] as any);
+
+			const [material] = await repository.getMaterialsByCourseId(1);
+
+			expect(material.teachers).toEqual([
+				{ id: 5, name: "Teacher Five", accessSource: AccessSource.COURSE },
+				{ id: 7, name: "Teacher Seven", accessSource: AccessSource.COURSE },
+			]);
+			expect(material.restrictedTeachers).toEqual([]);
+		});
+
+		it("should move teachers restricted for this material to restrictedTeachers", async () => {
+			const uploadedFile = {
+				...mockFile,
+				upload_status: UploadStatus.UPLOADED,
+				file_accesses: [{ teacher_id: 5, type: FileAccessType.DENY, teacher: { id: 5, name: "Teacher Five" } }],
+			};
+			jest.spyOn(prisma.file, "findMany").mockResolvedValue([uploadedFile] as any);
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([
+				{ teacher_id: 5, teacher: { id: 5, name: "Teacher Five" } },
+				{ teacher_id: 7, teacher: { id: 7, name: "Teacher Seven" } },
+			] as any);
+
+			const [material] = await repository.getMaterialsByCourseId(1);
+
+			expect(material.teachers).toEqual([{ id: 7, name: "Teacher Seven", accessSource: AccessSource.COURSE }]);
+			expect(material.restrictedTeachers).toEqual([{ id: 5, name: "Teacher Five" }]);
 		});
 	});
 
@@ -177,6 +231,49 @@ describe("MaterialRepository", () => {
 				where: { id: 10 },
 				data: { size_bytes: 2048, upload_status: UploadStatus.UPLOADED },
 			});
+		});
+	});
+
+	describe("renameMaterial", () => {
+		it("should update the original name and return the material with its teachers", async () => {
+			jest.spyOn(prisma.file, "update").mockResolvedValue({
+				...mockFile,
+				original_name: "renamed.pdf",
+				file_accesses: [{ teacher_id: 5, type: FileAccessType.ALLOW, teacher: { id: 5, name: "Teacher Five" } }],
+			} as any);
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([] as any);
+
+			const result = await repository.renameMaterial(10, "renamed.pdf");
+
+			expect(result.originalName).toBe("renamed.pdf");
+			expect(result.teachers).toEqual([{ id: 5, name: "Teacher Five", accessSource: AccessSource.FILE }]);
+			expect(result.restrictedTeachers).toEqual([]);
+			expect(prisma.file.update).toHaveBeenCalledWith({
+				where: { id: 10 },
+				data: { original_name: "renamed.pdf" },
+				include: {
+					file_accesses: {
+						include: {
+							teacher: true,
+						},
+					},
+				},
+			});
+		});
+	});
+
+	describe("deleteMaterial", () => {
+		it("should delete file access records and the file itself in a single transaction", async () => {
+			const deleteManyResult = Symbol("deleteMany");
+			const deleteResult = Symbol("delete");
+			jest.spyOn(prisma.fileAccess, "deleteMany").mockReturnValue(deleteManyResult as any);
+			jest.spyOn(prisma.file, "delete").mockReturnValue(deleteResult as any);
+
+			await repository.deleteMaterial(10);
+
+			expect(prisma.fileAccess.deleteMany).toHaveBeenCalledWith({ where: { file_id: 10 } });
+			expect(prisma.file.delete).toHaveBeenCalledWith({ where: { id: 10 } });
+			expect(prisma.$transaction).toHaveBeenCalledWith([deleteManyResult, deleteResult]);
 		});
 	});
 
@@ -200,51 +297,77 @@ describe("MaterialRepository", () => {
 	});
 
 	describe("hasAccess", () => {
-		it("should return true when a file access record exists", async () => {
-			jest.spyOn(prisma.fileAccess, "findFirst").mockResolvedValue({ id: 1, teacher_id: 5, file_id: 10, created_at: new Date() } as any);
+		const mockAccessLookup = (fileAccesses: unknown[], courseAccesses: unknown[]) => {
+			jest.spyOn(prisma.file, "findUnique").mockResolvedValue({
+				file_accesses: fileAccesses,
+				course: { accesses: courseAccesses },
+			} as any);
+		};
 
-			const result = await repository.hasAccess(5, 10);
+		it("should return true when the teacher has a personal grant", async () => {
+			mockAccessLookup([{ type: FileAccessType.ALLOW }], []);
 
-			expect(result).toBe(true);
-			expect(prisma.fileAccess.findFirst).toHaveBeenCalledWith({ where: { teacher_id: 5, file_id: 10 } });
+			expect(await repository.hasAccess(5, 10)).toBe(true);
 		});
 
-		it("should return false when there is no file access record", async () => {
-			jest.spyOn(prisma.fileAccess, "findFirst").mockResolvedValue(null);
+		it("should return true when the teacher has access to the course", async () => {
+			mockAccessLookup([], [{ id: 1 }]);
 
-			const result = await repository.hasAccess(5, 10);
+			expect(await repository.hasAccess(5, 10)).toBe(true);
+		});
 
-			expect(result).toBe(false);
+		it("should return false when the course access is restricted for this material", async () => {
+			mockAccessLookup([{ type: FileAccessType.DENY }], [{ id: 1 }]);
+
+			expect(await repository.hasAccess(5, 10)).toBe(false);
+		});
+
+		it("should return false when there is neither a personal grant nor course access", async () => {
+			mockAccessLookup([], []);
+
+			expect(await repository.hasAccess(5, 10)).toBe(false);
+		});
+
+		it("should return false when the material does not exist", async () => {
+			jest.spyOn(prisma.file, "findUnique").mockResolvedValue(null);
+
+			expect(await repository.hasAccess(5, 999)).toBe(false);
 		});
 	});
 
-	describe("createFileAccess", () => {
-		it("should create a file access record for each teacher", async () => {
-			jest.spyOn(prisma.fileAccess, "createMany").mockResolvedValue({ count: 2 } as any);
+	describe("setFileAccess", () => {
+		it("should replace existing records with records of the given type", async () => {
+			const deleteManyResult = Symbol("deleteMany");
+			const createManyResult = Symbol("createMany");
+			jest.spyOn(prisma.fileAccess, "deleteMany").mockReturnValue(deleteManyResult as any);
+			jest.spyOn(prisma.fileAccess, "createMany").mockReturnValue(createManyResult as any);
 
-			await repository.createFileAccess([1, 2], 10);
+			await repository.setFileAccess([1, 2], 10, DomainFileAccessType.DENY);
 
+			expect(prisma.fileAccess.deleteMany).toHaveBeenCalledWith({
+				where: { teacher_id: { in: [1, 2] }, file_id: 10 },
+			});
 			expect(prisma.fileAccess.createMany).toHaveBeenCalledWith({
 				data: [
-					{ teacher_id: 1, file_id: 10 },
-					{ teacher_id: 2, file_id: 10 },
+					{ teacher_id: 1, file_id: 10, type: DomainFileAccessType.DENY },
+					{ teacher_id: 2, file_id: 10, type: DomainFileAccessType.DENY },
 				],
-				skipDuplicates: true,
 			});
+			expect(prisma.$transaction).toHaveBeenCalledWith([deleteManyResult, createManyResult]);
 		});
 
 		it("should do nothing when teacher list is empty", async () => {
-			await repository.createFileAccess([], 10);
+			await repository.setFileAccess([], 10, DomainFileAccessType.ALLOW);
 
-			expect(prisma.fileAccess.createMany).not.toHaveBeenCalled();
+			expect(prisma.$transaction).not.toHaveBeenCalled();
 		});
 	});
 
-	describe("revokeFileAccess", () => {
+	describe("clearFileAccess", () => {
 		it("should delete file access records for the given teachers and material", async () => {
 			jest.spyOn(prisma.fileAccess, "deleteMany").mockResolvedValue({ count: 2 } as any);
 
-			await repository.revokeFileAccess([1, 2], 10);
+			await repository.clearFileAccess([1, 2], 10);
 
 			expect(prisma.fileAccess.deleteMany).toHaveBeenCalledWith({
 				where: { teacher_id: { in: [1, 2] }, file_id: 10 },
@@ -252,65 +375,105 @@ describe("MaterialRepository", () => {
 		});
 
 		it("should do nothing when teacher list is empty", async () => {
-			await repository.revokeFileAccess([], 10);
+			await repository.clearFileAccess([], 10);
 
 			expect(prisma.fileAccess.deleteMany).not.toHaveBeenCalled();
 		});
 	});
 
 	describe("grantCourseAccess", () => {
-		it("should create file access records for each teacher and each course file", async () => {
-			jest.spyOn(prisma.file, "findMany").mockResolvedValue([{ id: 10 }, { id: 11 }] as any);
-			jest.spyOn(prisma.fileAccess, "createMany").mockResolvedValue({ count: 4 } as any);
+		it("should create course access records and reset per-material records of the course", async () => {
+			const createManyResult = Symbol("createMany");
+			const deleteManyResult = Symbol("deleteMany");
+			jest.spyOn(prisma.courseAccess, "createMany").mockReturnValue(createManyResult as any);
+			jest.spyOn(prisma.fileAccess, "deleteMany").mockReturnValue(deleteManyResult as any);
 
 			await repository.grantCourseAccess(1, [5, 6]);
 
-			expect(prisma.file.findMany).toHaveBeenCalledWith({
-				where: { course_id: 1 },
-				select: { id: true },
-			});
-			expect(prisma.fileAccess.createMany).toHaveBeenCalledWith({
+			expect(prisma.courseAccess.createMany).toHaveBeenCalledWith({
 				data: [
-					{ teacher_id: 5, file_id: 10 },
-					{ teacher_id: 6, file_id: 10 },
-					{ teacher_id: 5, file_id: 11 },
-					{ teacher_id: 6, file_id: 11 },
+					{ teacher_id: 5, course_id: 1 },
+					{ teacher_id: 6, course_id: 1 },
 				],
 				skipDuplicates: true,
 			});
+			expect(prisma.fileAccess.deleteMany).toHaveBeenCalledWith({
+				where: { teacher_id: { in: [5, 6] }, file: { course_id: 1 } },
+			});
+			expect(prisma.$transaction).toHaveBeenCalledWith([createManyResult, deleteManyResult]);
 		});
 
 		it("should do nothing when teacher list is empty", async () => {
 			await repository.grantCourseAccess(1, []);
 
-			expect(prisma.file.findMany).not.toHaveBeenCalled();
-			expect(prisma.fileAccess.createMany).not.toHaveBeenCalled();
-		});
-
-		it("should do nothing when the course has no files", async () => {
-			jest.spyOn(prisma.file, "findMany").mockResolvedValue([]);
-
-			await repository.grantCourseAccess(1, [5, 6]);
-
-			expect(prisma.fileAccess.createMany).not.toHaveBeenCalled();
+			expect(prisma.$transaction).not.toHaveBeenCalled();
 		});
 	});
 
 	describe("revokeCourseAccess", () => {
-		it("should delete file access records for the given teachers across the course", async () => {
-			jest.spyOn(prisma.fileAccess, "deleteMany").mockResolvedValue({ count: 2 } as any);
+		it("should delete course access records together with per-material records of the course", async () => {
+			const courseDeleteResult = Symbol("courseDelete");
+			const fileDeleteResult = Symbol("fileDelete");
+			jest.spyOn(prisma.courseAccess, "deleteMany").mockReturnValue(courseDeleteResult as any);
+			jest.spyOn(prisma.fileAccess, "deleteMany").mockReturnValue(fileDeleteResult as any);
 
 			await repository.revokeCourseAccess(1, [5, 6]);
 
+			expect(prisma.courseAccess.deleteMany).toHaveBeenCalledWith({
+				where: { teacher_id: { in: [5, 6] }, course_id: 1 },
+			});
 			expect(prisma.fileAccess.deleteMany).toHaveBeenCalledWith({
 				where: { teacher_id: { in: [5, 6] }, file: { course_id: 1 } },
 			});
+			expect(prisma.$transaction).toHaveBeenCalledWith([courseDeleteResult, fileDeleteResult]);
 		});
 
 		it("should do nothing when teacher list is empty", async () => {
 			await repository.revokeCourseAccess(1, []);
 
-			expect(prisma.fileAccess.deleteMany).not.toHaveBeenCalled();
+			expect(prisma.$transaction).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("getCourseAccessTeachers", () => {
+		it("should return teachers with course access sorted by name", async () => {
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([
+				{ teacher: { id: 5, name: "Teacher Five" } },
+				{ teacher: { id: 7, name: "Teacher Seven" } },
+			] as any);
+
+			const result = await repository.getCourseAccessTeachers(1);
+
+			expect(result).toEqual([
+				{ id: 5, name: "Teacher Five" },
+				{ id: 7, name: "Teacher Seven" },
+			]);
+			expect(prisma.courseAccess.findMany).toHaveBeenCalledWith({
+				where: { course_id: 1 },
+				include: { teacher: true },
+				orderBy: { teacher: { name: "asc" } },
+			});
+		});
+	});
+
+	describe("filterTeachersWithCourseAccess", () => {
+		it("should return only the teachers who have access to the course", async () => {
+			jest.spyOn(prisma.courseAccess, "findMany").mockResolvedValue([{ teacher_id: 5 }] as any);
+
+			const result = await repository.filterTeachersWithCourseAccess(1, [5, 6]);
+
+			expect(result).toEqual([5]);
+			expect(prisma.courseAccess.findMany).toHaveBeenCalledWith({
+				where: { course_id: 1, teacher_id: { in: [5, 6] } },
+				select: { teacher_id: true },
+			});
+		});
+
+		it("should return an empty list without querying when teacher list is empty", async () => {
+			const result = await repository.filterTeachersWithCourseAccess(1, []);
+
+			expect(result).toEqual([]);
+			expect(prisma.courseAccess.findMany).not.toHaveBeenCalled();
 		});
 	});
 

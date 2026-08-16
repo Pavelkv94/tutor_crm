@@ -5,12 +5,8 @@ import { telegramConfig, TelegramConfig } from '../../../src/config/namespaces/t
 import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
 import { StudentService } from '../../../src/modules/student/application/student.service';
 import { TelegramRepository } from '../../../src/modules/telegram/infrastructure/telegram.repository';
-import { LessonService } from '../../../src/modules/lesson/application/lesson.service';
 import { TelegramLinkInputDto } from '../../../src/modules/telegram/interface/dto/requests/telegram-link.input.dto';
-import { LessonsCostFiltersDto } from '../../../src/modules/telegram/interface/dto/requests/lessons-cost-filter.input.dto';
 import { TelegramUserEnum } from '../../../src/modules/telegram/interface/dto/telegram-user.enum';
-import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
-import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
 import { LessonStatusEnum } from '../../../src/modules/lesson/interface/dto/lesson-status.enum';
 
 describe('TelegramService', () => {
@@ -18,7 +14,6 @@ describe('TelegramService', () => {
 	let teacherService: TeacherService;
 	let studentService: StudentService;
 	let telegramRepository: TelegramRepository;
-	let lessonService: LessonService;
 
 	const mockTelegramConfig = {
 		botToken: 'test_bot_token',
@@ -58,46 +53,6 @@ describe('TelegramService', () => {
 		student_id: null,
 	};
 
-	const mockTeacherPayload: JwtPayloadDto = {
-		id: '1',
-		login: 'testuser',
-		name: 'Test Teacher',
-		role: TeacherRoleEnum.TEACHER,
-	};
-
-	const mockLessons = [
-		{
-			id: 1,
-			date: new Date('2024-01-15T10:00:00Z'),
-			is_free: false,
-			plan: {
-				id: 1,
-				plan_price: 100,
-				plan_currency: 'BYN',
-			},
-		},
-		{
-			id: 2,
-			date: new Date('2024-01-16T10:00:00Z'),
-			is_free: true,
-			plan: {
-				id: 1,
-				plan_price: 0,
-				plan_currency: 'BYN',
-			},
-		},
-		{
-			id: 3,
-			date: new Date('2024-01-17T10:00:00Z'),
-			is_free: false,
-			plan: {
-				id: 2,
-				plan_price: 150,
-				plan_currency: 'BYN',
-			},
-		},
-	];
-
 	beforeEach(async () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
@@ -129,12 +84,6 @@ describe('TelegramService', () => {
 						createTelegramUser: jest.fn(),
 					},
 				},
-				{
-					provide: LessonService,
-					useValue: {
-						findPendingUnpaidLessonsForPeriodAndStudent: jest.fn(),
-					},
-				},
 			],
 		}).compile();
 
@@ -142,7 +91,6 @@ describe('TelegramService', () => {
 		teacherService = module.get<TeacherService>(TeacherService);
 		studentService = module.get<StudentService>(StudentService);
 		telegramRepository = module.get<TelegramRepository>(TelegramRepository);
-		lessonService = module.get<LessonService>(LessonService);
 		// Mock telegram.sendMessage
 		(service as any).telegram = {
 			sendMessage: jest.fn().mockResolvedValue({ message_id: 1 }),
@@ -305,58 +253,6 @@ describe('TelegramService', () => {
 
 			await expect(service.sendMessageToUser(telegramId, message)).resolves.not.toThrow();
 			expect((service as any).telegram.sendMessage).not.toHaveBeenCalled();
-		});
-	});
-
-	describe('sendLessonsCostToAdmin', () => {
-		it('should send lessons cost report to admin', async () => {
-			const dto: LessonsCostFiltersDto = {
-				student_id: 1,
-				start_date: '2024-01-01',
-				end_date: '2024-01-31',
-			};
-
-			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonService, 'findPendingUnpaidLessonsForPeriodAndStudent').mockResolvedValue(mockLessons as any);
-			jest.spyOn(telegramRepository, 'findTelegramByTelegramId').mockResolvedValue(mockTelegramUser as any);
-
-			await service.sendLessonsCostToAdmin(dto, mockTeacherPayload);
-
-			expect(studentService.findById).toHaveBeenCalledWith(1);
-			expect(lessonService.findPendingUnpaidLessonsForPeriodAndStudent).toHaveBeenCalledWith(
-				1,
-				dto.start_date,
-				dto.end_date,
-				mockTeacherPayload
-			);
-			expect((service as any).telegram.sendMessage).toHaveBeenCalled();
-		});
-
-		it('should throw NotFoundException when student not found', async () => {
-			const dto: LessonsCostFiltersDto = {
-				student_id: 1,
-				start_date: '2024-01-01',
-				end_date: '2024-01-31',
-			};
-
-			jest.spyOn(studentService, 'findById').mockResolvedValue(null as any);
-
-			await expect(service.sendLessonsCostToAdmin(dto, mockTeacherPayload)).rejects.toThrow(NotFoundException);
-			await expect(service.sendLessonsCostToAdmin(dto, mockTeacherPayload)).rejects.toThrow('Студент не найден');
-		});
-
-		it('should throw BadRequestException when no pending unpaid lessons', async () => {
-			const dto: LessonsCostFiltersDto = {
-				student_id: 1,
-				start_date: '2024-01-01',
-				end_date: '2024-01-31',
-			};
-
-			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
-			jest.spyOn(lessonService, 'findPendingUnpaidLessonsForPeriodAndStudent').mockResolvedValue([]);
-
-			await expect(service.sendLessonsCostToAdmin(dto, mockTeacherPayload)).rejects.toThrow(BadRequestException);
-			await expect(service.sendLessonsCostToAdmin(dto, mockTeacherPayload)).rejects.toThrow('По заданному периоду нет ожидающих оплату уроков');
 		});
 	});
 

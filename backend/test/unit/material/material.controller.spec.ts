@@ -32,9 +32,12 @@ describe("MaterialController", () => {
 
 	const mockMaterialService = {
 		getCourseMaterials: jest.fn(),
+		getCourseAccess: jest.fn(),
 		uploadInit: jest.fn(),
 		uploadComplete: jest.fn(),
 		getViewUrl: jest.fn(),
+		renameMaterial: jest.fn(),
+		deleteMaterial: jest.fn(),
 		getMaterialsSize: jest.fn(),
 		grantMaterialAccess: jest.fn(),
 		revokeMaterialAccess: jest.fn(),
@@ -126,13 +129,16 @@ describe("MaterialController", () => {
 				type: "PDF",
 				status: "UPLOADED",
 				created_at: new Date(),
-				teachers: [{ id: 5, name: "Teacher Five" }],
+				teachers: [{ id: 5, name: "Teacher Five", accessSource: "COURSE" }],
+				restrictedTeachers: [{ id: 6, name: "Teacher Six" }],
+				hasAccess: true,
 			};
+			const teacher = { id: "5", login: "teacher", name: "Teacher", role: "TEACHER" };
 			jest.spyOn(materialService, "getCourseMaterials").mockResolvedValue([mockMaterialEntity as any]);
 
-			const result = await controller.getCourseMaterials("1");
+			const result = await controller.getCourseMaterials("1", teacher as any);
 
-			expect(materialService.getCourseMaterials).toHaveBeenCalledWith(1);
+			expect(materialService.getCourseMaterials).toHaveBeenCalledWith(1, 5, "TEACHER");
 			expect(result).toEqual([
 				{
 					id: mockMaterialEntity.id,
@@ -144,8 +150,22 @@ describe("MaterialController", () => {
 					status: mockMaterialEntity.status,
 					created_at: mockMaterialEntity.created_at,
 					teachers: mockMaterialEntity.teachers,
+					restrictedTeachers: mockMaterialEntity.restrictedTeachers,
+					hasAccess: true,
 				},
 			]);
+		});
+	});
+
+	describe("getCourseAccess", () => {
+		it("should delegate to material service", async () => {
+			const teachers = [{ id: 5, name: "Teacher Five" }];
+			jest.spyOn(materialService, "getCourseAccess").mockResolvedValue(teachers);
+
+			const result = await controller.getCourseAccess("1");
+
+			expect(materialService.getCourseAccess).toHaveBeenCalledWith(1);
+			expect(result).toEqual(teachers);
 		});
 	});
 
@@ -189,6 +209,52 @@ describe("MaterialController", () => {
 
 			expect(materialService.getViewUrl).toHaveBeenCalledWith(10, 5, "TEACHER");
 			expect(result).toEqual(response);
+		});
+	});
+
+	describe("renameMaterial", () => {
+		it("should delegate to material service and return the renamed material mapped to response dto", async () => {
+			const renamedMaterialEntity = {
+				id: 10,
+				courseId: 1,
+				storageKey: "1/uuid-lesson5.pdf",
+				originalName: "renamed.pdf",
+				mimeType: "application/pdf",
+				sizeBytes: 1024,
+				type: "PDF",
+				status: "UPLOADED",
+				created_at: new Date(),
+				teachers: [{ id: 5, name: "Teacher Five", accessSource: "FILE" }],
+				hasAccess: true,
+			};
+			jest.spyOn(materialService, "renameMaterial").mockResolvedValue(renamedMaterialEntity as any);
+
+			const result = await controller.renameMaterial("10", { originalName: "renamed.pdf" });
+
+			expect(materialService.renameMaterial).toHaveBeenCalledWith(10, "renamed.pdf");
+			expect(result).toEqual({
+				id: renamedMaterialEntity.id,
+				courseId: renamedMaterialEntity.courseId,
+				originalName: "renamed.pdf",
+				mimeType: renamedMaterialEntity.mimeType,
+				sizeBytes: renamedMaterialEntity.sizeBytes,
+				type: renamedMaterialEntity.type,
+				status: renamedMaterialEntity.status,
+				created_at: renamedMaterialEntity.created_at,
+				teachers: renamedMaterialEntity.teachers,
+				restrictedTeachers: [],
+				hasAccess: true,
+			});
+		});
+	});
+
+	describe("deleteFile", () => {
+		it("should delegate to material service", async () => {
+			jest.spyOn(materialService, "deleteMaterial").mockResolvedValue(undefined);
+
+			await controller.deleteFile("10");
+
+			expect(materialService.deleteMaterial).toHaveBeenCalledWith(10);
 		});
 	});
 

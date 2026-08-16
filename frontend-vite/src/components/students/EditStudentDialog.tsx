@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -28,21 +29,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
 import { showSuccessToast } from '@/lib/toast'
-import type { PaymentCurrency, UpdateStudentInput } from '@/types'
-
-const PAYMENT_CURRENCIES: { value: PaymentCurrency; label: string }[] = [
-	{ value: 'BYN', label: 'BYN 🇧🇾' },
-	{ value: 'EUR', label: 'EUR 🇪🇺' },
-	{ value: 'PLN', label: 'PLN 🇵🇱' },
-]
-
-const currencyFlags: Record<string, string> = {
-  USD: '🇺🇸',
-  EUR: '🇪🇺',
-  PLN: '🇵🇱',
-  BYN: '🇧🇾',
-  RUB: '🇷🇺',
-}
+import type { UpdateStudentInput } from '@/types'
+import { formatMoney, getCurrencyFlag } from '@/constants/currency'
+import { getAllowedPlanCurrency, isPlanSelectable } from '@/lib/lesson-currency'
+import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 
 const getDefaultDateTimeLocal = (): string => {
   const d = new Date()
@@ -63,7 +53,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
 	const [marketingConsent, setMarketingConsent] = useState(false)
-	const [paymentCurrency, setPaymentCurrency] = useState<PaymentCurrency>('BYN')
+	const [termsAccepted, setTermsAccepted] = useState(false)
   const [oldPlanId, setOldPlanId] = useState<string>('')
   const [newPlanId, setNewPlanId] = useState<string>('')
   const [planStartDate, setPlanStartDate] = useState('')
@@ -92,6 +82,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
 
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
   const actualPlans = student?.actualPlans ?? []
+  const allowedCurrency = getAllowedPlanCurrency(student)
 
   useEffect(() => {
     if (student && open) {
@@ -105,7 +96,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       }
       setTimezone(student.timezone || '')
 			setMarketingConsent(student.marketing_consent)
-			setPaymentCurrency(student.payment_currency)
+			setTermsAccepted(student.terms_accepted)
     }
   }, [student, open, studentId])
 
@@ -133,8 +124,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       lessonsApi.updateLessonsPlanForPeriod(data),
     onSuccess: () => {
       showSuccessToast('План для периода успешно изменён')
-      queryClient.invalidateQueries({ queryKey: ['student', studentId] })
-      queryClient.invalidateQueries({ queryKey: ['lessons'] })
+      invalidateMoneyQueries(queryClient, studentId)
     },
   })
 
@@ -146,7 +136,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setTeacherId('')
       setTimezone('')
 			setMarketingConsent(false)
-			setPaymentCurrency('BYN')
+			setTermsAccepted(false)
     }
   }, [open])
 
@@ -172,7 +162,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       birth_date: birthDate ? new Date(birthDate).toISOString() : undefined,
       timezone: timezone || null,
 			marketing_consent: marketingConsent,
-			payment_currency: paymentCurrency,
+			terms_accepted: termsAccepted,
     }
 
     // Only include teacher_id if admin and it's provided
@@ -262,31 +252,51 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                 value={timezone}
                 onValueChange={setTimezone}
               />
-							<div className="grid gap-2">
-								<Label htmlFor="edit-paymentCurrency">Счет для оплаты</Label>
-								<Select value={paymentCurrency} onValueChange={(value) => setPaymentCurrency(value as PaymentCurrency)}>
-									<SelectTrigger id="edit-paymentCurrency" aria-label="Счет для оплаты">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{PAYMENT_CURRENCIES.map((currency) => (
-											<SelectItem key={currency.value} value={currency.value}>
-												{currency.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="flex items-center gap-2">
-								<Checkbox
-									id="edit-marketingConsent"
-									checked={marketingConsent}
-									onCheckedChange={(checked) => setMarketingConsent(checked === true)}
-									aria-label="Согласие на маркетинг"
-								/>
-								<Label htmlFor="edit-marketingConsent" className="cursor-pointer">
-									Согласие на маркетинг
-								</Label>
+							{isAdmin && (
+								<div className="grid gap-2">
+									<Label>Баланс</Label>
+									<div className="flex items-center gap-2 text-sm font-semibold">
+										<span>{formatMoney(student.balance, student.balance_currency)}</span>
+										{student.balance_currency && (
+											<span aria-hidden="true">{getCurrencyFlag(student.balance_currency)}</span>
+										)}
+									</div>
+									<p className="text-xs text-muted-foreground">
+										Валюта задаётся платежом и меняется только через корректировку баланса.
+									</p>
+								</div>
+							)}
+							<div className="grid gap-3">
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="edit-marketingConsent"
+										checked={marketingConsent}
+										onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+										aria-label="Согласие на маркетинг"
+									/>
+									<Label htmlFor="edit-marketingConsent" className="cursor-pointer">
+										Согласие на маркетинг
+									</Label>
+								</div>
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="edit-termsAccepted"
+										checked={termsAccepted}
+										onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+										aria-label="Условия обслуживания приняты"
+									/>
+									<Label htmlFor="edit-termsAccepted" className="cursor-pointer">
+										Условия обслуживания приняты
+									</Label>
+								</div>
+								<p className="text-xs text-muted-foreground">
+									{student.marketing_consent_at
+										? `Ответ про фото/видео получен ${format(new Date(student.marketing_consent_at), 'dd.MM.yyyy')}`
+										: 'Про фото/видео ещё не спрашивали — вопрос появится на странице оплаты'}
+									{student.terms_accepted_at
+										? ` · условия приняты ${format(new Date(student.terms_accepted_at), 'dd.MM.yyyy')}`
+										: ' · условия ещё не приняты'}
+								</p>
 							</div>
             </div>
             <DialogFooter>
@@ -323,7 +333,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                               <span className="flex items-center gap-2">
                                 <span>{plan.plan_name}</span>
                                 <span className="text-muted-foreground">
-                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] ?? ''}
+                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                                 </span>
                               </span>
                             </SelectItem>
@@ -361,18 +371,35 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
                         <SelectValue placeholder="Не выбрано" />
                       </SelectTrigger>
                       <SelectContent>
-                        {activePlans.map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id.toString()}>
-                            <span className="flex items-center gap-2">
-                              <span>{plan.plan_name}</span>
-                              <span className="text-muted-foreground">
-                                {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] ?? ''}
+                        {activePlans.map((plan) => {
+                          const isSelectable = isPlanSelectable(plan, allowedCurrency)
+
+                          return (
+                            <SelectItem
+                              key={plan.id}
+                              value={plan.id.toString()}
+                              disabled={!isSelectable}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span>{plan.plan_name}</span>
+                                <span className="text-muted-foreground">
+                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                                </span>
+                                {!isSelectable && (
+                                  <span className="text-muted-foreground">(другая валюта)</span>
+                                )}
                               </span>
-                            </span>
-                          </SelectItem>
-                        ))}
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
+                    {allowedCurrency && (
+                      <p className="text-xs text-muted-foreground">
+                        На балансе {formatMoney(student.balance, allowedCurrency)} — доступны только
+                        планы в {allowedCurrency}.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DialogFooter className="sm:justify-start">

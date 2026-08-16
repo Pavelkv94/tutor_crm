@@ -11,19 +11,15 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import type { RegularLessonInput, WeekDay, Teacher, Plan } from '@/types'
-
-const currencyFlags: Record<string, string> = {
-	USD: '🇺🇸',
-	EUR: '🇪🇺',
-	PLN: '🇵🇱',
-	BYN: '🇧🇾',
-	RUB: '🇷🇺',
-}
+import { type Currency, getCurrencyFlag } from '@/constants/currency'
+import { isPlanSelectable } from '@/lib/lesson-currency'
 
 interface RegularLessonCardProps {
   lesson: RegularLessonInput
   teachers: Teacher[]
   plans: Plan[]
+  /** Валюта остатка на балансе ученика: тарифы в другой валюте недоступны. */
+  allowedCurrency?: Currency | null
   onUpdate: (lesson: RegularLessonInput) => void
   onRemove: () => void
 }
@@ -71,6 +67,7 @@ export const RegularLessonCard = ({
   lesson,
   teachers,
   plans,
+  allowedCurrency,
   onUpdate,
   onRemove,
 }: RegularLessonCardProps) => {
@@ -116,18 +113,31 @@ export const RegularLessonCard = ({
                 <SelectValue placeholder="Выберите тариф" />
               </SelectTrigger>
               <SelectContent>
-                {plans.filter((plan) => !plan.deleted_at && plan.plan_price > 0).map((plan) => (
-                  <SelectItem key={plan.id} value={plan.id.toString()}>
-                    <span className="flex items-center gap-2">
-                      <span>{plan.plan_name}</span>
-                      <span className="text-muted-foreground">
-                        {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] || ''}
+                {plans.filter((plan) => !plan.deleted_at && plan.plan_price > 0).map((plan) => {
+                  const isSelectable = isPlanSelectable(plan, allowedCurrency ?? null)
+
+                  return (
+                    <SelectItem key={plan.id} value={plan.id.toString()} disabled={!isSelectable}>
+                      <span className="flex items-center gap-2">
+                        <span>{plan.plan_name}</span>
+                        <span className="text-muted-foreground">
+                          {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                        </span>
+                        {!isSelectable && (
+                          <span className="text-muted-foreground">(другая валюта)</span>
+                        )}
                       </span>
-                    </span>
-                  </SelectItem>
-                ))}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
+            {allowedCurrency && (
+              <p className="text-xs text-muted-foreground">
+                На балансе ученика есть деньги в {allowedCurrency} — доступны только тарифы в этой
+                валюте.
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="startTime">Время начала</Label>

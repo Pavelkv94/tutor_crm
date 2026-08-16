@@ -5,7 +5,7 @@ import { BadRequestErrorResponse } from "@/shared/exceptions/simple-exception";
 export const RevokeCourseAccessSwagger = () => {
 	const decorators = [
 		ApiOperation({
-			summary: "Revoke teachers access from all materials of a course",
+			summary: "Revoke teachers access to a course together with per-material grants and restrictions of that course",
 		}),
 		ApiNoContentResponse({
 			description: "Access has been successfully revoked from all course materials",

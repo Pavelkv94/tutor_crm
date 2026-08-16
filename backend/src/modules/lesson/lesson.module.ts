@@ -6,8 +6,9 @@ import { PlanModule } from '../plan/plan.module';
 import { LessonRegularRepository } from './infrastructure/lesson-regular.repository';
 import { StudentModule } from '../student/student.module';
 import { TeacherModule } from '../teacher/teacher.module';
+import { BalanceModule } from '@/modules/balance/balance.module';
 @Module({
-	imports: [PlanModule, StudentModule, TeacherModule],
+	imports: [PlanModule, StudentModule, TeacherModule, BalanceModule],
   controllers: [LessonController],
 	providers: [LessonService, LessonRepository, LessonRegularRepository],
 	exports: [LessonService],

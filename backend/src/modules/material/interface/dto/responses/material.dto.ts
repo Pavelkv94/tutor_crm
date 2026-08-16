@@ -1,13 +1,23 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { AccessSource } from "@/modules/material/domain/access-source.enum";
 import { FileType } from "@/modules/material/domain/file-type.enum";
 import { UploadStatus } from "@/modules/material/domain/upload-status.enum";
 
-export class MaterialTeacherDto {
+export class TeacherRefDto {
 	@ApiProperty({ description: "The id of the teacher", example: 1 })
 	id: number;
 
 	@ApiProperty({ description: "The name of the teacher", example: "John Doe" })
 	name: string;
+}
+
+export class MaterialTeacherDto extends TeacherRefDto {
+	@ApiProperty({
+		description: "Where the access comes from: the whole course or this material only",
+		enum: AccessSource,
+		example: AccessSource.COURSE,
+	})
+	accessSource: AccessSource;
 }
 
 export class MaterialDto {
@@ -29,4 +39,11 @@ export class MaterialDto {
 	created_at: Date;
 	@ApiProperty({ description: "Teachers who have access to this material", type: [MaterialTeacherDto] })
 	teachers: MaterialTeacherDto[];
+	@ApiProperty({
+		description: "Teachers with course access whose access to this material has been restricted",
+		type: [TeacherRefDto],
+	})
+	restrictedTeachers: TeacherRefDto[];
+	@ApiProperty({ description: "Whether the requesting user has access to this material", example: true })
+	hasAccess: boolean;
 }

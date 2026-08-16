@@ -13,6 +13,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { MaterialModule } from './modules/material/material.module';
+import { BalanceModule } from '@/modules/balance/balance.module';
+import { PaymentsModule } from '@/modules/payments/payments.module';
 @Module({
 	imports: [
 		AppConfigModule,
@@ -34,6 +36,8 @@ import { MaterialModule } from './modules/material/material.module';
 		TelegramModule,
 		TasksModule,
 		MaterialModule,
+		BalanceModule,
+		PaymentsModule,
 	],
 	controllers: [],
 	providers: [],

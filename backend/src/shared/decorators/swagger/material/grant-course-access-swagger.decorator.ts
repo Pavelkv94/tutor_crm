@@ -5,7 +5,7 @@ import { BadRequestErrorResponse } from "@/shared/exceptions/simple-exception";
 export const GrantCourseAccessSwagger = () => {
 	const decorators = [
 		ApiOperation({
-			summary: "Grant teachers access to all materials of a course",
+			summary: "Grant teachers access to a course, including materials added later. Resets per-material restrictions of the course",
 		}),
 		ApiNoContentResponse({
 			description: "Access has been successfully granted to all course materials",

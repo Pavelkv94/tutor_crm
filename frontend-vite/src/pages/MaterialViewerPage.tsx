@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 import { materialsApi } from '@/api/materials'
 
 export const MaterialViewerPage = () => {
@@ -13,6 +14,7 @@ export const MaterialViewerPage = () => {
     data,
     isLoading,
     isError,
+    error,
   } = useQuery({
     queryKey: ['materials', parsedMaterialId, 'view-url'],
     queryFn: () => materialsApi.getViewUrl(parsedMaterialId),
@@ -43,9 +45,11 @@ export const MaterialViewerPage = () => {
   }
 
   if (isError || !data?.url) {
+    const isForbidden = axios.isAxiosError(error) && error.response?.status === 403
+
     return (
       <div className="flex h-screen items-center justify-center bg-background text-destructive">
-        Не удалось открыть материал
+        {isForbidden ? 'Нет доступа к этому материалу' : 'Не удалось открыть материал'}
       </div>
     )
   }

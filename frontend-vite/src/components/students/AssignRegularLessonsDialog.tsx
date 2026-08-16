@@ -14,6 +14,9 @@ import { RegularLessonCard } from './RegularLessonCard'
 import { teachersApi } from '@/api/teachers'
 import { plansApi } from '@/api/plans'
 import { lessonsApi } from '@/api/lessons'
+import { studentsApi } from '@/api/students'
+import { getAllowedPlanCurrency } from '@/lib/lesson-currency'
+import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 import type { RegularLessonInput, WeekDay } from '@/types'
 
 interface AssignRegularLessonsDialogProps {
@@ -68,14 +71,21 @@ export const AssignRegularLessonsDialog = ({
     enabled: open,
   })
 
+  const { data: student } = useQuery({
+    queryKey: ['student', studentId],
+    queryFn: () => studentsApi.getById(studentId!),
+    enabled: open && studentId !== null,
+  })
+
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
   const activePlans = plans.filter((plan) => !plan.deleted_at)
+  const allowedCurrency = getAllowedPlanCurrency(student)
 
   const createMutation = useMutation({
     mutationFn: (data: { lessons: RegularLessonInput[] }) =>
       lessonsApi.createRegularLessons(studentId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] })
+      invalidateMoneyQueries(queryClient, studentId)
       onOpenChange(false)
       setLessons([createEmptyLesson()])
     },
@@ -156,6 +166,7 @@ export const AssignRegularLessonsDialog = ({
                 lesson={lesson}
                 teachers={activeTeachers}
                 plans={activePlans}
+                allowedCurrency={allowedCurrency}
                 onUpdate={(updatedLesson) => handleUpdateLesson(index, updatedLesson)}
                 onRemove={() => handleRemoveLesson(index)}
               />

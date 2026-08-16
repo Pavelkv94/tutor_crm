@@ -51,6 +51,17 @@
 		}
 	},
 	"files": {
-		"includes": ["apps/**/*.ts", "libs/**/*.ts"]
+		"includes": [
+			"src/modules/payments/**/*.ts",
+			"src/modules/balance/**/*.ts",
+			"src/infrastructure/stripe/**/*.ts",
+			"src/shared/enums/**/*.ts",
+			"src/shared/decorators/swagger/payments/**/*.ts",
+			"test/unit/payments/**/*.ts",
+			"test/unit/balance/**/*.ts",
+			"test/unit/stripe/**/*.ts",
+			"apps/**/*.ts",
+			"libs/**/*.ts"
+		]
 	}
 }

@@ -4,6 +4,8 @@ import type {
   CreateCourseInput,
   Material,
   MaterialsSize,
+  RenameMaterialInput,
+  TeacherRef,
   UpdateAccessInput,
   UpdateCourseInput,
   UploadInitInput,
@@ -37,7 +39,13 @@ export const materialsApi = {
     return response.data.map((material) => ({
       ...material,
       teachers: material.teachers ?? [],
+      restrictedTeachers: material.restrictedTeachers ?? [],
     }))
+  },
+
+  getCourseAccess: async (courseId: number): Promise<TeacherRef[]> => {
+    const response = await apiClient.get<TeacherRef[]>(`/materials/courses/${courseId}/access`)
+    return response.data
   },
 
   getViewUrl: async (materialId: number): Promise<ViewUrlResponse> => {
@@ -71,6 +79,11 @@ export const materialsApi = {
 
   uploadComplete: async (materialId: number): Promise<void> => {
     await apiClient.post(`/materials/upload/${materialId}/complete`)
+  },
+
+  renameMaterial: async (materialId: number, data: RenameMaterialInput): Promise<Material> => {
+    const response = await apiClient.put<Material>(`/materials/${materialId}`, data)
+    return response.data
   },
 
   deleteMaterial: async (materialId: number): Promise<void> => {

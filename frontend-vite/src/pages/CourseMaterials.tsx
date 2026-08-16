@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Upload } from 'lucide-react'
+import { ArrowLeft, Search, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { DeleteMaterialDialog } from '@/components/materials/DeleteMaterialDialog'
 import { MaterialAccessDialog } from '@/components/materials/MaterialAccessDialog'
 import { MaterialsTable } from '@/components/materials/MaterialsTable'
+import { RenameMaterialDialog } from '@/components/materials/RenameMaterialDialog'
 import { UploadMaterialDialog } from '@/components/materials/UploadMaterialDialog'
 import { materialsApi } from '@/api/materials'
 import { useAuth } from '@/contexts/AuthContext'
@@ -20,7 +22,9 @@ export const CourseMaterials = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [accessDialogOpen, setAccessDialogOpen] = useState(false)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const parsedCourseId = Number(courseId)
 
   const { data: courses = [], isLoading: isCoursesLoading } = useQuery({
@@ -43,6 +47,13 @@ export const CourseMaterials = () => {
     selectedMaterialId === null
       ? null
       : materials.find((material) => material.id === selectedMaterialId) ?? null
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase()
+  const filteredMaterials = normalizedSearchQuery
+    ? materials.filter((material) =>
+        material.originalName.toLowerCase().includes(normalizedSearchQuery),
+      )
+    : materials
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => materialsApi.deleteMaterial(id),
@@ -78,6 +89,11 @@ export const CourseMaterials = () => {
     setAccessDialogOpen(true)
   }
 
+  const handleRenameClick = (material: Material) => {
+    setSelectedMaterialId(material.id)
+    setRenameDialogOpen(true)
+  }
+
   const handleDeleteConfirm = () => {
     if (selectedMaterialId === null) return
     deleteMutation.mutate(selectedMaterialId)
@@ -85,6 +101,13 @@ export const CourseMaterials = () => {
 
   const handleAccessOpenChange = (open: boolean) => {
     setAccessDialogOpen(open)
+    if (!open) {
+      setSelectedMaterialId(null)
+    }
+  }
+
+  const handleRenameOpenChange = (open: boolean) => {
+    setRenameDialogOpen(open)
     if (!open) {
       setSelectedMaterialId(null)
     }
@@ -150,18 +173,38 @@ export const CourseMaterials = () => {
         )}
       </div>
 
+      <div className="relative w-full sm:max-w-sm">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Поиск по названию"
+          aria-label="Поиск материалов по названию"
+          className="pl-9"
+        />
+      </div>
+
       {isMaterialsLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="text-muted-foreground">Загрузка...</div>
         </div>
       ) : materials.length === 0 ? (
         <p className="py-10 text-center text-muted-foreground">Материалы не найдены</p>
+      ) : filteredMaterials.length === 0 ? (
+        <p className="py-10 text-center text-muted-foreground">
+          Ничего не найдено по запросу «{searchQuery.trim()}»
+        </p>
       ) : (
         <MaterialsTable
-          materials={materials}
+          materials={filteredMaterials}
           onOpen={handleOpenMaterial}
           showActions={isAdmin}
           onAccess={handleAccessClick}
+          onRename={handleRenameClick}
           onDelete={handleDeleteClick}
           isDeleting={deleteMutation.isPending}
         />
@@ -179,6 +222,13 @@ export const CourseMaterials = () => {
         material={selectedMaterial}
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <RenameMaterialDialog
+        open={renameDialogOpen}
+        onOpenChange={handleRenameOpenChange}
+        material={selectedMaterial}
+        courseId={course.id}
       />
 
       <MaterialAccessDialog

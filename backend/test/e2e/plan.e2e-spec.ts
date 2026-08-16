@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
 import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { TeacherRole, PlanType, Currency } from '../../src/infrastructure/prisma/generated/client';
 import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 
 describe('PlanController (e2e)', () => {
@@ -26,7 +26,7 @@ describe('PlanController (e2e)', () => {
 
 	const testPlan = {
 		plan_type: PlanType.INDIVIDUAL,
-		plan_currency: PlanCurrency.USD,
+		plan_currency: Currency.PLN,
 		plan_price: 100000,
 		duration: 10,
 		plan_name: 'Test Plan 10 minutes',
@@ -34,14 +34,23 @@ describe('PlanController (e2e)', () => {
 
 	const testPlan2 = {
 		plan_type: PlanType.PAIR,
-		plan_currency: PlanCurrency.EUR,
+		plan_currency: Currency.EUR,
 		plan_price: 150000,
 		duration: 20,
 		plan_name: 'Test Plan 20 minutes',
 	};
 
 	beforeAll(async () => {
-		const testContext = await createTestApp();
+		// Планы в PLN/EUR заводят продукт и цену в Stripe — в тестах сеть не трогаем.
+		const testContext = await createTestApp({
+			stripeService: {
+				createProductWithPrice: jest.fn(async ({ planId }: { planId: number }) => ({ productId: `prod_${planId}`, priceId: `price_${planId}` })),
+				archiveProduct: jest.fn(),
+				createPaymentLink: jest.fn(),
+				deactivatePaymentLink: jest.fn(),
+				constructWebhookEvent: jest.fn(),
+			},
+		});
 		app = testContext.app;
 		module = testContext.module;
 		prisma = module.get<PrismaService>(PrismaService);

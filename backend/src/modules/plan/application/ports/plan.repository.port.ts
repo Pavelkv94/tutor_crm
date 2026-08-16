@@ -6,4 +6,5 @@ export abstract class PlanRepositoryPort {
 	abstract createPlan(createPlanDto: CreatePlanDto): Promise<PlanEntity>;
 	abstract getPlanById(id: number): Promise<PlanEntity | null>;
 	abstract deletePlan(id: number): Promise<boolean>;
+	abstract updateStripeIds(id: number, stripeProductId: string, stripePriceId: string): Promise<PlanEntity>;
 }

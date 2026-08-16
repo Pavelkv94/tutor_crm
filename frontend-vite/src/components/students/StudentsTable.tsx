@@ -13,13 +13,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { RegionDisplay } from '@/components/shared/RegionDisplay'
 import { formatStudentClassLabel } from '@/constants/student-class'
-import type { PaymentCurrency, Student } from '@/types'
-
-const PAYMENT_CURRENCY_LABELS: Record<PaymentCurrency, string> = {
-	BYN: 'BYN 🇧🇾',
-	EUR: 'EUR 🇪🇺',
-	PLN: 'PLN 🇵🇱',
-}
+import type { Student } from '@/types'
+import { BalanceDisplay } from '@/components/shared/BalanceDisplay'
 
 interface StudentsTableProps {
   students: Student[]
@@ -27,8 +22,10 @@ interface StudentsTableProps {
   onEdit: (id: number) => void
   onAssignLessons: (id: number) => void
   onReport: (id: number) => void
+  onBalance: (id: number) => void
   isDeleting: boolean
-  showBalance?: boolean
+  /** Регион и баланс — админские колонки. */
+  showAdminColumns?: boolean
   showActions?: boolean
 }
 
@@ -75,8 +72,9 @@ export const StudentsTable = ({
   onEdit,
   onAssignLessons,
   onReport,
+  onBalance,
   isDeleting,
-  showBalance = false,
+  showAdminColumns = false,
   showActions = false,
 }: StudentsTableProps) => {
   const [sortField, setSortField] = useState<SortField | null>(null)
@@ -120,7 +118,7 @@ export const StudentsTable = ({
     return 0
   })
 
-	const columnCount = (showBalance ? 6 : 5) + 2
+	const columnCount = showAdminColumns ? 8 : 6
 
   return (
 		<div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -150,7 +148,7 @@ export const StudentsTable = ({
 									<ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
 								</button>
 							</TableHead>
-							{showBalance && (
+							{showAdminColumns && (
 								<TableHead className={headerCellClass}>Регион</TableHead>
 							)}
 							<TableHead className={headerCellClass}>
@@ -164,7 +162,7 @@ export const StudentsTable = ({
 									<ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
 								</button>
 							</TableHead>
-							<TableHead className={headerCellClass}>Счет для оплаты</TableHead>
+							{showAdminColumns && <TableHead className={headerCellClass}>Баланс</TableHead>}
 							<TableHead className={headerCellClass}>Маркетинг</TableHead>
 							<TableHead className={headerCellClass}>Архивация</TableHead>
 							<TableHead className={cn(headerCellClass, 'text-right')}>Действия</TableHead>
@@ -206,7 +204,7 @@ export const StudentsTable = ({
 										<TableCell className={cn(bodyCellClass, 'font-medium')}>
 											{formatClassWithAge(student)}
 										</TableCell>
-										{showBalance && (
+										{showAdminColumns && (
 											<TableCell className={bodyCellClass}>
 												<RegionDisplay region={student.timezone} />
 											</TableCell>
@@ -214,11 +212,21 @@ export const StudentsTable = ({
 										<TableCell className={cn(bodyCellClass, 'text-muted-foreground')}>
 											{formatStudentDate(student.birth_date)}
 										</TableCell>
+										{showAdminColumns && (
+											<TableCell className={bodyCellClass}>
+												<BalanceDisplay
+													balance={student.balance}
+													currency={student.balance_currency}
+												/>
+											</TableCell>
+										)}
 										<TableCell className={bodyCellClass}>
-											{PAYMENT_CURRENCY_LABELS[student.payment_currency] ?? student.payment_currency ?? '—'}
-										</TableCell>
-										<TableCell className={bodyCellClass}>
-											{student.marketing_consent ? 'Да' : 'Нет'}
+											{/* Прочерк — ответа ещё не было: вопрос покажется на странице оплаты. */}
+											{student.marketing_consent_at
+												? student.marketing_consent
+													? 'Да'
+													: 'Нет'
+												: '—'}
 										</TableCell>
 										<TableCell className={cn(bodyCellClass, 'text-muted-foreground')}>
 											{formatStudentDate(student.deleted_at)}
@@ -233,6 +241,17 @@ export const StudentsTable = ({
 												>
 													Отчёт
 												</Button>
+												{showActions && (
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => onBalance(student.id)}
+														aria-label={`Баланс ученика ${student.name}`}
+														className="h-8 rounded-lg border-transparent bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80"
+													>
+														Баланс
+													</Button>
+												)}
 												{showActions && (
 													<Button
 														variant="outline"

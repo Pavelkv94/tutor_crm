@@ -1,16 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsInt,  IsNotEmpty, IsString, Max } from "class-validator";
+import { Currency } from "@/shared/enums/currency.enum";
 
 export enum PlanTypeEnum {
 	INDIVIDUAL = "INDIVIDUAL",
 	PAIR = "PAIR",
-}
-
-enum PlanCurrency {
-	USD = "USD",
-	EUR = "EUR",
-	PLN = "PLN",
-	BYN = "BYN",
 }
 
 export class CreatePlanDto {
@@ -19,10 +13,10 @@ export class CreatePlanDto {
 	@IsNotEmpty()
 	plan_type: PlanTypeEnum;
 
-	@ApiProperty({ enum: PlanCurrency })
-	@IsEnum(PlanCurrency)
+	@ApiProperty({ enum: Currency })
+	@IsEnum(Currency)
 	@IsNotEmpty()
-	plan_currency: PlanCurrency;
+	plan_currency: Currency;
 
 	@ApiProperty({ example: 1000000 })
 	@IsInt()

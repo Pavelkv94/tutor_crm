@@ -5,8 +5,10 @@ import { PlanRepository } from './infrastructure/plan.repository';
 import { PlanRepositoryPort } from './application/ports/plan.repository.port';
 import { PlanQueryRepository } from './infrastructure/plan.query.repository';
 import { PlanQueryRepositoryPort } from './application/ports/plan.query.repository.port';
+import { StripeModule } from '@/infrastructure/stripe/stripe.module';
 
 @Module({
+	imports: [StripeModule],
 	controllers: [PlanController],
 	providers: [
 		PlanService,

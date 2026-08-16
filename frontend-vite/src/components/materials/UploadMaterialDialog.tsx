@@ -123,7 +123,17 @@ export const UploadMaterialDialog = ({
     enabled: open,
   })
 
-  const accessTeachers = teachers.filter((teacher) => teacher.role !== 'ADMIN')
+  const { data: courseAccessTeachers = [] } = useQuery({
+    queryKey: ['materials', 'courses', courseId, 'access'],
+    queryFn: () => materialsApi.getCourseAccess(courseId),
+    enabled: open,
+  })
+
+  // Преподаватели с доступом к курсу получают новый файл автоматически, поэтому в списке их нет
+  const courseAccessTeacherIds = new Set(courseAccessTeachers.map((teacher) => teacher.id))
+  const accessTeachers = teachers.filter(
+    (teacher) => teacher.role !== 'ADMIN' && !courseAccessTeacherIds.has(teacher.id),
+  )
 
   const uploadMutation = useMutation({
     mutationFn: async ({
@@ -283,6 +293,12 @@ export const UploadMaterialDialog = ({
                 onChange={setSelectedTeacherIds}
                 isLoading={isTeachersLoading}
               />
+              {courseAccessTeachers.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Преподаватели с доступом к курсу ({courseAccessTeachers.length}) получат файл
+                  автоматически.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
-import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
 
 
 export class CreateStudentDto {
@@ -45,8 +44,7 @@ export class CreateStudentDto {
 	@IsOptional()
 	marketing_consent?: boolean;
 
-	@ApiProperty({ description: 'The payment currency of the student', example: 'BYN', enum: PaymentCurrency, required: false })
-	@IsEnum(PaymentCurrency)
-	@IsOptional()
-	payment_currency?: PaymentCurrency;
+	// balance_currency сюда не входит намеренно: в БД стоит констрейнт
+	// student_balance_currency_check («balance = 0 ⟺ balance_currency IS NULL»), а у нового
+	// ученика баланс всегда 0. Валюту устанавливает первый платёж через BalanceService.
 }

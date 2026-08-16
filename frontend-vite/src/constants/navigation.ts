@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   BookOpen,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export const navItems: NavItem[] = [
   { icon: Users, label: 'Ученики', path: '/students' },
   { icon: FileText, label: 'Тарифы', path: '/plans', adminOnly: true },
   { icon: UserCog, label: 'Преподаватели', path: '/teachers', adminOnly: true },
+  { icon: Wallet, label: 'Платежи', path: '/payments', adminOnly: true },
   { icon: ClipboardList, label: 'Задачи', path: '/tasks' },
   { icon: BookOpen, label: 'Материалы', path: '/materials' },
 ]

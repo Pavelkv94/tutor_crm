@@ -5,6 +5,8 @@ import {
   FileCode2,
   FileText,
   Loader2,
+  Lock,
+  Pencil,
   Trash2,
   Users,
   XCircle,
@@ -26,6 +28,7 @@ interface MaterialsTableProps {
   onOpen: (material: Material) => void
   showActions?: boolean
   onAccess?: (material: Material) => void
+  onRename?: (material: Material) => void
   onDelete?: (material: Material) => void
   isDeleting?: boolean
 }
@@ -106,6 +109,7 @@ export const MaterialsTable = ({
   onOpen,
   showActions = false,
   onAccess,
+  onRename,
   onDelete,
   isDeleting = false,
 }: MaterialsTableProps) => {
@@ -211,7 +215,7 @@ export const MaterialsTable = ({
                   <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </TableHead>
-              {showActions && <TableHead className={`${headerCellClass} w-24`} />}
+              {showActions && <TableHead className={`${headerCellClass} w-36`} />}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -220,7 +224,20 @@ export const MaterialsTable = ({
                 <TableCell className={`${bodyCellClass} font-semibold text-foreground`}>
                   <div className="flex items-center gap-2">
                     <TypeIcon type={material.type} />
-                    {material.status === 'UPLOADED' ? (
+                    {!material.hasAccess ? (
+                      <>
+                        <span className="truncate text-muted-foreground">
+                          {material.originalName}
+                        </span>
+                        <span
+                          title="Нет доступа"
+                          aria-label="Нет доступа"
+                          className="inline-flex shrink-0"
+                        >
+                          <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                        </span>
+                      </>
+                    ) : material.status === 'UPLOADED' ? (
                       <button
                         type="button"
                         onClick={() => onOpen(material)}
@@ -259,6 +276,17 @@ export const MaterialsTable = ({
                         className="h-8 w-8 rounded-lg border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
                       >
                         <Users className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => onRename?.(material)}
+                        title="Переименовать"
+                        aria-label={`Переименовать материал ${material.originalName}`}
+                        className="h-8 w-8 rounded-lg border-border bg-card text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                       </Button>
                       <Button
                         type="button"

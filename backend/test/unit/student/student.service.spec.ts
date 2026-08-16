@@ -42,7 +42,7 @@ describe('StudentService', () => {
 		teacher_id: 1,
 		balance: 0,
 		marketing_consent: false,
-		payment_currency: 'BYN',
+		balance_currency: null,
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,
@@ -64,6 +64,7 @@ describe('StudentService', () => {
 						getStudentsByTeacherId: jest.fn(),
 						getStudent: jest.fn(),
 						updateStudent: jest.fn(),
+						applyCheckoutConsents: jest.fn(),
 						deleteStudent: jest.fn(),
 					},
 				},
@@ -187,6 +188,62 @@ describe('StudentService', () => {
 
 			await expect(service.update(1, updateStudentDto)).rejects.toThrow(NotFoundException);
 			await expect(service.update(1, updateStudentDto)).rejects.toThrow('Студент не найден');
+		});
+	});
+
+	describe('согласия ученика', () => {
+		const updateWith = async (stored: Record<string, unknown>, dto: UpdateStudentDto) => {
+			jest.spyOn(repository, 'getStudent').mockResolvedValue({ ...mockStudentExtended, ...stored } as any);
+			jest.spyOn(repository, 'updateStudent').mockResolvedValue(true);
+			await service.update(1, dto);
+			return (repository.updateStudent as jest.Mock).mock.calls[0][1];
+		};
+
+		it('проставляет дату, когда админ меняет ответ про маркетинг', async () => {
+			const payload = await updateWith({ marketing_consent: false }, { marketing_consent: true });
+
+			expect(payload).toEqual({ marketing_consent: true, marketing_consent_at: expect.any(Date) });
+		});
+
+		it('не двигает дату, когда значение не изменилось', async () => {
+			// Форма редактирования шлёт поле при каждом сохранении: безусловный штамп закрыл бы
+			// вопрос у всех, кого просто открыли и сохранили, и дропдаун не показался бы никогда.
+			const payload = await updateWith({ marketing_consent: false }, { marketing_consent: false });
+
+			expect(payload).toEqual({ marketing_consent: false });
+		});
+
+		it('фиксирует принятие условий', async () => {
+			const payload = await updateWith({ terms_accepted: false }, { terms_accepted: true });
+
+			expect(payload).toEqual({ terms_accepted_at: expect.any(Date) });
+		});
+
+		it('сохраняет исходный момент принятия при повторном сохранении', async () => {
+			const payload = await updateWith({ terms_accepted: true }, { terms_accepted: true });
+
+			expect(payload).toEqual({});
+		});
+
+		it('обнуляет дату, когда админ снимает принятие условий', async () => {
+			// Ученик снова увидит галочку на следующей оплате.
+			const payload = await updateWith({ terms_accepted: true }, { terms_accepted: false });
+
+			expect(payload).toEqual({ terms_accepted_at: null });
+		});
+
+		it('не трогает согласия, когда их нет в запросе', async () => {
+			const payload = await updateWith({}, { name: 'Новое имя' });
+
+			expect(payload).toEqual({ name: 'Новое имя' });
+		});
+
+		it('передаёт ответы со страницы оплаты в репозиторий', async () => {
+			jest.spyOn(repository, 'applyCheckoutConsents').mockResolvedValue(undefined);
+
+			await service.recordConsentsFromCheckout(1, { termsAccepted: true, marketingConsent: false });
+
+			expect(repository.applyCheckoutConsents).toHaveBeenCalledWith(1, { termsAccepted: true, marketingConsent: false }, expect.any(Date));
 		});
 	});
 

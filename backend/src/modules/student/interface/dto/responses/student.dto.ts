@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { PlanDto } from '@/modules/plan/interface/dto/responses/plan.dto';
-import { PaymentCurrency } from '@/modules/student/interface/dto/responses/payment-currency.enum';
+import { Currency } from '@/shared/enums/currency.enum';
 
 export class StudentDto {
 	@ApiProperty({ description: 'The id of the student', example: 1 })
@@ -24,15 +24,25 @@ export class StudentDto {
 	timezone: Timezone | null;
 	@ApiProperty({ description: 'Whether the student has given marketing consent', example: false })
 	marketing_consent: boolean;
-	@ApiProperty({ description: 'The payment currency of the student', example: 'BYN', enum: PaymentCurrency })
-	payment_currency: PaymentCurrency;
+	@ApiProperty({
+		description: 'Когда получен ответ про маркетинговое согласие. null — вопрос ещё не задавали, он будет показан на странице оплаты.',
+		example: '2026-01-01T00:00:00.000Z',
+		nullable: true,
+	})
+	marketing_consent_at: Date | null;
+	@ApiProperty({ description: 'Приняты ли условия обслуживания', example: false })
+	terms_accepted: boolean;
+	@ApiProperty({ description: 'Когда приняты условия обслуживания', example: '2026-01-01T00:00:00.000Z', nullable: true })
+	terms_accepted_at: Date | null;
+	@ApiProperty({ description: 'Валюта остатка на балансе. null, когда баланс равен нулю.', example: 'BYN', enum: Currency, nullable: true })
+	balance_currency: Currency | null;
+	@ApiProperty({ description: 'The balance of the student', example: 0 })
+	balance: number;
 }
 
 export class StudentExtendedDto extends StudentDto {
 	@ApiProperty({ description: 'The actual plans of the student', type: [PlanDto] })
 	actualPlans: PlanDto[];
-	@ApiProperty({ description: 'The balance of the student' , example: 0 })
-	balance: number;
 	@ApiProperty({ description: 'The book until cancellation of the student' , example: false })
 	bookUntilCancellation: boolean;
 	@ApiProperty({ description: 'The notify about birthday of the student' , example: true })

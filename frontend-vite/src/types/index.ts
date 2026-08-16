@@ -1,4 +1,5 @@
 import type { RegionCode } from '@/constants/regions'
+import type { Currency } from '@/constants/currency'
 
 export interface LoginInput {
   login: string
@@ -16,8 +17,6 @@ export interface JwtPayload {
   role: 'ADMIN' | 'TEACHER'
 }
 
-export type PaymentCurrency = 'EUR' | 'PLN' | 'BYN'
-
 export interface Student {
   id: number
   name: string
@@ -29,12 +28,25 @@ export interface Student {
   teacher_id?: number | null
   timezone?: RegionCode | null
   marketing_consent: boolean
-  payment_currency: PaymentCurrency
+  /**
+   * Когда получен ответ про фото/видео. null — вопрос ещё не задавали, и он будет
+   * показан на странице оплаты. Отказ — такой же ответ, как согласие.
+   */
+  marketing_consent_at: string | null
+  terms_accepted: boolean
+  terms_accepted_at: string | null
+  /**
+   * Валюта остатка на балансе, а не постоянное свойство ученика.
+   * null означает нулевой баланс — валюта «отпущена» и её задаёт первый платёж.
+   * Поле только для чтения: менять его можно лишь через корректировку баланса
+   * (POST /payments/students/:id/balance/adjust).
+   */
+  balance_currency: Currency | null
+  balance: number
 }
 
 export interface StudentExtended extends Student {
   actualPlans?: Plan[]
-  balance: number
   bookUntilCancellation: boolean
   notifyAboutBirthday: boolean
   notifyAboutLessons: boolean
@@ -48,6 +60,9 @@ export interface UpdateLessonsPlanForPeriodInput {
   end_date: string
 }
 
+// balance_currency сюда намеренно не входит: в БД стоит констрейнт
+// «balance = 0 ⟺ balance_currency IS NULL», поэтому отправка валюты при создании
+// (баланс всегда 0) роняет запрос, а при ненулевом балансе сервис отдаёт 400.
 export interface CreateStudentInput {
   name: string
   class: number
@@ -55,7 +70,6 @@ export interface CreateStudentInput {
   teacher_id: number
   timezone?: RegionCode | null
   marketing_consent?: boolean
-  payment_currency?: PaymentCurrency
 }
 
 export interface UpdateStudentInput {
@@ -65,14 +79,14 @@ export interface UpdateStudentInput {
   teacher_id?: number
   timezone?: RegionCode | null
   marketing_consent?: boolean
-  payment_currency?: PaymentCurrency
+  terms_accepted?: boolean
 }
 
 export interface Plan {
   id: number
   plan_name: string
   plan_price: number
-  plan_currency: string
+  plan_currency: Currency
   duration: number
   plan_type: string
   deleted_at: string | null
@@ -81,7 +95,7 @@ export interface Plan {
 
 export interface CreatePlanInput {
   plan_price: number
-  plan_currency: 'USD' | 'EUR' | 'PLN' | 'BYN' | 'RUB'
+  plan_currency: Currency
   duration: number
   plan_type: 'INDIVIDUAL' | 'PAIR'
 }
@@ -292,9 +306,16 @@ export interface UpdateCourseInput {
 export type MaterialFileType = 'PDF' | 'HTML'
 export type MaterialUploadStatus = 'UPLOADING' | 'UPLOADED' | 'FAILED'
 
-export interface MaterialTeacher {
+/** COURSE — доступ выдан на весь курс, FILE — точечно на этот материал */
+export type MaterialAccessSource = 'COURSE' | 'FILE'
+
+export interface TeacherRef {
   id: number
   name: string
+}
+
+export interface MaterialTeacher extends TeacherRef {
+  accessSource: MaterialAccessSource
 }
 
 export interface Material {
@@ -307,6 +328,13 @@ export interface Material {
   status: MaterialUploadStatus
   created_at: string
   teachers: MaterialTeacher[]
+  /** Преподаватели с доступом к курсу, которым этот материал закрыт */
+  restrictedTeachers: TeacherRef[]
+  hasAccess: boolean
+}
+
+export interface RenameMaterialInput {
+  originalName: string
 }
 
 export interface UpdateAccessInput {
@@ -333,5 +361,88 @@ export interface ViewUrlResponse {
 
 export interface MaterialsSize {
   totalSizeBytes: number
+}
+
+export type PaymentType =
+  | 'STRIPE_PAYMENT'
+  | 'STRIPE_REFUND'
+  | 'MANUAL_ADJUSTMENT'
+  | 'LEGACY_OPENING_BALANCE'
+
+export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'CANCELED' | 'FAILED' | 'REQUIRES_ATTENTION'
+
+/** Все суммы — целые единицы валюты (40 = 40 PLN) и знаковые: списания отрицательные. */
+export interface Payment {
+  id: number
+  student_id: number
+  student_name: string
+  type: PaymentType
+  status: PaymentStatus
+  amount: number
+  currency: Currency
+  period_start: string | null
+  period_end: string | null
+  lessons_count: number | null
+  comment: string | null
+  paid_at: string | null
+  created_at: string
+}
+
+export interface PaymentsFilter {
+  student_id?: number
+  status?: PaymentStatus
+  type?: PaymentType
+  from?: string
+  to?: string
+}
+
+export interface CreateInvoiceInput {
+  student_id: number
+  start_date: string
+  end_date: string
+}
+
+export interface Invoice {
+  payment_id: number
+  student_id: number
+  amount: number
+  currency: Currency
+  lessons_count: number
+  /** null для BYN и когда Stripe недоступен. */
+  link: string | null
+}
+
+export interface BalanceAllocation {
+  lesson_id: number
+  lesson_date: string
+  amount: number
+  currency: Currency
+}
+
+export interface StudentBalance {
+  student_id: number
+  balance: number
+  balance_currency: Currency | null
+  allocations: BalanceAllocation[]
+}
+
+export interface AdjustBalanceInput {
+  /** Знаковая сумма, не равная нулю: отрицательная — списание. */
+  amount: number
+  /** Обязательна при нулевом балансе, недопустима при другом остатке. */
+  currency?: Currency
+  comment: string
+}
+
+export interface AffectedLesson {
+  lesson_id: number
+  amount: number
+  new_status: string
+}
+
+export interface AdjustBalanceResult {
+  balance: number
+  balance_currency: Currency | null
+  affected_lessons: AffectedLesson[]
 }
 

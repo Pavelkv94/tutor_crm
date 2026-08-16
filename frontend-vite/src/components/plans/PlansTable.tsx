@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { Plan } from '@/types'
+import { getCurrencyFlag } from '@/constants/currency'
 
 interface PlansTableProps {
   plans: Plan[]
@@ -21,14 +22,6 @@ interface PlansTableProps {
 
 type SortField = 'plan_currency'
 type SortDirection = 'asc' | 'desc'
-
-const currencyFlags: Record<string, string> = {
-  USD: '🇺🇸',
-  EUR: '🇪🇺',
-  PLN: '🇵🇱',
-  BYN: '🇧🇾',
-  RUB: '🇷🇺',
-}
 
 const formatPlanDate = (date: string | null): string => {
   if (!date) return '—'
@@ -141,9 +134,9 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{plan.plan_currency}</span>
-                      {currencyFlags[plan.plan_currency] && (
+                      {getCurrencyFlag(plan.plan_currency) && (
                         <span className="text-base leading-none" aria-hidden="true">
-                          {currencyFlags[plan.plan_currency]}
+                          {getCurrencyFlag(plan.plan_currency)}
                         </span>
                       )}
                     </div>

@@ -1,5 +1,6 @@
 import './observability/tracing/tracing'; //* загружаем tracing перед инициализацией nestjs модулей
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { env } from '@/config/bootstrap-env';
 import { AppModule } from '@/app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -11,7 +12,9 @@ import { corsConfig } from '@/config/namespaces/cors.config';
 import { ConfigType } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+	// rawBody: true необходим для верификации подписи вебхука Stripe
+	// (https://docs.nestjs.com/faq/raw-body) — контроллер вебхука читает req.rawBody.
+	const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
 	app.use(cookieParser());
 

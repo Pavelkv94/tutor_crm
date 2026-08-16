@@ -10,9 +10,15 @@ import { TelegramService } from '../../src/modules/telegram/application/telegram
 import { TelegramModule } from '../../src/modules/telegram/telegram.module';
 import { createTelegramTestModule } from './telegram-test.module';
 import * as cookieParser from 'cookie-parser';
+import { StripeService } from '../../src/infrastructure/stripe/stripe.service';
 
 export interface CreateTestAppOptions {
 	useRealTelegramService?: boolean;
+	/**
+	 * Подменяет StripeService, чтобы e2e не ходил в реальный API. Проверка подписи вебхука
+	 * при этом должна оставаться настоящей — передавайте свою реализацию constructWebhookEvent.
+	 */
+	stripeService?: Record<string, unknown>;
 }
 
 export interface TestAppContext {
@@ -20,7 +26,6 @@ export interface TestAppContext {
 	module: TestingModule;
 	mockTelegramService: {
 		generateTelegramLink: jest.Mock;
-		sendLessonsCostToAdmin: jest.Mock;
 		sendMessageToAdmin: jest.Mock;
 		sendMessageToUser: jest.Mock;
 		onStart: jest.Mock;
@@ -41,7 +46,6 @@ export async function createTestApp(
 ): Promise<TestAppContext> {
 	const mockTelegramService = {
 		generateTelegramLink: jest.fn(),
-		sendLessonsCostToAdmin: jest.fn(),
 		sendMessageToAdmin: jest.fn(),
 		sendMessageToUser: jest.fn(),
 		onStart: jest.fn(),
@@ -53,7 +57,7 @@ export async function createTestApp(
 		},
 	};
 
-	const moduleBuilder = Test.createTestingModule({
+	let moduleBuilder = Test.createTestingModule({
 		imports: [AppModule],
 	})
 		.overrideGuard(ThrottlerGuard)
@@ -67,9 +71,14 @@ export async function createTestApp(
 			),
 		);
 
+	if (options.stripeService) {
+		moduleBuilder = moduleBuilder.overrideProvider(StripeService).useValue(options.stripeService);
+	}
+
 	const moduleFixture: TestingModule = await moduleBuilder.compile();
 
-	const app = moduleFixture.createNestApplication();
+	// rawBody нужен вебхуку Stripe: подпись считается по «сырому» телу запроса.
+	const app = moduleFixture.createNestApplication({ rawBody: true });
 	app.use(cookieParser());
 	app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 	await app.init();

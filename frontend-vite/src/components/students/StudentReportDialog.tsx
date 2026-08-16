@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { lessonsApi } from '@/api/lessons'
-import { telegramApi } from '@/api/telegram'
+import { paymentsApi } from '@/api/payments'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatStudentClassPhrase, formatStudentClassShort } from '@/constants/student-class'
+import { formatMoney } from '@/constants/currency'
+import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 import { cn } from '@/lib/utils'
+import type { CreateInvoiceInput } from '@/types'
 
 interface StudentReportDialogProps {
   open: boolean
@@ -52,6 +55,16 @@ const getDatesFromMonthYear = (year: number, month: number) => {
 	return { firstDay, lastDay }
 }
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+	if (error && typeof error === 'object' && 'response' in error) {
+		const axiosError = error as { response?: { data?: { message?: string | string[] } } }
+		const message = axiosError.response?.data?.message
+		if (Array.isArray(message)) return message.join(', ')
+		if (typeof message === 'string') return message
+	}
+	return fallback
+}
+
 const isPeriodRangeValid = (
 	startYear: string,
 	startMonth: string,
@@ -69,6 +82,7 @@ export const StudentReportDialog = ({
   studentId,
 }: StudentReportDialogProps) => {
   const { isAdmin } = useAuth()
+  const queryClient = useQueryClient()
 
   const now = new Date()
   const currentYear = now.getFullYear()
@@ -110,6 +124,7 @@ export const StudentReportDialog = ({
 
 	const [shouldFetchInfo, setShouldFetchInfo] = useState(false)
 	const [isCopied, setIsCopied] = useState(false)
+	const [isLinkCopied, setIsLinkCopied] = useState(false)
 
 	const {
 		data: reportData,
@@ -126,10 +141,14 @@ export const StudentReportDialog = ({
 		enabled: !!studentId && shouldFetchInfo && isInfoPeriodValid,
   })
 
-  const sendLessonsCostMutation = useMutation({
-    mutationFn: (data: { student_id: number; start_date: string; end_date: string }) =>
-      telegramApi.sendLessonsCostToAdmin(data),
-  })
+	// Канонический аналог старого «отчёта по оплатам»: так же уходит отчёт админу в Telegram,
+	// но в ответе приходит сумма счёта и ссылка на оплату.
+	const createInvoiceMutation = useMutation({
+		mutationFn: (data: CreateInvoiceInput) => paymentsApi.createInvoice(data),
+		onSuccess: () => {
+			invalidateMoneyQueries(queryClient, studentId)
+		},
+	})
 
   const handleGetInfo = () => {
 		if (!isInfoPeriodValid) {
@@ -138,16 +157,28 @@ export const StudentReportDialog = ({
 		setShouldFetchInfo(true)
   }
 
-  const handleSendLessonsCostToAdmin = () => {
+	const handleCreateInvoice = () => {
 		if (!studentId || !paymentStartDate || !paymentEndDate) {
       return
     }
-    sendLessonsCostMutation.mutate({
+		createInvoiceMutation.mutate({
       student_id: studentId,
 			start_date: paymentStartDate,
 			end_date: paymentEndDate,
     })
   }
+
+	const handleCopyPaymentLink = async () => {
+		const link = createInvoiceMutation.data?.link
+		if (!link) return
+		try {
+			await navigator.clipboard.writeText(link)
+			setIsLinkCopied(true)
+			window.setTimeout(() => setIsLinkCopied(false), 1500)
+		} catch {
+			setIsLinkCopied(false)
+		}
+	}
 
 	const resetState = () => {
 		setActiveTab(isAdmin ? 'payments' : 'info')
@@ -158,7 +189,7 @@ export const StudentReportDialog = ({
 		setInfoStartMonth(defaultMonth)
 		setInfoEndYear(defaultYear)
 		setInfoEndMonth(defaultMonth)
-		sendLessonsCostMutation.reset()
+		createInvoiceMutation.reset()
 	}
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -171,17 +202,17 @@ export const StudentReportDialog = ({
 	const handleTabChange = (tab: ReportTab) => {
 		setActiveTab(tab)
 		setShouldFetchInfo(false)
-		sendLessonsCostMutation.reset()
+		createInvoiceMutation.reset()
   }
 
 	const handlePaymentYearChange = (value: string) => {
 		setPaymentYear(value)
-		sendLessonsCostMutation.reset()
+		createInvoiceMutation.reset()
   }
 
 	const handlePaymentMonthChange = (value: string) => {
 		setPaymentMonth(value)
-		sendLessonsCostMutation.reset()
+		createInvoiceMutation.reset()
   }
 
 	const handleInfoPeriodChange = () => {
@@ -345,31 +376,77 @@ export const StudentReportDialog = ({
 							</div>
 
 							<Button
-								onClick={handleSendLessonsCostToAdmin}
+								onClick={handleCreateInvoice}
 								disabled={
-									!paymentStartDate || !paymentEndDate || sendLessonsCostMutation.isPending
+									!paymentStartDate || !paymentEndDate || createInvoiceMutation.isPending
 								}
 								variant="outline"
 								className="w-full border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
 							>
-								{sendLessonsCostMutation.isPending
-									? 'Отправка...'
-									: 'Отправить мне отчет по оплатам'}
+								{createInvoiceMutation.isPending ? 'Выставление...' : 'Выставить счёт'}
 							</Button>
 
-							{sendLessonsCostMutation.isError && (
+							<p className="text-xs text-muted-foreground">
+								Счёт тратит остаток баланса на неоплаченные занятия периода, а отчёт по
+								оплатам всё так же уходит вам в Telegram.
+							</p>
+
+							{createInvoiceMutation.isError && (
 								<div className="p-3 bg-red-50 border border-red-200 rounded-lg">
 									<p className="text-sm text-red-600">
-										Не удалось отправить отчет по оплатам
+										{getErrorMessage(createInvoiceMutation.error, 'Не удалось выставить счёт')}
 									</p>
 								</div>
 							)}
 
-							{sendLessonsCostMutation.isSuccess && (
-								<div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-									<p className="text-sm text-green-600">
-										Отчет по оплатам успешно отправлен
-									</p>
+							{createInvoiceMutation.isSuccess && createInvoiceMutation.data && (
+								<div className="space-y-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+									<div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+										<p className="text-lg font-extrabold text-green-700">
+											{formatMoney(
+												createInvoiceMutation.data.amount,
+												createInvoiceMutation.data.currency,
+											)}
+										</p>
+										<p className="text-sm text-green-700">
+											Занятий: {createInvoiceMutation.data.lessons_count}
+										</p>
+									</div>
+
+									{createInvoiceMutation.data.link ? (
+										<div className="flex flex-wrap items-center gap-2">
+											<a
+												href={createInvoiceMutation.data.link}
+												target="_blank"
+												rel="noreferrer"
+												className="break-all text-sm text-blue-600 underline"
+											>
+												{createInvoiceMutation.data.link}
+											</a>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={handleCopyPaymentLink}
+											>
+												{isLinkCopied ? 'Скопировано' : 'Копировать ссылку'}
+											</Button>
+										</div>
+									) : createInvoiceMutation.data.currency === 'BYN' ? (
+										<p className="text-sm text-green-700">
+											Оплата в BYN — ссылка не требуется, ожидается чек.
+										</p>
+									) : (
+										<div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+											<p className="text-sm text-amber-700">
+												Платёжный сервис не ответил: отчёт админу отправлен, но ссылки на
+												оплату нет.
+											</p>
+											<Button type="button" variant="outline" size="sm" onClick={handleCreateInvoice}>
+												Выставить счёт заново
+											</Button>
+										</div>
+									)}
 								</div>
 							)}
 						</>

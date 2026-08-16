@@ -14,14 +14,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import { formatStudentClassShort } from '@/constants/student-class'
 import type { Student, Plan, Teacher, SingleLessonInput } from '@/types'
-
-const currencyFlags: Record<string, string> = {
-	USD: '🇺🇸',
-	EUR: '🇪🇺',
-	PLN: '🇵🇱',
-	BYN: '🇧🇾',
-	RUB: '🇷🇺',
-}
+import { formatMoney, getCurrencyFlag } from '@/constants/currency'
+import { getAllowedPlanCurrency, isPlanSelectable } from '@/lib/lesson-currency'
 
 // Generate minutes options with 5-minute intervals from 00 to 55
 const generateMinutesOptions = () => {
@@ -125,6 +119,21 @@ export const CreateSingleLessonForm = ({
   })
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
 
+  const selectedStudent = activeStudents.find((student) => student.id.toString() === studentId)
+  const allowedCurrency = getAllowedPlanCurrency(selectedStudent, date ? new Date(date) : null)
+
+  const handleStudentChange = (value: string) => {
+    setStudentId(value)
+    if (!planId) return
+    // Ученик сменился — ранее выбранный тариф может конфликтовать с его балансом.
+    const nextStudent = activeStudents.find((student) => student.id.toString() === value)
+    const nextAllowed = getAllowedPlanCurrency(nextStudent, date ? new Date(date) : null)
+    const selectedPlan = plans.find((plan) => plan.id.toString() === planId)
+    if (selectedPlan && !isPlanSelectable(selectedPlan, nextAllowed, { isFree, isTrial })) {
+      setPlanId('')
+    }
+  }
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -133,7 +142,7 @@ export const CreateSingleLessonForm = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="student">Ученик</Label>
-              <Select value={studentId} onValueChange={setStudentId}>
+              <Select value={studentId} onValueChange={handleStudentChange}>
                 <SelectTrigger id="student">
                   <SelectValue placeholder="Выберите ученика" />
                 </SelectTrigger>
@@ -153,18 +162,31 @@ export const CreateSingleLessonForm = ({
                   <SelectValue placeholder="Выберите тариф" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activePlans.map((plan) => (
-                    <SelectItem key={plan.id} value={plan.id.toString()}>
-                      <span className="flex items-center gap-2">
-                        <span>{plan.plan_name}</span>
-                      <span className="text-muted-foreground">
-                        {plan.plan_price.toLocaleString()} {plan.plan_currency} {currencyFlags[plan.plan_currency] || ''}
-                      </span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {activePlans.map((plan) => {
+                    const isSelectable = isPlanSelectable(plan, allowedCurrency, { isFree, isTrial })
+
+                    return (
+                      <SelectItem key={plan.id} value={plan.id.toString()} disabled={!isSelectable}>
+                        <span className="flex items-center gap-2">
+                          <span>{plan.plan_name}</span>
+                        <span className="text-muted-foreground">
+                          {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                        </span>
+                        {!isSelectable && (
+                          <span className="text-muted-foreground">(другая валюта)</span>
+                        )}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
+              {allowedCurrency && selectedStudent && (
+                <p className="text-xs text-muted-foreground">
+                  На балансе ученика {formatMoney(selectedStudent.balance, allowedCurrency)} —
+                  доступны только тарифы в {allowedCurrency}.
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="teacher">Преподаватель</Label>

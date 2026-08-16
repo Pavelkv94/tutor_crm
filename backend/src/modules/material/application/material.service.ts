@@ -3,7 +3,8 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { R2Service } from "@/infrastructure/storage/r2.service";
 import { CourseRepositoryPort } from "@/modules/material/application/ports/course.repository.port";
 import { MaterialRepositoryPort } from "@/modules/material/application/ports/material.repository.port";
-import { MaterialEntity } from "@/modules/material/domain/material.entity";
+import { FileAccessType } from "@/modules/material/domain/file-access-type.enum";
+import { MaterialEntity, TeacherRef } from "@/modules/material/domain/material.entity";
 import { UploadStatus } from "@/modules/material/domain/upload-status.enum";
 import { UploadInitDto } from "@/modules/material/interface/dto/requests/upload-init.dto";
 import { UploadInitResponseDto } from "@/modules/material/interface/dto/responses/upload-init-response.dto";
@@ -18,12 +19,26 @@ export class MaterialService {
 		private readonly r2Service: R2Service,
 	) {}
 
-	async getCourseMaterials(courseId: number): Promise<MaterialEntity[]> {
+	async getCourseMaterials(courseId: number, teacherId: number, role: string): Promise<MaterialEntity[]> {
 		const course = await this.courseRepository.getCourseById(courseId);
 		if (!course) {
 			throw new NotFoundException("Курс не найден");
 		}
-		return await this.materialRepository.getMaterialsByCourseId(courseId);
+		const materials = await this.materialRepository.getMaterialsByCourseId(courseId);
+		const isAdmin = role === TeacherRoleEnum.ADMIN;
+
+		return materials.map((material) => ({
+			...material,
+			hasAccess: isAdmin || (material.teachers ?? []).some((teacher) => teacher.id === teacherId),
+		}));
+	}
+
+	async getCourseAccess(courseId: number): Promise<TeacherRef[]> {
+		const course = await this.courseRepository.getCourseById(courseId);
+		if (!course) {
+			throw new NotFoundException("Курс не найден");
+		}
+		return await this.materialRepository.getCourseAccessTeachers(courseId);
 	}
 
 	async uploadInit(uploadInitDto: UploadInitDto): Promise<UploadInitResponseDto> {
@@ -43,7 +58,11 @@ export class MaterialService {
 			status: UploadStatus.UPLOADING,
 		});
 
-		await this.materialRepository.createFileAccess(uploadInitDto.teachers, materialId);
+		// Преподавателям с доступом к курсу файл доступен и без персональной записи
+		const teachersWithCourseAccess = new Set(await this.materialRepository.filterTeachersWithCourseAccess(uploadInitDto.courseId, uploadInitDto.teachers));
+		const personalTeachers = uploadInitDto.teachers.filter((teacherId) => !teachersWithCourseAccess.has(teacherId));
+
+		await this.materialRepository.setFileAccess(personalTeachers, materialId, FileAccessType.ALLOW);
 
 		return {
 			materialId,
@@ -102,13 +121,25 @@ export class MaterialService {
 		return { url };
 	}
 
+	async renameMaterial(id: number, originalName: string): Promise<MaterialEntity> {
+		const material = await this.materialRepository.getMaterialById(id);
+		if (!material) {
+			throw new NotFoundException("Материал не найден");
+		}
+		const renamedMaterial = await this.materialRepository.renameMaterial(id, originalName);
+
+		// Переименование доступно только админу, у которого доступ есть ко всем материалам
+		return { ...renamedMaterial, hasAccess: true };
+	}
+
 	async deleteMaterial(id: number): Promise<void> {
 		const material = await this.materialRepository.getMaterialById(id);
 		if (!material) {
 			throw new NotFoundException("Материал не найден");
 		}
-		await this.r2Service.deleteObject(material.storageKey);
+		// Сначала запись в БД: если удаление файла из хранилища упадёт, материал не превратится в битую ссылку
 		await this.materialRepository.deleteMaterial(id);
+		await this.r2Service.deleteObject(material.storageKey);
 	}
 
 	async getMaterialsSize(): Promise<number> {
@@ -120,7 +151,11 @@ export class MaterialService {
 		if (!material) {
 			throw new NotFoundException("Материал не найден");
 		}
-		await this.materialRepository.createFileAccess(teacherIds, materialId);
+		const { withCourseAccess, withoutCourseAccess } = await this.splitByCourseAccess(material.courseId, teacherIds);
+
+		// Тем, у кого есть доступ к курсу, достаточно снять персональное ограничение; остальным нужна точечная выдача
+		await this.materialRepository.clearFileAccess(withCourseAccess, materialId);
+		await this.materialRepository.setFileAccess(withoutCourseAccess, materialId, FileAccessType.ALLOW);
 	}
 
 	async revokeMaterialAccess(materialId: number, teacherIds: number[]): Promise<void> {
@@ -128,7 +163,11 @@ export class MaterialService {
 		if (!material) {
 			throw new NotFoundException("Материал не найден");
 		}
-		await this.materialRepository.revokeFileAccess(teacherIds, materialId);
+		const { withCourseAccess, withoutCourseAccess } = await this.splitByCourseAccess(material.courseId, teacherIds);
+
+		// Доступ по курсу отзывается персональным ограничением, точечная выдача — удалением записи
+		await this.materialRepository.setFileAccess(withCourseAccess, materialId, FileAccessType.DENY);
+		await this.materialRepository.clearFileAccess(withoutCourseAccess, materialId);
 	}
 
 	async grantCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
@@ -145,5 +184,14 @@ export class MaterialService {
 			throw new NotFoundException("Курс не найден");
 		}
 		await this.materialRepository.revokeCourseAccess(courseId, teacherIds);
+	}
+
+	private async splitByCourseAccess(courseId: number, teacherIds: number[]): Promise<{ withCourseAccess: number[]; withoutCourseAccess: number[] }> {
+		const courseAccessTeacherIds = new Set(await this.materialRepository.filterTeachersWithCourseAccess(courseId, teacherIds));
+
+		return {
+			withCourseAccess: teacherIds.filter((teacherId) => courseAccessTeacherIds.has(teacherId)),
+			withoutCourseAccess: teacherIds.filter((teacherId) => !courseAccessTeacherIds.has(teacherId)),
+		};
 	}
 }

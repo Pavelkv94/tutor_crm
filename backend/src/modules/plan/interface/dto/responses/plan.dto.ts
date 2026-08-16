@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Currency } from "@/shared/enums/currency.enum";
 
 export class PlanDto {
 	@ApiProperty({ description: 'The id of the plan', example: 1 })
@@ -7,8 +8,8 @@ export class PlanDto {
 	plan_name: string;
 	@ApiProperty({ description: 'The price of the plan', example: 1000000 })
 	plan_price: number;
-	@ApiProperty({ description: 'The currency of the plan', example: 'USD' })
-	plan_currency: string;
+	@ApiProperty({ description: 'The currency of the plan', example: 'PLN', enum: Currency })
+	plan_currency: Currency;
 	@ApiProperty({ description: 'The duration of the plan', example: 10 })
 	duration: number;
 	@ApiProperty({ description: 'The type of the plan', example: 'INDIVIDUAL' })

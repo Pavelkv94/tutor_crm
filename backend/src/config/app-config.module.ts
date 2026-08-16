@@ -7,6 +7,7 @@ import { corsConfig } from '@/config/namespaces/cors.config';
 import { httpConfig } from '@/config/namespaces/http.config';
 import { observabilityConfig } from '@/observability/observability.config';
 import { storageConfig } from '@/config/namespaces/storage.config';
+import { stripeConfig } from '@/config/namespaces/stripe.config';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,6 +21,7 @@ import { storageConfig } from '@/config/namespaces/storage.config';
 				httpConfig,
 				observabilityConfig,
 				storageConfig,
+				stripeConfig,
 			],
     }),
   ],

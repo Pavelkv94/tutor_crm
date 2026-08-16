@@ -98,4 +98,11 @@ export class EnvSchema {
 	@IsDefined()
 	R2_SECRET_ACCESS_KEY: string;
 
+	@IsString()
+	@IsDefined()
+	STRIPE_SECRET_KEY: string;
+
+	@IsString()
+	@IsDefined()
+	STRIPE_WEBHOOK_SECRET: string;
 }

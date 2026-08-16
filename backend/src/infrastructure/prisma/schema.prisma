@@ -33,6 +33,8 @@ model Teacher {
 	telegram_tokens TelegramToken[]
 	task_comments TaskComment[]
 	file_accesses FileAccess[]
+	course_accesses CourseAccess[]
+	payments_created Payment[]
 
 	@@map("teacher")
 }
@@ -44,7 +46,17 @@ model Student {
   birth_date DateTime?
 	balance    Int @default(0)
 	marketing_consent Boolean @default(false)
-	payment_currency PaymentCurrency @default(BYN)
+	/// Когда получен ответ про маркетинговое согласие. NULL — вопрос ещё не задавали,
+	/// и его нужно показать на странице оплаты. Отказ — такой же зафиксированный ответ,
+	/// как согласие, поэтому сам ответ живёт в marketing_consent, а факт ответа — здесь.
+	marketing_consent_at DateTime?
+	/// Когда приняты условия обслуживания. NULL — не приняты (Stripe отдаёт только
+	/// «accepted», отказа не бывает, поэтому отдельный boolean не нужен).
+	terms_accepted_at DateTime?
+	/// Валюта текущего остатка на балансе. NULL при balance = 0 — валюта «отпущена»,
+	/// ученик может перейти на другую. Инвариант закреплён CHECK-констрейнтом
+	/// student_balance_currency_check (см. миграцию rename_payment_currency_to_balance_currency).
+	balance_currency Currency?
 
 	notifyAboutBirthday Boolean @default(true)
 	notifyAboutLessons Boolean @default(true)
@@ -59,6 +71,8 @@ model Student {
   telegrams  Telegram[]
   lessons    Lesson[]
 	telegram_tokens TelegramToken[]
+	payments Payment[]
+	lesson_payments LessonPayment[]
 
 	deleted_at DateTime?
 
@@ -116,6 +130,8 @@ model Lesson {
 
 	regular_lesson RegularLesson? @relation(fields: [regular_lesson_id], references: [id])
 
+	lesson_payments LessonPayment[]
+
 	@@index([teacher_id, date])
 	@@index([student_id, date])
 	@@index([status, date])
@@ -125,17 +141,84 @@ model Lesson {
 model Plan {
   id            Int         @id @default(autoincrement())
   plan_type     PlanType
-  plan_currency PlanCurrency
+  plan_currency Currency
 	plan_name     String
   duration      Int
 	plan_price    Int
   created_at    DateTime    @default(now())
 	deleted_at    DateTime?
 
+	stripe_product_id String? @unique
+	stripe_price_id   String? @unique
+
   lessons       Lesson[]
 	regular_lessons RegularLesson[]
 
 	@@map("plan")
+}
+
+model Payment {
+	id            Int           @id @default(autoincrement())
+	student_id    Int
+	type          PaymentType
+	status        PaymentStatus @default(PENDING)
+	amount        Int
+	currency      Currency
+
+	period_start  DateTime?
+	period_end    DateTime?
+	lessons_count Int?
+	comment       String?
+
+	created_by_id Int?
+
+	stripe_payment_link_id      String? @unique
+	stripe_checkout_session_id  String? @unique
+	stripe_payment_intent_id    String? @unique
+	/// Заполняется только у строк типа STRIPE_REFUND. У возврата тот же payment_intent,
+	/// что у исходного платежа, поэтому переиспользовать stripe_payment_intent_id нельзя — @unique.
+	stripe_refund_id            String? @unique
+
+	paid_at    DateTime?
+	created_at DateTime @default(now())
+	updated_at DateTime @updatedAt
+
+	student    Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+	created_by Teacher? @relation(fields: [created_by_id], references: [id])
+
+	lesson_payments LessonPayment[]
+
+	@@index([student_id, created_at])
+	@@map("payment")
+}
+
+model LessonPayment {
+	id         Int       @id @default(autoincrement())
+	student_id Int
+	lesson_id  Int
+	payment_id Int?
+	amount     Int
+	currency   Currency
+	created_at DateTime  @default(now())
+	reverted_at DateTime?
+
+	student Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+	lesson  Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+	payment Payment? @relation(fields: [payment_id], references: [id])
+
+	@@index([student_id, reverted_at])
+	@@index([lesson_id])
+	@@map("lesson_payment")
+}
+
+model StripeWebhookEvent {
+	id           String    @id
+	type         String
+	received_at  DateTime  @default(now())
+	processed_at DateTime?
+	error        String?
+
+	@@map("stripe_webhook_event")
 }
 
 model Telegram {
@@ -214,6 +297,7 @@ model Course {
 	created_at DateTime @default(now())
 
 	files File[]
+	accesses CourseAccess[]
 
 	@@map("file_category")
 }
@@ -241,17 +325,34 @@ model File {
 
 model FileAccess {
 	id Int @id @default(autoincrement())
-	
+
 	teacher_id Int
 	file_id Int
+
+	type FileAccessType @default(ALLOW)
 
 	created_at DateTime @default(now())
 
 	teacher Teacher @relation(fields: [teacher_id], references: [id])
-	file File @relation(fields: [file_id], references: [id])
+	file File @relation(fields: [file_id], references: [id], onDelete: Cascade)
 
 	@@unique([teacher_id, file_id])
 	@@map("file_access")
+}
+
+model CourseAccess {
+	id Int @id @default(autoincrement())
+
+	teacher_id Int
+	course_id Int
+
+	created_at DateTime @default(now())
+
+	teacher Teacher @relation(fields: [teacher_id], references: [id])
+	course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+	@@unique([teacher_id, course_id])
+	@@map("course_access")
 }
 
 
@@ -266,12 +367,34 @@ enum FileType {
 	HTML
 }
 
-enum PaymentCurrency {
+enum FileAccessType {
+	ALLOW
+	DENY
+}
+
+enum Currency {
   EUR
   PLN
 	BYN
 }
-  
+
+enum PaymentType {
+	STRIPE_PAYMENT
+	STRIPE_REFUND
+	MANUAL_ADJUSTMENT
+	LEGACY_OPENING_BALANCE
+}
+
+enum PaymentStatus {
+	PENDING
+	SUCCEEDED
+	CANCELED
+	FAILED
+	/// Платёж получен, но не применён к балансу из-за конфликта валют.
+	/// В инвариант баланса не входит, применяется вручную через POST /api/payments/:id/apply.
+	REQUIRES_ATTENTION
+}
+
 enum TelegramType {
 	TEACHER
 	STUDENT
@@ -288,14 +411,6 @@ enum TaskStatus {
 enum PlanType {
   INDIVIDUAL
   PAIR
-}
-
-enum PlanCurrency {
-  USD
-  EUR
-  PLN
-	BYN
-	RUB
 }
 
 enum LessonStatus {

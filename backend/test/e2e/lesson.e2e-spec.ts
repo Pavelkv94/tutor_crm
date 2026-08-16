@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { PrismaService } from '../../src/infrastructure/prisma/prisma.service';
 import { createTestApp, generateTestAdminToken, generateTestAccessToken, getAuthConfig, getJwtService, closeTestApp } from '../helpers/test-utils';
-import { TeacherRole, PlanType, PlanCurrency } from '../../src/infrastructure/prisma/generated/client';
+import { TeacherRole, PlanType, Currency } from '../../src/infrastructure/prisma/generated/client';
 import { BcryptService } from '../../src/infrastructure/bcrypt/bcrypt.service';
 import { CancelationStatusEnum } from '../../src/modules/lesson/interface/dto/requests/cancel-lesson.dto';
 import { WeekDay } from '../../src/modules/lesson/interface/dto/requests/regular-lesson.input.dto';
@@ -40,7 +40,7 @@ describe('LessonController (e2e)', () => {
 
 	const testPlan = {
 		plan_type: PlanType.INDIVIDUAL,
-		plan_currency: PlanCurrency.USD,
+		plan_currency: Currency.BYN,
 		plan_price: 100000,
 		duration: 10,
 		plan_name: 'Test Plan Lesson 10 minutes',
@@ -48,7 +48,7 @@ describe('LessonController (e2e)', () => {
 
 	const testPlanPair = {
 		plan_type: PlanType.PAIR,
-		plan_currency: PlanCurrency.USD,
+		plan_currency: Currency.BYN,
 		plan_price: 150000,
 		duration: 20,
 		plan_name: 'Test Plan Pair Lesson 20 minutes',

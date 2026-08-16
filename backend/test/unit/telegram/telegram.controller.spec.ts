@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TelegramController } from '../../../src/modules/telegram/interface/telegram.controller';
 import { TelegramService } from '../../../src/modules/telegram/application/telegram.service';
 import { TelegramLinkInputDto } from '../../../src/modules/telegram/interface/dto/requests/telegram-link.input.dto';
-import { LessonsCostFiltersDto } from '../../../src/modules/telegram/interface/dto/requests/lessons-cost-filter.input.dto';
 import { JwtPayloadDto } from '../../../src/modules/auth/dto/jwt.payload.dto';
 import { TeacherRoleEnum } from '../../../src/modules/teacher/interface/dto/teacherRole';
 
@@ -29,7 +28,6 @@ describe('TelegramController', () => {
 					provide: TelegramService,
 					useValue: {
 						generateTelegramLink: jest.fn(),
-						sendLessonsCostToAdmin: jest.fn(),
 					},
 				},
 			],
@@ -56,22 +54,6 @@ describe('TelegramController', () => {
 
 			expect(result).toEqual(mockTelegramLinkOutput);
 			expect(service.generateTelegramLink).toHaveBeenCalledWith(dto);
-		});
-	});
-
-	describe('sendLessonsCostToAdmin', () => {
-		it('should send lessons cost to admin', async () => {
-			const dto: LessonsCostFiltersDto = {
-				student_id: 1,
-				start_date: '2024-01-01',
-				end_date: '2024-01-31',
-			};
-
-			jest.spyOn(service, 'sendLessonsCostToAdmin').mockResolvedValue(undefined);
-
-			await controller.sendLessonsCostToAdmin(dto, mockTeacherPayload);
-
-			expect(service.sendLessonsCostToAdmin).toHaveBeenCalledWith(dto, mockTeacherPayload);
 		});
 	});
 });

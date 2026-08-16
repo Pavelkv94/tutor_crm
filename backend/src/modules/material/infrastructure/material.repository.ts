@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "@/infrastructure/prisma/prisma.service";
-import { File, FileType as PrismaFileType } from "@/infrastructure/prisma/generated/client";
+import { File, FileAccessType as PrismaFileAccessType, FileType as PrismaFileType } from "@/infrastructure/prisma/generated/client";
 import { CreateMaterialParams, MaterialRepositoryPort, UpdateMaterialParams } from "@/modules/material/application/ports/material.repository.port";
+import { AccessSource } from "@/modules/material/domain/access-source.enum";
+import { FileAccessType } from "@/modules/material/domain/file-access-type.enum";
 import { FileType } from "@/modules/material/domain/file-type.enum";
-import { MaterialEntity } from "@/modules/material/domain/material.entity";
+import { MaterialEntity, MaterialTeacher, TeacherRef } from "@/modules/material/domain/material.entity";
 import { UploadStatus } from "@/modules/material/domain/upload-status.enum";
 
 @Injectable()
@@ -36,23 +38,27 @@ export class MaterialRepository implements MaterialRepositoryPort {
 	}
 
 	async getMaterialsByCourseId(courseId: number): Promise<MaterialEntity[]> {
-		const files = await this.prisma.file.findMany({
-			where: { course_id: courseId, upload_status: UploadStatus.UPLOADED },
-			include: {
-				file_accesses: {
-					include: {
-						teacher: true,
+		const [files, courseAccesses] = await Promise.all([
+			this.prisma.file.findMany({
+				where: { course_id: courseId, upload_status: UploadStatus.UPLOADED },
+				include: {
+					file_accesses: {
+						include: {
+							teacher: true,
+						},
 					},
 				},
-			},
-			orderBy: { created_at: "desc" },
-		});
+				orderBy: { original_name: "asc" },
+			}),
+			this.prisma.courseAccess.findMany({
+				where: { course_id: courseId },
+				include: { teacher: true },
+			}),
+		]);
+
 		return files.map((file) => ({
 			...this.mapFileToEntity(file),
-			teachers: file.file_accesses.map((access) => ({
-				id: access.teacher.id,
-				name: access.teacher.name,
-			})),
+			...this.buildAccessLists(file.file_accesses, courseAccesses),
 		}));
 	}
 
@@ -67,6 +73,28 @@ export class MaterialRepository implements MaterialRepositoryPort {
 		return this.mapFileToEntity(file);
 	}
 
+	async renameMaterial(id: number, originalName: string): Promise<MaterialEntity> {
+		const file = await this.prisma.file.update({
+			where: { id },
+			data: { original_name: originalName },
+			include: {
+				file_accesses: {
+					include: {
+						teacher: true,
+					},
+				},
+			},
+		});
+		const courseAccesses = await this.prisma.courseAccess.findMany({
+			where: { course_id: file.course_id },
+			include: { teacher: true },
+		});
+		return {
+			...this.mapFileToEntity(file),
+			...this.buildAccessLists(file.file_accesses, courseAccesses),
+		};
+	}
+
 	async hasFiles(courseId: number): Promise<boolean> {
 		const filesCount = await this.prisma.file.count({
 			where: { course_id: courseId },
@@ -75,23 +103,48 @@ export class MaterialRepository implements MaterialRepositoryPort {
 	}
 
 	async hasAccess(teacherId: number, materialId: number): Promise<boolean> {
-		const fileAccess = await this.prisma.fileAccess.findFirst({
-			where: { teacher_id: teacherId, file_id: materialId },
+		const file = await this.prisma.file.findUnique({
+			where: { id: materialId },
+			select: {
+				file_accesses: {
+					where: { teacher_id: teacherId },
+					select: { type: true },
+				},
+				course: {
+					select: {
+						accesses: {
+							where: { teacher_id: teacherId },
+							select: { id: true },
+						},
+					},
+				},
+			},
 		});
-		return fileAccess !== null;
+		if (!file) {
+			return false;
+		}
+		// Персональная запись всегда сильнее доступа к курсу: DENY — исключение, ALLOW — точечная выдача
+		const fileAccess = file.file_accesses[0];
+		if (fileAccess) {
+			return fileAccess.type === PrismaFileAccessType.ALLOW;
+		}
+		return file.course.accesses.length > 0;
 	}
 
-	async createFileAccess(teacherIds: number[], materialId: number): Promise<void> {
+	async setFileAccess(teacherIds: number[], materialId: number, type: FileAccessType): Promise<void> {
 		if (teacherIds.length === 0) {
 			return;
 		}
-		await this.prisma.fileAccess.createMany({
-			data: teacherIds.map((teacherId) => ({ teacher_id: teacherId, file_id: materialId })),
-			skipDuplicates: true,
-		});
+		// Пара (teacher_id, file_id) уникальна, поэтому перезаписываем: удаляем прежнюю запись и создаём нужного типа
+		await this.prisma.$transaction([
+			this.prisma.fileAccess.deleteMany({ where: { teacher_id: { in: teacherIds }, file_id: materialId } }),
+			this.prisma.fileAccess.createMany({
+				data: teacherIds.map((teacherId) => ({ teacher_id: teacherId, file_id: materialId, type })),
+			}),
+		]);
 	}
 
-	async revokeFileAccess(teacherIds: number[], materialId: number): Promise<void> {
+	async clearFileAccess(teacherIds: number[], materialId: number): Promise<void> {
 		if (teacherIds.length === 0) {
 			return;
 		}
@@ -104,32 +157,58 @@ export class MaterialRepository implements MaterialRepositoryPort {
 		if (teacherIds.length === 0) {
 			return;
 		}
-		const files = await this.prisma.file.findMany({
-			where: { course_id: courseId },
-			select: { id: true },
-		});
-		if (files.length === 0) {
-			return;
-		}
-		await this.prisma.fileAccess.createMany({
-			data: files.flatMap((file) => teacherIds.map((teacherId) => ({ teacher_id: teacherId, file_id: file.id }))),
-			skipDuplicates: true,
-		});
+		// Доступ к курсу перекрывает персональные записи по его файлам, поэтому и ограничения, и точечные выдачи сбрасываются
+		await this.prisma.$transaction([
+			this.prisma.courseAccess.createMany({
+				data: teacherIds.map((teacherId) => ({ teacher_id: teacherId, course_id: courseId })),
+				skipDuplicates: true,
+			}),
+			this.prisma.fileAccess.deleteMany({
+				where: { teacher_id: { in: teacherIds }, file: { course_id: courseId } },
+			}),
+		]);
 	}
 
 	async revokeCourseAccess(courseId: number, teacherIds: number[]): Promise<void> {
 		if (teacherIds.length === 0) {
 			return;
 		}
-		await this.prisma.fileAccess.deleteMany({
-			where: { teacher_id: { in: teacherIds }, file: { course_id: courseId } },
+		await this.prisma.$transaction([
+			this.prisma.courseAccess.deleteMany({
+				where: { teacher_id: { in: teacherIds }, course_id: courseId },
+			}),
+			this.prisma.fileAccess.deleteMany({
+				where: { teacher_id: { in: teacherIds }, file: { course_id: courseId } },
+			}),
+		]);
+	}
+
+	async getCourseAccessTeachers(courseId: number): Promise<TeacherRef[]> {
+		const courseAccesses = await this.prisma.courseAccess.findMany({
+			where: { course_id: courseId },
+			include: { teacher: true },
+			orderBy: { teacher: { name: "asc" } },
 		});
+		return courseAccesses.map((access) => ({ id: access.teacher.id, name: access.teacher.name }));
+	}
+
+	async filterTeachersWithCourseAccess(courseId: number, teacherIds: number[]): Promise<number[]> {
+		if (teacherIds.length === 0) {
+			return [];
+		}
+		const courseAccesses = await this.prisma.courseAccess.findMany({
+			where: { course_id: courseId, teacher_id: { in: teacherIds } },
+			select: { teacher_id: true },
+		});
+		return courseAccesses.map((access) => access.teacher_id);
 	}
 
 	async deleteMaterial(id: number): Promise<void> {
-		await this.prisma.file.delete({
-			where: { id },
-		});
+		// Доступы удаляем в той же транзакции: внешний ключ file_access -> file запрещает удаление файла с выданными доступами
+		await this.prisma.$transaction([
+			this.prisma.fileAccess.deleteMany({ where: { file_id: id } }),
+			this.prisma.file.delete({ where: { id } }),
+		]);
 	}
 
 	async getMaterialsSize(): Promise<number> {
@@ -140,6 +219,32 @@ export class MaterialRepository implements MaterialRepositoryPort {
 			where: { upload_status: UploadStatus.UPLOADED },
 		});
 		return materialsSize._sum.size_bytes ?? 0;
+	}
+
+	private buildAccessLists(
+		fileAccesses: { teacher_id: number; type: PrismaFileAccessType; teacher: { id: number; name: string } }[],
+		courseAccesses: { teacher_id: number; teacher: { id: number; name: string } }[],
+	): { teachers: MaterialTeacher[]; restrictedTeachers: TeacherRef[] } {
+		const courseTeacherIds = new Set(courseAccesses.map((access) => access.teacher_id));
+		const deniedTeacherIds = new Set(
+			fileAccesses.filter((access) => access.type === PrismaFileAccessType.DENY).map((access) => access.teacher_id),
+		);
+
+		const teachers: MaterialTeacher[] = [
+			...courseAccesses
+				.filter((access) => !deniedTeacherIds.has(access.teacher_id))
+				.map((access) => ({ id: access.teacher.id, name: access.teacher.name, accessSource: AccessSource.COURSE })),
+			...fileAccesses
+				.filter((access) => access.type === PrismaFileAccessType.ALLOW && !courseTeacherIds.has(access.teacher_id))
+				.map((access) => ({ id: access.teacher.id, name: access.teacher.name, accessSource: AccessSource.FILE })),
+		].sort((first, second) => first.name.localeCompare(second.name));
+
+		const restrictedTeachers: TeacherRef[] = courseAccesses
+			.filter((access) => deniedTeacherIds.has(access.teacher_id))
+			.map((access) => ({ id: access.teacher.id, name: access.teacher.name }))
+			.sort((first, second) => first.name.localeCompare(second.name));
+
+		return { teachers, restrictedTeachers };
 	}
 
 	private resolveFileType(mimeType: string): PrismaFileType {
