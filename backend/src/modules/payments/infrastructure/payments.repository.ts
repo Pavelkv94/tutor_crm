@@ -103,6 +103,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 		period_start: Date;
 		period_end: Date;
 		lessons_count: number;
+		discount_percent: number;
 		created_by_id: number | null;
 	}): Promise<PaymentEntity> {
 		const payment = await this.prisma.payment.create({
@@ -115,6 +116,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 				period_start: data.period_start,
 				period_end: data.period_end,
 				lessons_count: data.lessons_count,
+				discount_percent: data.discount_percent,
 				created_by_id: data.created_by_id,
 			},
 		});
@@ -194,6 +196,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 		class: number;
 		balance: number;
 		balance_currency: string | null;
+		discount: number;
 		deleted_at: Date | null;
 		terms_accepted_at: Date | null;
 		marketing_consent_at: Date | null;
@@ -204,6 +207,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 			class: student.class,
 			balance: student.balance,
 			balance_currency: student.balance_currency as Currency | null,
+			discount: student.discount,
 			deleted_at: student.deleted_at,
 			// Наружу отдаём готовые признаки: разбор трёх состояний согласия — забота модуля ученика.
 			terms_accepted: student.terms_accepted_at !== null,
@@ -219,6 +223,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 			status: payment.status as PaymentStatusEnum,
 			amount: payment.amount,
 			currency: payment.currency as Currency,
+			discount_percent: payment.discount_percent,
 			period_start: payment.period_start,
 			period_end: payment.period_end,
 			lessons_count: payment.lessons_count,

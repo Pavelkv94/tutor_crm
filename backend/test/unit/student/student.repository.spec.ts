@@ -18,6 +18,7 @@ describe('StudentRepository', () => {
 		balance: 0,
 		marketing_consent: false,
 		balance_currency: null,
+		discount: 0,
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,

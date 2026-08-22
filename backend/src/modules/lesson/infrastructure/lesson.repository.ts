@@ -385,6 +385,7 @@ export class LessonRepository {
 				terms_accepted_at: lesson.student.terms_accepted_at,
 				balance_currency: lesson.student.balance_currency as Currency | null,
 				balance: lesson.student.balance,
+				discount: lesson.student.discount,
 			},
 			plan: {
 				id: lesson.plan.id,

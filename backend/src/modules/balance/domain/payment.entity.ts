@@ -9,6 +9,8 @@ export class PaymentEntity {
 	status: PaymentStatusEnum;
 	amount: number;
 	currency: Currency;
+	/** Скидка ученика, по которой посчитан счёт. 0 у операций, к которым скидка неприменима. */
+	discount_percent: number;
 
 	period_start: Date | null;
 	period_end: Date | null;

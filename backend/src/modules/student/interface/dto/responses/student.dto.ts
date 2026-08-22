@@ -38,6 +38,8 @@ export class StudentDto {
 	balance_currency: Currency | null;
 	@ApiProperty({ description: 'The balance of the student', example: 0 })
 	balance: number;
+	@ApiProperty({ description: 'Персональная скидка в процентах, применяемая к цене каждого занятия', example: 0 })
+	discount: number;
 }
 
 export class StudentExtendedDto extends StudentDto {

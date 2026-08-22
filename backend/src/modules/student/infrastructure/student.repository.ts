@@ -153,6 +153,7 @@ export class StudentRepository {
 			terms_accepted_at: student.terms_accepted_at,
 			balance_currency: student.balance_currency as Currency | null,
 			balance: student.balance,
+			discount: student.discount,
 		};
 	}
 

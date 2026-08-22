@@ -19,6 +19,7 @@ describe("buildInvoiceMessage", () => {
 		studentName: "Иван",
 		periodStart: new Date(Date.UTC(2026, 7, 1)),
 		currency: Currency.PLN,
+		discountPercent: 0,
 		paymentLink: null as string | null,
 	};
 
@@ -67,6 +68,24 @@ describe("buildInvoiceMessage", () => {
 		expect(message).toContain("прислать чек");
 		expect(message).not.toContain("ССЫЛКА НА ОПЛАТУ");
 		expect(message).toContain("25р");
+	});
+
+	it("shows the discount as a separate line and a reduced total", () => {
+		const lessons = [lesson(1, 5, 100), lesson(2, 12, 100)];
+
+		// Итог приходит уже со скидкой: 2 × round(100 × 0.9).
+		const message = buildInvoiceMessage({ ...params, lessons, total: 180, discountPercent: 10 });
+
+		// Построчные суммы остаются полными — админ должен видеть базу, от которой считалась скидка.
+		expect(message).toContain("🔸2 урок(ов) индивидуально × 100zł = 200zł");
+		expect(message).toContain("💰 Скидка 10%: −20zł");
+		expect(message).toContain("📌 Итого: 180zł");
+	});
+
+	it("omits the discount line when there is no discount", () => {
+		const message = buildInvoiceMessage({ ...params, lessons: [lesson(1, 5, 40)], total: 40 });
+
+		expect(message).not.toContain("Скидка");
 	});
 
 	it("explains why the link is missing", () => {

@@ -9,6 +9,8 @@ export type StudentForBalance = {
 	id: number;
 	balance: number;
 	balance_currency: Currency | null;
+	/** Персональная скидка в процентах. 0 — скидки нет. */
+	discount: number;
 	deleted_at: Date | null;
 };
 

@@ -22,6 +22,8 @@ export type InvoiceStudent = {
 	class: number;
 	balance: number;
 	balance_currency: Currency | null;
+	/** Персональная скидка в процентах. 0 — скидки нет. */
+	discount: number;
 	deleted_at: Date | null;
 	/** Условия обслуживания приняты — галочка на странице оплаты больше не нужна. */
 	terms_accepted: boolean;
@@ -68,6 +70,8 @@ export abstract class PaymentsRepositoryPort {
 		period_start: Date;
 		period_end: Date;
 		lessons_count: number;
+		/** Снимок скидки ученика: по нему оплата раскладывается по занятиям. */
+		discount_percent: number;
 		created_by_id: number | null;
 	}): Promise<PaymentEntity>;
 

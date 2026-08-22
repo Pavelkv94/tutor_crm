@@ -29,6 +29,7 @@ describe("PaymentsService", () => {
 		class: 5,
 		balance: 0,
 		balance_currency: null as Currency | null,
+		discount: 0,
 		deleted_at: null as Date | null,
 		terms_accepted: false,
 		marketing_answered: false,
@@ -89,7 +90,12 @@ describe("PaymentsService", () => {
 						deactivatePaymentLink: jest.fn(),
 					},
 				},
-				{ provide: PlanService, useValue: { ensureStripeIds: jest.fn(async (id: number) => ({ id, stripe_price_id: `price_${id}` })) } },
+				{
+					provide: PlanService,
+					useValue: {
+						ensureStripeIds: jest.fn(async (id: number) => ({ id, plan_price: 40 * id, stripe_price_id: `price_${id}`, stripe_product_id: `prod_${id}` })),
+					},
+				},
 				{ provide: TelegramService, useValue: { sendMessageToAdmin: jest.fn() } },
 				{ provide: PaymentsMetrics, useValue: { payment: jest.fn(), webhookEvent: jest.fn() } },
 			],
@@ -142,6 +148,30 @@ describe("PaymentsService", () => {
 						{ priceId: "price_2", quantity: 1 },
 					],
 					idempotencyKey: "invoice-7",
+				}),
+			);
+		});
+
+		it("discounts every lesson and stores the discount on the invoice", async () => {
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 100), billableLesson(2, 12, 100)]);
+
+			const result = await createInvoice();
+
+			// 2 × round(100 × 0.9), а не round(200 × 0.9) — иначе итог разошёлся бы со списаниями.
+			expect(result?.amount).toBe(180);
+			expect(paymentsRepository.createInvoice).toHaveBeenCalledWith(expect.objectContaining({ amount: 180, discount_percent: 10 }));
+		});
+
+		it("sends an ad-hoc price instead of the plan price when the student has a discount", async () => {
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40, Currency.PLN, 1), billableLesson(2, 12, 40, Currency.PLN, 1)]);
+
+			await createInvoice();
+
+			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
+				expect.objectContaining({
+					items: [{ productId: "prod_1", unitAmountMajor: 36, currency: Currency.PLN, quantity: 2 }],
 				}),
 			);
 		});

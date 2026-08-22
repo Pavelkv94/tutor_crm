@@ -119,6 +119,9 @@ export class StripeWebhookService {
 			delta: amountMajor,
 			currency: payment.currency as Currency,
 			allocateFrom: payment.period_start ? startOfMonth(payment.period_start) : undefined,
+			// Скидка берётся со счёта, а не из карточки ученика: если её успели изменить после
+			// выставления, занятия должны закрыться по тем ценам, за которые ученик заплатил.
+			discountPercent: payment.discount_percent,
 			reason: `stripe:${eventType}`,
 			payment: {
 				kind: "settle",

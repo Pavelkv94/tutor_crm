@@ -43,6 +43,11 @@ export interface Student {
    */
   balance_currency: Currency | null
   balance: number
+  /**
+   * Персональная скидка в процентах, 0 — скидки нет. Применяется к цене каждого занятия,
+   * а не к итогу счёта, поэтому влияет и на сумму к оплате, и на закрытие занятий балансом.
+   */
+  discount: number
 }
 
 export interface StudentExtended extends Student {
@@ -70,6 +75,7 @@ export interface CreateStudentInput {
   teacher_id: number
   timezone?: RegionCode | null
   marketing_consent?: boolean
+  discount?: number
 }
 
 export interface UpdateStudentInput {
@@ -80,6 +86,7 @@ export interface UpdateStudentInput {
   timezone?: RegionCode | null
   marketing_consent?: boolean
   terms_accepted?: boolean
+  discount?: number
 }
 
 export interface Plan {

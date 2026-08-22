@@ -17,7 +17,10 @@ export type InvoiceMessageParams = {
 	periodStart: Date;
 	lessons: BillableLesson[];
 	currency: Currency;
+	/** Сумма к оплате: уже со скидкой, если она есть. */
 	total: number;
+	/** Персональная скидка ученика в процентах. 0 — строки про скидку в отчёте не будет. */
+	discountPercent: number;
 	paymentLink: string | null;
 	/** Сообщение о причине, по которой ссылка не сгенерирована. */
 	linkIssue?: string;
@@ -38,6 +41,10 @@ const formatLessonLine = (lesson: BillableLesson): string => {
  *
  * Бесплатные занятия показываются в расписании, но не участвуют ни в построчных суммах,
  * ни в итоге — раньше их цена ошибочно попадала в сумму к оплате.
+ *
+ * Построчные суммы по планам остаются в полных ценах, а скидка выносится отдельной строкой:
+ * так администратору видно и базу, и размер уступки. Сама скидка считается как разница
+ * между полной суммой и итогом — иначе она разошлась бы с поштучным округлением цен.
  */
 export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 	const symbol = currencySymbol(params.currency);
@@ -61,6 +68,9 @@ export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 		return `🔸${lessons.length} урок(ов) ${planLabel} × ${plan.plan_price}${symbol} = ${lessons.length * plan.plan_price}${symbol}`;
 	});
 
+	const fullTotal = paidLessons.reduce((sum, lesson) => sum + lesson.plan_price, 0);
+	const discountLine = params.discountPercent > 0 ? `\n💰 Скидка ${params.discountPercent}%: −${fullTotal - params.total}${symbol}` : "";
+
 	const monthLabel = MONTHS_UPPER[params.periodStart.getMonth()];
 
 	let paymentNote: string;
@@ -79,7 +89,7 @@ export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 
 ${scheduleLines.join("\n")}
 
-${planLines.join("\n")}
+${planLines.join("\n")}${discountLine}
 📌 Итого: ${params.total}${symbol}
 
 ${paymentNote}

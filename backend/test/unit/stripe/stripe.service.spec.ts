@@ -56,6 +56,15 @@ describe("StripeService", () => {
 			}
 		});
 
+		it("builds an ad-hoc price for an item without a ready price id", async () => {
+			await service.createPaymentLink({
+				items: [{ productId: "prod_1", unitAmountMajor: 36, currency: Currency.PLN, quantity: 2 }],
+			});
+			const [params] = stripe.paymentLinks.create.mock.calls[0];
+
+			expect(params.line_items).toEqual([{ price_data: { product: "prod_1", currency: "pln", unit_amount: 3600 }, quantity: 2 }]);
+		});
+
 		it("shows a thank-you screen instead of redirecting anywhere", async () => {
 			const [params] = await call();
 

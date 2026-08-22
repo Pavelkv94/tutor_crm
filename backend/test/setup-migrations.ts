@@ -105,6 +105,13 @@ async function applyHandWrittenConstraints(databaseUrl: string): Promise<void> {
 				CHECK (("balance" = 0 AND "balance_currency" IS NULL) OR ("balance" <> 0 AND "balance_currency" IS NOT NULL))
 		`);
 
+		// Скидка ученика лежит в границах процента.
+		await client.query(`ALTER TABLE "student" DROP CONSTRAINT IF EXISTS "student_discount_check"`);
+		await client.query(`
+			ALTER TABLE "student" ADD CONSTRAINT "student_discount_check"
+				CHECK ("discount" >= 0 AND "discount" <= 100)
+		`);
+
 		console.log('✓ Hand-written indexes and constraints applied');
 	} finally {
 		await client.end();

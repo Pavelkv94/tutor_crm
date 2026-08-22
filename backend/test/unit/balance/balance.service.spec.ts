@@ -34,7 +34,7 @@ describe("BalanceService", () => {
 	};
 
 	class FakeBalanceRepository {
-		student = { id: 1, balance: 0, balance_currency: null as Currency | null, deleted_at: null as Date | null };
+		student = { id: 1, balance: 0, balance_currency: null as Currency | null, discount: 0, deleted_at: null as Date | null };
 		lessons: FakeLesson[] = [];
 		allocations: FakeAllocation[] = [];
 		payments: Array<{ id: number; amount: number; status: PaymentStatusEnum; type: PaymentTypeEnum; currency: Currency }> = [];
@@ -201,6 +201,44 @@ describe("BalanceService", () => {
 			expect(result.allocated.map((change) => change.lesson_id)).toEqual([1, 2, 3, 4]);
 			expect(result.balance).toBe(30);
 			expect(result.balance_currency).toBe(Currency.PLN);
+			expect(await repository.invariantHolds()).toBe(true);
+		});
+
+		it("closes every lesson of a discounted student without leaving a remainder", async () => {
+			// Ровно та поломка, ради которой скидка опускается до цены занятия: платёж со скидкой
+			// при полных ценах не закрыл бы последнее занятие.
+			repository.student.discount = 10;
+			repository.lessons = [lesson(1, 5, 100), lesson(2, 10, 100), lesson(3, 15, 100), lesson(4, 20, 100)];
+
+			const result = await service.reconcile(topUp(360));
+
+			expect(result.allocated.map((change) => change.lesson_id)).toEqual([1, 2, 3, 4]);
+			expect(result.allocated.map((change) => change.amount)).toEqual([90, 90, 90, 90]);
+			expect(result.balance).toBe(0);
+			expect(await repository.invariantHolds()).toBe(true);
+		});
+
+		it("prefers the discount passed in over the student's current one", async () => {
+			// Снимок со счёта: скидку успели снять после выставления, но оплата пришла по старой.
+			repository.student.discount = 0;
+			repository.lessons = [lesson(1, 5, 100), lesson(2, 10, 100)];
+
+			const result = await service.reconcile({ ...topUp(180), discountPercent: 10 });
+
+			expect(result.allocated.map((change) => change.amount)).toEqual([90, 90]);
+			expect(result.balance).toBe(0);
+			expect(await repository.invariantHolds()).toBe(true);
+		});
+
+		it("rounds the discounted price per lesson", async () => {
+			repository.student.discount = 10;
+			// round(95 × 0.9) = 86 (не 85.5), и таких занятий два.
+			repository.lessons = [lesson(1, 5, 95), lesson(2, 10, 95)];
+
+			const result = await service.reconcile(topUp(172));
+
+			expect(result.allocated.map((change) => change.amount)).toEqual([86, 86]);
+			expect(result.balance).toBe(0);
 			expect(await repository.invariantHolds()).toBe(true);
 		});
 

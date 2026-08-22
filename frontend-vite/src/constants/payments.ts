@@ -25,3 +25,9 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
 
 export const PAYMENT_STATUS_OPTIONS = Object.keys(PAYMENT_STATUS_LABELS) as PaymentStatus[]
 export const PAYMENT_TYPE_OPTIONS = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[]
+
+/**
+ * Потолок персональной скидки ученика. Зеркало MAX_STUDENT_DISCOUNT_PERCENT на бэкенде:
+ * там же живёт валидация, здесь — только ограничение поля ввода.
+ */
+export const MAX_STUDENT_DISCOUNT_PERCENT = 10

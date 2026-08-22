@@ -26,6 +26,7 @@ describe("StripeWebhookService", () => {
 		status: PaymentStatusEnum.PENDING,
 		amount: 120,
 		currency: Currency.PLN,
+		discount_percent: 0,
 		period_start: new Date(Date.UTC(2026, 7, 1)),
 		period_end: new Date(Date.UTC(2026, 7, 31)),
 	};
@@ -184,6 +185,15 @@ describe("StripeWebhookService", () => {
 					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 150 }),
 				}),
 			);
+		});
+
+		it("spreads the money by the discount stored on the invoice", async () => {
+			// Скидку могли изменить после выставления — раскладывать надо по той, за которую заплатили.
+			paymentsRepository.findByPaymentLinkId.mockResolvedValue({ ...invoice, discount_percent: 10 } as any);
+
+			await service.handleEvent(event("checkout.session.completed", session()));
+
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ discountPercent: 10 }));
 		});
 
 		it("waits for the async confirmation when the payment is not settled yet", async () => {

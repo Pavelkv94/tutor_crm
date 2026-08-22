@@ -21,6 +21,7 @@ interface StudentsTableProps {
   onDelete: (id: number) => void
   onEdit: (id: number) => void
   onAssignLessons: (id: number) => void
+  onChangePlan: (id: number) => void
   onReport: (id: number) => void
   onBalance: (id: number) => void
   isDeleting: boolean
@@ -71,6 +72,7 @@ export const StudentsTable = ({
   onDelete,
   onEdit,
   onAssignLessons,
+  onChangePlan,
   onReport,
   onBalance,
   isDeleting,
@@ -261,6 +263,17 @@ export const StudentsTable = ({
 														className="h-8 rounded-lg border-transparent bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
 													>
 														Регулярные занятия
+													</Button>
+												)}
+												{showActions && (
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => onChangePlan(student.id)}
+														disabled={isDeleted}
+														className="h-8 rounded-lg border-transparent bg-secondary px-3 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+													>
+														Изменить план
 													</Button>
 												)}
 												{showActions && !isDeleted && (

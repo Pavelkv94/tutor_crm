@@ -16,10 +16,15 @@ export type CreateProductWithPriceResult = {
 	priceId: string;
 };
 
-export type PaymentLinkItem = {
-	priceId: string;
-	quantity: number;
-};
+/**
+ * Позиция ссылки на оплату.
+ *
+ * Обычный случай — готовая цена плана (`priceId`). Для ученика со скидкой такой цены не
+ * существует: сумма зависит от ученика, а не от плана. Заводить Price на каждую пару
+ * «план + скидка» не нужно — Stripe принимает цену «на лету» через `price_data`,
+ * привязанную к тому же продукту плана.
+ */
+export type PaymentLinkItem = { priceId: string; quantity: number } | { productId: string; unitAmountMajor: number; currency: Currency; quantity: number };
 
 /**
  * Какие согласия страница оплаты должна собрать у плательщика. Признаки независимы:
@@ -103,6 +108,21 @@ export type CreatePaymentLinkResult = {
 	url: string;
 };
 
+/** Цены Stripe считает в минорных единицах, а суммы в приложении хранятся в целых. */
+const MINOR_UNITS_IN_MAJOR = 100;
+
+const toLineItem = (item: PaymentLinkItem): Stripe.PaymentLinkCreateParams.LineItem =>
+	"priceId" in item
+		? { price: item.priceId, quantity: item.quantity }
+		: {
+				price_data: {
+					product: item.productId,
+					currency: item.currency.toLowerCase(),
+					unit_amount: Math.round(item.unitAmountMajor * MINOR_UNITS_IN_MAJOR),
+				},
+				quantity: item.quantity,
+			};
+
 @Injectable()
 export class StripeService {
 	private readonly logger = new Logger(StripeService.name);
@@ -146,10 +166,7 @@ export class StripeService {
 		try {
 			const paymentLink = await this.stripe.paymentLinks.create(
 				{
-					line_items: params.items.map((item) => ({
-						price: item.priceId,
-						quantity: item.quantity,
-					})),
+					line_items: params.items.map((item) => toLineItem(item)),
 					metadata: params.metadata,
 					restrictions: {
 						completed_sessions: { limit: 1 },

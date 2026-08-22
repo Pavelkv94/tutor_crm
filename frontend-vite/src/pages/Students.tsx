@@ -16,6 +16,7 @@ import { CreateStudentDialog } from '@/components/students/CreateStudentDialog'
 import { EditStudentDialog } from '@/components/students/EditStudentDialog'
 import { DeleteStudentDialog } from '@/components/students/DeleteStudentDialog'
 import { AssignRegularLessonsDialog } from '@/components/students/AssignRegularLessonsDialog'
+import { ChangeStudentPlanDialog } from '@/components/students/ChangeStudentPlanDialog'
 import { StudentReportDialog } from '@/components/students/StudentReportDialog'
 import { BalanceAdjustDialog } from '@/components/payments/BalanceAdjustDialog'
 import { studentsApi } from '@/api/students'
@@ -27,6 +28,7 @@ export const Students = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [assignLessonsDialogOpen, setAssignLessonsDialogOpen] = useState(false)
+  const [changePlanDialogOpen, setChangePlanDialogOpen] = useState(false)
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [balanceDialogOpen, setBalanceDialogOpen] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
@@ -77,6 +79,11 @@ export const Students = () => {
   const handleAssignLessonsClick = (id: number) => {
     setSelectedStudentId(id)
     setAssignLessonsDialogOpen(true)
+  }
+
+  const handleChangePlanClick = (id: number) => {
+    setSelectedStudentId(id)
+    setChangePlanDialogOpen(true)
   }
 
   const handleReportClick = (id: number) => {
@@ -206,6 +213,7 @@ export const Students = () => {
         onDelete={handleDeleteClick}
         onEdit={handleEditClick}
         onAssignLessons={handleAssignLessonsClick}
+        onChangePlan={handleChangePlanClick}
         onReport={handleReportClick}
         onBalance={handleBalanceClick}
         isDeleting={deleteMutation.isPending}
@@ -229,6 +237,11 @@ export const Students = () => {
       <AssignRegularLessonsDialog
         open={assignLessonsDialogOpen}
         onOpenChange={setAssignLessonsDialogOpen}
+        studentId={selectedStudentId}
+      />
+      <ChangeStudentPlanDialog
+        open={changePlanDialogOpen}
+        onOpenChange={setChangePlanDialogOpen}
         studentId={selectedStudentId}
       />
       <StudentReportDialog

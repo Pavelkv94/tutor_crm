@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
+import { MAX_STUDENT_DISCOUNT_PERCENT } from "@/shared/utils/discount.util";
 
 
 export class CreateStudentDto {
@@ -43,6 +44,19 @@ export class CreateStudentDto {
 	@IsBoolean()
 	@IsOptional()
 	marketing_consent?: boolean;
+
+	@ApiProperty({
+		description: `Персональная скидка в процентах, от 0 до ${MAX_STUDENT_DISCOUNT_PERCENT}. Применяется к цене каждого занятия.`,
+		example: 0,
+		minimum: 0,
+		maximum: MAX_STUDENT_DISCOUNT_PERCENT,
+		required: false,
+	})
+	@IsInt()
+	@Min(0)
+	@Max(MAX_STUDENT_DISCOUNT_PERCENT)
+	@IsOptional()
+	discount?: number;
 
 	// balance_currency сюда не входит намеренно: в БД стоит констрейнт
 	// student_balance_currency_check («balance = 0 ⟺ balance_currency IS NULL»), а у нового

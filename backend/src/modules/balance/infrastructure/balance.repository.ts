@@ -55,6 +55,7 @@ export class BalanceRepository implements BalanceRepositoryPort {
 			id: student.id,
 			balance: student.balance,
 			balance_currency: student.balance_currency as Currency | null,
+			discount: student.discount,
 			deleted_at: student.deleted_at,
 		};
 	}
@@ -68,6 +69,7 @@ export class BalanceRepository implements BalanceRepositoryPort {
 			id: student.id,
 			balance: student.balance,
 			balance_currency: student.balance_currency as Currency | null,
+			discount: student.discount,
 			deleted_at: student.deleted_at,
 		};
 	}
@@ -263,6 +265,7 @@ export class BalanceRepository implements BalanceRepositoryPort {
 			status: payment.status as PaymentStatusEnum,
 			amount: payment.amount,
 			currency: payment.currency as Currency,
+			discount_percent: payment.discount_percent,
 			period_start: payment.period_start,
 			period_end: payment.period_end,
 			lessons_count: payment.lessons_count,

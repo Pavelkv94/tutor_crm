@@ -342,6 +342,73 @@ describe('Payments (e2e)', () => {
 		});
 	});
 
+	describe('скидка ученика', () => {
+		const issueInvoice = () =>
+			request(app.getHttpServer())
+				.post('/payments/invoices')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end });
+
+		it('уменьшает счёт и всё равно закрывает все занятия', async () => {
+			await prisma.student.update({ where: { id: studentId }, data: { discount: 10 } });
+			await createLesson(5, plnPlanId);
+			await createLesson(12, plnPlanId);
+			await createLesson(19, plnPlanId);
+			await createLesson(26, plnPlanId);
+
+			// 4 × round(40 × 0.9) = 144 вместо 160. Скидка на итог дала бы столько же,
+			// но занятия закрывались бы по 40 — и на четвёртое денег бы не хватило.
+			const invoiceResponse = await issueInvoice().expect(201);
+			expect(invoiceResponse.body).toMatchObject({ amount: 144, currency: Currency.PLN, lessons_count: 4 });
+
+			// Готовой цены на 36 в Stripe нет: она принадлежит ученику, а не плану.
+			expect(stripeServiceMock.createPaymentLink).toHaveBeenLastCalledWith(
+				expect.objectContaining({
+					items: [{ productId: `prod_${plnPlanId}`, unitAmountMajor: 36, currency: Currency.PLN, quantity: 4 }],
+				}),
+			);
+
+			await postWebhook(checkoutSessionEvent({ amountTotal: 14400 })).expect(200);
+
+			const lessons = await getLessons();
+			expect(lessons.every((lesson) => lesson.status === LessonStatus.PENDING_PAID)).toBe(true);
+
+			const student = await getStudent();
+			expect(student.balance).toBe(0);
+			expect(student.balance_currency).toBeNull();
+
+			const payment = await prisma.payment.findUniqueOrThrow({ where: { id: invoiceResponse.body.payment_id } });
+			expect(payment.discount_percent).toBe(10);
+		});
+
+		it('раскладывает оплату по скидке со счёта, а не по текущей', async () => {
+			await prisma.student.update({ where: { id: studentId }, data: { discount: 10 } });
+			await createLesson(5, plnPlanId);
+			await createLesson(12, plnPlanId);
+			await issueInvoice().expect(201);
+
+			// Админ снял скидку уже после того, как ссылка ушла ученику.
+			await prisma.student.update({ where: { id: studentId }, data: { discount: 0 } });
+			await postWebhook(checkoutSessionEvent({ amountTotal: 7200 })).expect(200);
+
+			const lessons = await getLessons();
+			expect(lessons.every((lesson) => lesson.status === LessonStatus.PENDING_PAID)).toBe(true);
+			expect((await getStudent()).balance).toBe(0);
+		});
+
+		it('не принимает скидку выше потолка', async () => {
+			await request(app.getHttpServer())
+				.patch(`/students/${studentId}`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ discount: 11 })
+				.expect(400);
+		});
+
+		it('не даёт записать в БД скидку вне процента', async () => {
+			await expect(prisma.student.update({ where: { id: studentId }, data: { discount: 101 } })).rejects.toThrow();
+		});
+	});
+
 	describe('refunds', () => {
 		it('reverts payment from the latest lesson', async () => {
 			await createLesson(5, plnPlanId);

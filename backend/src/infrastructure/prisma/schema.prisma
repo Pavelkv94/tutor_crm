@@ -45,6 +45,11 @@ model Student {
   class      Int
   birth_date DateTime?
 	balance    Int @default(0)
+	/// Персональная скидка ученика в процентах, 0 — скидки нет. Применяется к цене каждого
+	/// занятия, а не к итогу счёта: баланс закрывает занятия поштучно, и скидка на итог
+	/// оставила бы последнее занятие неоплаченным. Диапазон закреплён CHECK-констрейнтом
+	/// student_discount_check, потолок в 10% — валидацией DTO (MAX_STUDENT_DISCOUNT_PERCENT).
+	discount   Int @default(0)
 	marketing_consent Boolean @default(false)
 	/// Когда получен ответ про маркетинговое согласие. NULL — вопрос ещё не задавали,
 	/// и его нужно показать на странице оплаты. Отказ — такой же зафиксированный ответ,
@@ -164,6 +169,10 @@ model Payment {
 	status        PaymentStatus @default(PENDING)
 	amount        Int
 	currency      Currency
+	/// Скидка ученика на момент выставления счёта. Снимок нужен, чтобы пришедшая оплата
+	/// разложилась по тем же ценам, по которым счёт был посчитан, даже если скидку ученика
+	/// успели изменить между выставлением и оплатой.
+	discount_percent Int @default(0)
 
 	period_start  DateTime?
 	period_end    DateTime?

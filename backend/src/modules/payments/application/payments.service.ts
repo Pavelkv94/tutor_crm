@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { endOfDay, endOfMonth, parseISO, startOfDay, startOfMonth } from "date-fns";
 import { Currency } from "@/shared/enums/currency.enum";
-import { StripeService } from "@/infrastructure/stripe/stripe.service";
+import { PaymentLinkItem, StripeService } from "@/infrastructure/stripe/stripe.service";
 import { PlanService } from "@/modules/plan/application/plan.service";
 import { TelegramService } from "@/modules/telegram/application/telegram.service";
 import { BalanceService } from "@/modules/balance/application/balance.service";
@@ -20,6 +20,7 @@ import { buildInvoiceMessage, currencySymbol } from "@/modules/payments/applicat
 import { AdjustBalanceDto } from "@/modules/payments/interface/dto/requests/adjust-balance.dto";
 import { AdjustBalanceResultDto, BalanceDto, InvoiceDto } from "@/modules/payments/interface/dto/responses/invoice.dto";
 import { PaymentsMetrics } from "@/modules/payments/application/payments.metrics";
+import { applyDiscount } from "@/shared/utils/discount.util";
 
 /** Валюты, по которым выставляется ссылка Stripe. BYN оплачивается вне системы. */
 const STRIPE_CURRENCIES: Currency[] = [Currency.PLN, Currency.EUR];
@@ -95,7 +96,9 @@ export class PaymentsService {
 			return this.skip(params.throwOnSkip, message);
 		}
 
-		const total = paidLessons.reduce((sum, lesson) => sum + lesson.plan_price, 0);
+		// Скидка применяется к каждому занятию, а не к итогу: баланс закрывает занятия поштучно,
+		// и округлённая на итоге скидка оставила бы последнее занятие без денег.
+		const total = paidLessons.reduce((sum, lesson) => sum + applyDiscount(lesson.plan_price, student.discount), 0);
 		const periodStart = startOfDay(params.from);
 		const periodEnd = endOfDay(params.to);
 
@@ -108,6 +111,7 @@ export class PaymentsService {
 			period_start: periodStart,
 			period_end: periodEnd,
 			lessons_count: paidLessons.length,
+			discount_percent: student.discount,
 			created_by_id: params.createdById,
 		});
 
@@ -120,6 +124,7 @@ export class PaymentsService {
 				lessons,
 				currency,
 				total,
+				discountPercent: student.discount,
 				paymentLink: link,
 				linkIssue: issue,
 			}),
@@ -234,6 +239,7 @@ export class PaymentsService {
 			delta: payment.amount,
 			currency: payment.currency,
 			allocateFrom: payment.period_start ? startOfMonth(payment.period_start) : undefined,
+			discountPercent: payment.discount_percent,
 			reason: `apply-parked-payment:${paymentId}`,
 			payment: { kind: "settle", paymentId, amount: payment.amount, patch: { paid_at: payment.paid_at ?? new Date() } },
 		});
@@ -333,7 +339,7 @@ export class PaymentsService {
 		}
 
 		try {
-			const items = await this.buildLineItems(lessons);
+			const items = await this.buildLineItems(lessons, student.discount, currency);
 			if (items.length > MAX_LINE_ITEMS) {
 				const issue = `в счёте ${items.length} позиций, Stripe допускает не больше ${MAX_LINE_ITEMS}`;
 				this.logger.error(`Счёт ${payment.id}: ${issue}`);
@@ -365,16 +371,32 @@ export class PaymentsService {
 	}
 
 	/** Группирует занятия по плану: одна позиция на план с количеством занятий. */
-	private async buildLineItems(lessons: BillableLesson[]): Promise<Array<{ priceId: string; quantity: number }>> {
+	private async buildLineItems(lessons: BillableLesson[], discountPercent: number, currency: Currency): Promise<PaymentLinkItem[]> {
 		const countByPlan = new Map<number, number>();
 		for (const lesson of lessons) {
 			countByPlan.set(lesson.plan_id, (countByPlan.get(lesson.plan_id) ?? 0) + 1);
 		}
 
-		const items: Array<{ priceId: string; quantity: number }> = [];
+		const items: PaymentLinkItem[] = [];
 		for (const [planId, quantity] of countByPlan) {
 			// Планы, заведённые до появления оплат, приходят без цены в Stripe — создаём на лету.
 			const plan = await this.planService.ensureStripeIds(planId);
+
+			if (discountPercent > 0) {
+				// Цена со скидкой принадлежит ученику, а не плану, поэтому готового Price для неё
+				// нет и быть не должно: Stripe принимает разовую цену у того же продукта.
+				if (!plan.stripe_product_id) {
+					throw new Error(`У плана ${planId} нет продукта в Stripe`);
+				}
+				items.push({
+					productId: plan.stripe_product_id,
+					unitAmountMajor: applyDiscount(plan.plan_price, discountPercent),
+					currency,
+					quantity,
+				});
+				continue;
+			}
+
 			if (!plan.stripe_price_id) {
 				throw new Error(`У плана ${planId} нет цены в Stripe`);
 			}

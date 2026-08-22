@@ -6,6 +6,7 @@ import { LessonStatusEnum } from "@/modules/lesson/interface/dto/lesson-status.e
 import { PaymentEntity } from "@/modules/balance/domain/payment.entity";
 import { PaymentStatusEnum } from "@/modules/balance/domain/payment-status.enum";
 import { BalanceRepositoryPort, CreatePaymentData, UpdatePaymentData } from "@/modules/balance/application/ports/balance.repository.port";
+import { applyDiscount } from "@/shared/utils/discount.util";
 
 /** Как поступить со строкой Payment в рамках операции. */
 export type ReconcilePaymentRef =
@@ -24,6 +25,12 @@ export type ReconcileInput = {
 	currency: Currency | null;
 	/** С какой даты закрывать занятия. По умолчанию — начало текущего месяца. */
 	allocateFrom?: Date;
+	/**
+	 * Скидка, по которой закрывать занятия. По умолчанию берётся текущая скидка ученика.
+	 * Оплата счёта передаёт сюда снимок со счёта: иначе изменение скидки между выставлением
+	 * и оплатой развело бы сумму платежа с суммой списаний, и занятие осталось бы неоплаченным.
+	 */
+	discountPercent?: number;
 	reason: string;
 	payment: ReconcilePaymentRef;
 	/** Разрешить балансу уйти в минус. Только для возвратов: деньги в Stripe уже отданы. */
@@ -139,6 +146,7 @@ export class BalanceService {
 				currency: operationCurrency,
 				paymentId: payment?.id ?? null,
 				from: input.allocateFrom ?? startOfMonth(new Date()),
+				discountPercent: input.discountPercent ?? student.discount,
 				allocated,
 			});
 		}
@@ -381,10 +389,22 @@ export class BalanceService {
 	/**
 	 * Закрывает неоплаченные занятия по возрастанию даты. Хронология строгая: если на очередное
 	 * занятие денег не хватило — останавливаемся, а не перескакиваем на более позднее дешёвое.
+	 *
+	 * Занятие закрывается по цене со скидкой ученика — по той же, по которой посчитан счёт.
+	 * Скидка обязана применяться здесь, а не только к итогу: списание идёт поштучно, и на
+	 * уменьшенный платёж при полных ценах не хватило бы последнего занятия.
 	 */
 	private async allocate(
 		tx: Prisma.TransactionClient,
-		params: { studentId: number; available: number; currency: Currency; paymentId: number | null; from: Date; allocated: AllocationChange[] },
+		params: {
+			studentId: number;
+			available: number;
+			currency: Currency;
+			paymentId: number | null;
+			from: Date;
+			discountPercent: number;
+			allocated: AllocationChange[];
+		},
 	): Promise<number> {
 		const lessons = await this.balanceRepository.getAllocatableLessons(tx, params.studentId, params.from);
 
@@ -399,7 +419,8 @@ export class BalanceService {
 				);
 				continue;
 			}
-			if (rest < lesson.plan_price) {
+			const price = applyDiscount(lesson.plan_price, params.discountPercent);
+			if (rest < price) {
 				break;
 			}
 			const paidStatus = PAID_FOR_UNPAID[lesson.status];
@@ -411,12 +432,12 @@ export class BalanceService {
 				lessonId: lesson.id,
 				studentId: params.studentId,
 				paymentId: params.paymentId,
-				amount: lesson.plan_price,
+				amount: price,
 				currency: params.currency,
 				newStatus: paidStatus,
 			});
-			rest -= lesson.plan_price;
-			params.allocated.push({ lesson_id: lesson.id, amount: lesson.plan_price, new_status: paidStatus });
+			rest -= price;
+			params.allocated.push({ lesson_id: lesson.id, amount: price, new_status: paidStatus });
 		}
 		return rest;
 	}

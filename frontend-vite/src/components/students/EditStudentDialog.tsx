@@ -21,24 +21,14 @@ import {
 } from '@/components/ui/select'
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
-import { plansApi } from '@/api/plans'
-import { lessonsApi } from '@/api/lessons'
 import { RegionSelect } from '@/components/shared/RegionSelect'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
-import { showSuccessToast } from '@/lib/toast'
 import type { UpdateStudentInput } from '@/types'
+import { MAX_STUDENT_DISCOUNT_PERCENT } from '@/constants/payments'
 import { formatMoney, getCurrencyFlag } from '@/constants/currency'
-import { getAllowedPlanCurrency, isPlanSelectable } from '@/lib/lesson-currency'
-import { invalidateMoneyQueries } from '@/lib/invalidate-money'
-
-const getDefaultDateTimeLocal = (): string => {
-  const d = new Date()
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 interface EditStudentDialogProps {
   open: boolean
@@ -54,10 +44,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
 	const [marketingConsent, setMarketingConsent] = useState(false)
 	const [termsAccepted, setTermsAccepted] = useState(false)
-  const [oldPlanId, setOldPlanId] = useState<string>('')
-  const [newPlanId, setNewPlanId] = useState<string>('')
-  const [planStartDate, setPlanStartDate] = useState('')
-  const [planEndDate, setPlanEndDate] = useState('')
+  const [discount, setDiscount] = useState('0')
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
 
@@ -74,15 +61,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
     enabled: isAdmin && open,
   })
 
-  const { data: activePlans = [] } = useQuery({
-    queryKey: ['plans', 'active'],
-    queryFn: () => plansApi.getAll('active'),
-    enabled: isAdmin && open,
-  })
-
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
-  const actualPlans = student?.actualPlans ?? []
-  const allowedCurrency = getAllowedPlanCurrency(student)
 
   useEffect(() => {
     if (student && open) {
@@ -97,18 +76,9 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setTimezone(student.timezone || '')
 			setMarketingConsent(student.marketing_consent)
 			setTermsAccepted(student.terms_accepted)
+      setDiscount(student.discount.toString())
     }
   }, [student, open, studentId])
-
-  useEffect(() => {
-    if (open && isAdmin) {
-      const now = getDefaultDateTimeLocal()
-      setPlanStartDate(now)
-      setPlanEndDate(now)
-      setOldPlanId('')
-      setNewPlanId('')
-    }
-  }, [open, isAdmin])
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateStudentInput) => studentsApi.update(studentId!, data),
@@ -116,15 +86,6 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['student', studentId] })
       onOpenChange(false)
-    },
-  })
-
-  const updatePlanMutation = useMutation({
-    mutationFn: (data: { student_id: number; old_plan_id: number; new_plan_id: number; start_date: string; end_date: string }) =>
-      lessonsApi.updateLessonsPlanForPeriod(data),
-    onSuccess: () => {
-      showSuccessToast('План для периода успешно изменён')
-      invalidateMoneyQueries(queryClient, studentId)
     },
   })
 
@@ -137,20 +98,13 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setTimezone('')
 			setMarketingConsent(false)
 			setTermsAccepted(false)
+      setDiscount('0')
     }
   }, [open])
 
-  const handleSavePlanChange = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!studentId || !oldPlanId || !newPlanId || !planStartDate || !planEndDate) return
-    updatePlanMutation.mutate({
-      student_id: studentId,
-      old_plan_id: parseInt(oldPlanId, 10),
-      new_plan_id: parseInt(newPlanId, 10),
-      start_date: planStartDate,
-      end_date: planEndDate,
-    })
-  }
+  const discountValue = Number(discount)
+  const isDiscountValid =
+    Number.isInteger(discountValue) && discountValue >= 0 && discountValue <= MAX_STUDENT_DISCOUNT_PERCENT
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -170,6 +124,11 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       data.teacher_id = parseInt(teacherId, 10)
     }
 
+    // Скидку назначает только администратор — у преподавателя поля нет, и слать его нечего.
+    if (isAdmin) {
+      data.discount = discountValue
+    }
+
     updateMutation.mutate(data)
   }
 
@@ -180,7 +139,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={isAdmin ? 'sm:max-w-4xl' : 'sm:max-w-[425px]'}
+        className={`max-h-[90vh] overflow-y-auto ${isAdmin ? 'sm:max-w-2xl' : 'sm:max-w-[425px]'}`}
         aria-describedby="edit-student-description"
         aria-labelledby="edit-student-title"
       >
@@ -190,9 +149,8 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
             Изменить информацию об ученике.
           </DialogDescription>
         </DialogHeader>
-        <div className={isAdmin ? 'grid grid-cols-1 gap-6 sm:grid-cols-2' : undefined}>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className={`grid gap-4 py-4 ${isAdmin ? 'sm:grid-cols-2' : ''}`}>
               <div className="grid gap-2">
                 <Label htmlFor="edit-name">Имя</Label>
                 <Input
@@ -266,7 +224,24 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
 									</p>
 								</div>
 							)}
-							<div className="grid gap-3">
+							{isAdmin && (
+								<div className="grid gap-2">
+									<Label htmlFor="edit-discount">Скидка, %</Label>
+									<Input
+										id="edit-discount"
+										type="number"
+										min={0}
+										max={MAX_STUDENT_DISCOUNT_PERCENT}
+										step={1}
+										value={discount}
+										onChange={(e) => setDiscount(e.target.value)}
+									/>
+									<p className="text-xs text-muted-foreground">
+										0 — без скидки, максимум {MAX_STUDENT_DISCOUNT_PERCENT}%. Действует на новые счета.
+									</p>
+								</div>
+							)}
+							<div className={`grid gap-3 ${isAdmin ? 'sm:col-span-2' : ''}`}>
 								<div className="flex items-center gap-2">
 									<Checkbox
 										id="edit-marketingConsent"
@@ -303,124 +278,11 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Отмена
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending || (isAdmin && !isDiscountValid)}>
                 {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
               </Button>
             </DialogFooter>
-          </form>
-
-          {isAdmin && (
-            <div className="border-t pt-4 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-              <h3 className="mb-3 text-sm font-semibold" id="plan-change-title">
-                Изменить план для ученика
-              </h3>
-              <form onSubmit={handleSavePlanChange} className="flex flex-col gap-4">
-                <div className="grid gap-4 py-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-old">Текущий план</Label>
-                    <Select value={oldPlanId} onValueChange={setOldPlanId}>
-                      <SelectTrigger id="plan-old" aria-label="Текущий план ученика">
-                        <SelectValue placeholder="Не выбрано" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {actualPlans.length === 0 ? (
-                          <SelectItem value="none" disabled>
-                            Нет планов
-                          </SelectItem>
-                        ) : (
-                          actualPlans.map((plan) => (
-                            <SelectItem key={plan.id} value={plan.id.toString()}>
-                              <span className="flex items-center gap-2">
-                                <span>{plan.plan_name}</span>
-                                <span className="text-muted-foreground">
-                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-start">Дата и время начала</Label>
-                    <Input
-                      id="plan-start"
-                      type="datetime-local"
-                      value={planStartDate}
-                      onChange={(e) => setPlanStartDate(e.target.value)}
-                      required
-                      aria-label="Дата и время начала периода"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-end">Дата и время окончания</Label>
-                    <Input
-                      id="plan-end"
-                      type="datetime-local"
-                      value={planEndDate}
-                      onChange={(e) => setPlanEndDate(e.target.value)}
-                      required
-                      aria-label="Дата и время окончания периода"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-new">Новый план</Label>
-                    <Select value={newPlanId} onValueChange={setNewPlanId}>
-                      <SelectTrigger id="plan-new" aria-label="Новый план">
-                        <SelectValue placeholder="Не выбрано" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activePlans.map((plan) => {
-                          const isSelectable = isPlanSelectable(plan, allowedCurrency)
-
-                          return (
-                            <SelectItem
-                              key={plan.id}
-                              value={plan.id.toString()}
-                              disabled={!isSelectable}
-                            >
-                              <span className="flex items-center gap-2">
-                                <span>{plan.plan_name}</span>
-                                <span className="text-muted-foreground">
-                                  {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
-                                </span>
-                                {!isSelectable && (
-                                  <span className="text-muted-foreground">(другая валюта)</span>
-                                )}
-                              </span>
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {allowedCurrency && (
-                      <p className="text-xs text-muted-foreground">
-                        На балансе {formatMoney(student.balance, allowedCurrency)} — доступны только
-                        планы в {allowedCurrency}.
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <DialogFooter className="sm:justify-start">
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    disabled={
-                      updatePlanMutation.isPending ||
-                      !oldPlanId ||
-                      oldPlanId === 'none' ||
-                      !newPlanId ||
-                      actualPlans.length === 0
-                    }
-                  >
-                    {updatePlanMutation.isPending ? 'Сохранение...' : 'Сохранить план'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </div>
-          )}
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

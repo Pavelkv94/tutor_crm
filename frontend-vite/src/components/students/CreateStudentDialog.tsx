@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
+import { MAX_STUDENT_DISCOUNT_PERCENT } from '@/constants/payments'
 import type { CreateStudentInput } from '@/types'
 
 interface CreateStudentDialogProps {
@@ -39,6 +40,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
 	const [marketingConsent, setMarketingConsent] = useState(false)
+  const [discount, setDiscount] = useState('0')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -50,7 +52,12 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
 
   const activeTeachers = teachers.filter((teacher) => !teacher.deleted_at)
 
-  const isFormValid = name.trim() !== '' && studentClass.trim() !== '' && (!isAdmin || teacherId !== '')
+  const discountValue = Number(discount)
+  const isDiscountValid =
+    Number.isInteger(discountValue) && discountValue >= 0 && discountValue <= MAX_STUDENT_DISCOUNT_PERCENT
+
+  const isFormValid =
+    name.trim() !== '' && studentClass.trim() !== '' && (!isAdmin || (teacherId !== '' && isDiscountValid))
 
   const createMutation = useMutation({
     mutationFn: (data: CreateStudentInput) => studentsApi.create(data),
@@ -63,6 +70,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       setTeacherId('')
       setTimezone('')
 			setMarketingConsent(false)
+      setDiscount('0')
     },
   })
 
@@ -78,6 +86,11 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
       timezone: timezone || null,
 			marketing_consent: marketingConsent,
+    }
+
+    // Скидку назначает только администратор — у преподавателя поля нет, и слать его нечего.
+    if (isAdmin) {
+      data.discount = discountValue
     }
 
     createMutation.mutate(data)
@@ -148,6 +161,24 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
               value={timezone}
               onValueChange={setTimezone}
             />
+            {isAdmin && (
+              <div className="grid gap-2">
+                <Label htmlFor="discount">Скидка, %</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  min={0}
+                  max={MAX_STUDENT_DISCOUNT_PERCENT}
+                  step={1}
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Уменьшает цену каждого занятия в счёте. 0 — без скидки, максимум{' '}
+                  {MAX_STUDENT_DISCOUNT_PERCENT}%.
+                </p>
+              </div>
+            )}
 						<div className="flex items-center gap-2">
 							<Checkbox
 								id="marketingConsent"
