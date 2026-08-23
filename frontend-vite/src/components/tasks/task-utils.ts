@@ -3,7 +3,7 @@ import type { TaskStatus } from '@/types'
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'В работе',
   ON_APPROVAL: 'На проверку',
-  COMPLETED: 'Выполнена',
+  COMPLETED: 'Выполнено',
 }
 
 export const TASK_STATUS_PILL_CLASS: Record<TaskStatus, string> = {
