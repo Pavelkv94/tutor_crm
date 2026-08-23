@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils'
 import {
   formatTaskDate,
   getTaskColorClass,
-  TASK_STATUS_BORDER_CLASS,
   TASK_STATUS_LABELS,
 } from '@/components/tasks/task-utils'
+import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge'
 import type { Task } from '@/types'
 
 interface TaskStickerProps {
@@ -46,7 +46,6 @@ export const TaskSticker = ({
     onDelete?.(task)
   }
 
-  const showActions = canEdit || canDelete
   const isCompleted = task.status === 'COMPLETED'
   const statusLabel = TASK_STATUS_LABELS[task.status]
   const commentsCount = task.comments_count ?? 0
@@ -57,18 +56,17 @@ export const TaskSticker = ({
         'relative flex aspect-square flex-col rounded-sm p-4 shadow-md',
         'font-medium text-gray-800 leading-snug',
         getTaskColorClass(task.color),
-        TASK_STATUS_BORDER_CLASS[task.status],
         isCompleted && 'opacity-70 shadow-sm'
       )}
-      title={statusLabel}
     >
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-4 bg-white/40 rounded-sm"
         aria-hidden="true"
       />
 
-      {showActions && (
-        <div className="relative z-10 flex items-start justify-end gap-1 pt-1">
+      <div className="relative z-10 flex items-start justify-between gap-2 pt-1">
+        <TaskStatusBadge status={task.status} />
+        <div className="flex items-start gap-1">
           {canEdit && (
             <button
               type="button"
@@ -90,20 +88,19 @@ export const TaskSticker = ({
             </button>
           )}
         </div>
-      )}
+      </div>
 
       <button
         type="button"
         onClick={handleViewClick}
         onKeyDown={handleViewKeyDown}
         className={cn(
-          'relative z-10 flex flex-1 flex-col text-left outline-none',
-          'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm',
-          !showActions && 'pt-1'
+          'relative z-10 mt-2 flex flex-1 flex-col text-left outline-none',
+          'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm'
         )}
         aria-label={`Открыть задачу (${statusLabel}): ${task.description}`}
       >
-        <p className={cn('line-clamp-5 flex-1 text-sm whitespace-pre-wrap break-words', isCompleted && 'text-gray-500')}>
+        <p className={cn('line-clamp-4 flex-1 text-sm whitespace-pre-wrap break-words', isCompleted && 'text-gray-500')}>
           {task.description}
         </p>
         <div

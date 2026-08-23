@@ -6,11 +6,13 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   COMPLETED: 'Выполнена',
 }
 
-export const TASK_STATUS_BORDER_CLASS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'border-l-4 border-l-green-500',
-  ON_APPROVAL: 'border-l-4 border-l-blue-500',
-  COMPLETED: '',
+export const TASK_STATUS_PILL_CLASS: Record<TaskStatus, string> = {
+  IN_PROGRESS: 'border-emerald-600/40 bg-white/90 text-emerald-700',
+  ON_APPROVAL: 'border-blue-600/40 bg-white/90 text-blue-700',
+  COMPLETED: 'border-gray-500/40 bg-white/70 text-gray-600',
 }
+
+export const TASK_STATUS_ORDER: TaskStatus[] = ['IN_PROGRESS', 'ON_APPROVAL', 'COMPLETED']
 
 export const TASK_COLORS = [
   'bg-yellow-200',

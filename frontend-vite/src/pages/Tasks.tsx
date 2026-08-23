@@ -12,6 +12,8 @@ import {
 import { Label } from '@/components/ui/label'
 import { TaskTeacherSelectionGrid } from '@/components/tasks/TaskTeacherSelectionGrid'
 import { TaskSticker } from '@/components/tasks/TaskSticker'
+import { TaskStatusSection } from '@/components/tasks/TaskStatusSection'
+import { TASK_STATUS_ORDER } from '@/components/tasks/task-utils'
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
 import { EditTaskDialog } from '@/components/tasks/EditTaskDialog'
 import { DeleteTaskDialog } from '@/components/tasks/DeleteTaskDialog'
@@ -19,7 +21,7 @@ import { ViewTaskDialog } from '@/components/tasks/ViewTaskDialog'
 import { tasksApi } from '@/api/tasks'
 import { useAuth } from '@/contexts/AuthContext'
 import { showSuccessToast } from '@/lib/toast'
-import type { Task } from '@/types'
+import type { Task, TaskStatus } from '@/types'
 
 export const Tasks = () => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
@@ -63,6 +65,14 @@ export const Tasks = () => {
 
   const tasks = isAdmin ? teacherTasks : myTasks
   const isTasksLoading = isAdmin ? isTeacherTasksLoading : isMyTasksLoading
+
+  const tasksByStatus = TASK_STATUS_ORDER.reduce(
+    (acc, status) => {
+      acc[status] = tasks.filter((task) => task.status === status)
+      return acc
+    },
+    {} as Record<TaskStatus, Task[]>
+  )
 
   const handleTeacherSelect = (teacherId: number) => {
     setSelectedTeacherId(teacherId.toString())
@@ -168,18 +178,33 @@ export const Tasks = () => {
           <p className="text-muted-foreground">Задач пока нет</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-          {tasks.map((task) => (
-            <TaskSticker
-              key={task.id}
-              task={task}
-              canEdit={isAdmin || canTeacherEdit(task)}
-              canDelete={isAdmin}
-              onView={handleViewClick}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          ))}
+        <div className="space-y-8">
+          {TASK_STATUS_ORDER.map((status) => {
+            const statusTasks = tasksByStatus[status]
+            if (statusTasks.length === 0) return null
+
+            return (
+              <TaskStatusSection
+                key={status}
+                status={status}
+                count={statusTasks.length}
+                collapsible={status === 'COMPLETED'}
+                defaultCollapsed
+              >
+                {statusTasks.map((task) => (
+                  <TaskSticker
+                    key={task.id}
+                    task={task}
+                    canEdit={isAdmin || canTeacherEdit(task)}
+                    canDelete={isAdmin}
+                    onView={handleViewClick}
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteClick}
+                  />
+                ))}
+              </TaskStatusSection>
+            )
+          })}
         </div>
       )}
 

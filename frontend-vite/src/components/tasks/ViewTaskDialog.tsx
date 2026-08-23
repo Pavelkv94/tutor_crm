@@ -18,8 +18,8 @@ import {
   formatTaskDate,
   formatTaskDateTime,
   getTaskColorClass,
-  TASK_STATUS_LABELS,
 } from '@/components/tasks/task-utils'
+import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge'
 import type { Task, TaskStatus } from '@/types'
 
 interface ViewTaskDialogProps {
@@ -187,7 +187,9 @@ export const ViewTaskDialog = ({
           <div className="overflow-y-auto p-6 pt-8 space-y-4">
             <p className="whitespace-pre-wrap break-words text-base">{displayTask.description}</p>
             <div className="space-y-1 shrink-0 text-sm text-gray-600">
-              <p>Статус: {TASK_STATUS_LABELS[displayTask.status]}</p>
+              <p className="flex items-center gap-2">
+                Статус: <TaskStatusBadge status={displayTask.status} />
+              </p>
               {displayTask.teacher && <p>Исполнитель: {displayTask.teacher.name}</p>}
               <p>Создано: {formatTaskDate(displayTask.created_at)}</p>
             </div>
