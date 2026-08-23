@@ -40,10 +40,19 @@ export class CreateStudentDto {
 	@IsOptional()
 	timezone: Timezone;
 
-	@ApiProperty({ description: 'Whether the student has given marketing consent', example: false, required: false })
+	@ApiProperty({
+		description:
+			'Ответ про использование фото/видео: true — согласен, false — отказался, null или отсутствие поля — ' +
+			'вопрос ещё не задавали, он появится на странице оплаты.',
+		type: Boolean,
+		example: false,
+		required: false,
+		nullable: true,
+	})
+	// @IsOptional() пропускает null мимо @IsBoolean() — это и даёт третье значение.
 	@IsBoolean()
 	@IsOptional()
-	marketing_consent?: boolean;
+	marketing_consent?: boolean | null;
 
 	@ApiProperty({
 		description: `Персональная скидка в процентах, от 0 до ${MAX_STUDENT_DISCOUNT_PERCENT}. Применяется к цене каждого занятия.`,

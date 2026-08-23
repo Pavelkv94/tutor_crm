@@ -12,22 +12,19 @@ export class UpdateStudentDto extends PartialType(CreateStudentDto) {
 	birth_date?: Date | null;
 
 	@ApiProperty({
-		description: 'Согласие на использование фото/видео. Дата ответа проставляется автоматически при изменении значения.',
+		description:
+			'Ответ про использование фото/видео: true — согласен, false — отказался, null — вернуть в состояние ' +
+			'«вопрос не задавали», после чего он снова появится на странице оплаты. Дата ответа проставляется ' +
+			'автоматически при изменении ответа.',
+		type: Boolean,
 		example: false,
 		required: false,
+		nullable: true,
 	})
+	// @IsOptional() пропускает null мимо @IsBoolean() — это и даёт третье значение.
 	@IsBoolean()
 	@IsOptional()
-	marketing_consent?: boolean;
-
-	@ApiProperty({
-		description: 'Приняты ли условия обслуживания. Снятие флага обнуляет дату — вопрос снова появится на странице оплаты.',
-		example: false,
-		required: false,
-	})
-	@IsBoolean()
-	@IsOptional()
-	terms_accepted?: boolean;
+	marketing_consent?: boolean | null;
 
 	// balance_currency вручную не задаётся: при нулевом балансе её запрещает CHECK-констрейнт
 	// в БД, при ненулевом — менять валюту нельзя, пока остаток не израсходован.

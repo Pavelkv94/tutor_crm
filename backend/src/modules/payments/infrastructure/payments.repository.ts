@@ -198,7 +198,6 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 		balance_currency: string | null;
 		discount: number;
 		deleted_at: Date | null;
-		terms_accepted_at: Date | null;
 		marketing_consent_at: Date | null;
 	}): InvoiceStudent {
 		return {
@@ -209,8 +208,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 			balance_currency: student.balance_currency as Currency | null,
 			discount: student.discount,
 			deleted_at: student.deleted_at,
-			// Наружу отдаём готовые признаки: разбор трёх состояний согласия — забота модуля ученика.
-			terms_accepted: student.terms_accepted_at !== null,
+			// Наружу отдаём готовый признак: разбор трёх состояний ответа — забота модуля ученика.
 			marketing_answered: student.marketing_consent_at !== null,
 		};
 	}

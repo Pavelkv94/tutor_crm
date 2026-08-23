@@ -87,26 +87,27 @@ describe("StripeWebhookService", () => {
 		studentService = module.get(StudentService);
 	});
 
-	describe("согласия со страницы оплаты", () => {
+	describe("ответ про фото/видео со страницы оплаты", () => {
 		const withConsents = (marketing?: string) =>
 			session({
+				// Принятие условий страница собирает на каждой оплате, но нигде не сохраняется.
 				consent: { terms_of_service: "accepted", promotions: null },
 				custom_fields: marketing ? ([{ key: "marketingConsent", type: "dropdown", dropdown: { value: marketing } }] as any) : ([] as any),
 			});
 
-		it("records the accepted terms and the marketing answer", async () => {
+		it("records the marketing answer", async () => {
 			await service.handleEvent(event("checkout.session.completed", withConsents("yes")));
 
-			expect(studentService.recordConsentsFromCheckout).toHaveBeenCalledWith(1, { termsAccepted: true, marketingConsent: true });
+			expect(studentService.recordConsentsFromCheckout).toHaveBeenCalledWith(1, { marketingConsent: true });
 		});
 
 		it("records a refusal as a real answer", async () => {
 			await service.handleEvent(event("checkout.session.completed", withConsents("no")));
 
-			expect(studentService.recordConsentsFromCheckout).toHaveBeenCalledWith(1, { termsAccepted: true, marketingConsent: false });
+			expect(studentService.recordConsentsFromCheckout).toHaveBeenCalledWith(1, { marketingConsent: false });
 		});
 
-		it("stays quiet for a session that carries no consents at all", async () => {
+		it("stays quiet for a session that carries no answer at all", async () => {
 			// Так выглядит оплата ученика, который уже ответил, и ссылок, созданных до фичи.
 			const result = await service.handleEvent(event("checkout.session.completed", session()));
 
@@ -115,13 +116,14 @@ describe("StripeWebhookService", () => {
 		});
 
 		it("does not fail on an unknown dropdown value", async () => {
+			// Значение не разобрано — записывать нечего, но платёж должен пройти.
 			const result = await service.handleEvent(event("checkout.session.completed", withConsents("maybe")));
 
-			expect(studentService.recordConsentsFromCheckout).toHaveBeenCalledWith(1, { termsAccepted: true, marketingConsent: undefined });
+			expect(studentService.recordConsentsFromCheckout).not.toHaveBeenCalled();
 			expect(result).toBe("handled");
 		});
 
-		it("writes the consents before touching the money", async () => {
+		it("writes the answer before touching the money", async () => {
 			await service.handleEvent(event("checkout.session.completed", withConsents("yes")));
 
 			// Если запись согласия упадёт, деньги ещё не тронуты и ретрай Stripe пройдёт заново.
@@ -130,7 +132,7 @@ describe("StripeWebhookService", () => {
 			);
 		});
 
-		it("still records the consents when the invoice was already paid", async () => {
+		it("still records the answer when the invoice was already paid", async () => {
 			paymentsRepository.findByPaymentLinkId.mockResolvedValue({ ...invoice, status: PaymentStatusEnum.SUCCEEDED } as any);
 
 			const result = await service.handleEvent(event("checkout.session.completed", withConsents("yes")));

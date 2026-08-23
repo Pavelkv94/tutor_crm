@@ -30,10 +30,6 @@ export class StudentDto {
 		nullable: true,
 	})
 	marketing_consent_at: Date | null;
-	@ApiProperty({ description: 'Приняты ли условия обслуживания', example: false })
-	terms_accepted: boolean;
-	@ApiProperty({ description: 'Когда приняты условия обслуживания', example: '2026-01-01T00:00:00.000Z', nullable: true })
-	terms_accepted_at: Date | null;
 	@ApiProperty({ description: 'Валюта остатка на балансе. null, когда баланс равен нулю.', example: 'BYN', enum: Currency, nullable: true })
 	balance_currency: Currency | null;
 	@ApiProperty({ description: 'The balance of the student', example: 0 })

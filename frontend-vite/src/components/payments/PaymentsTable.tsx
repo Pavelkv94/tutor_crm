@@ -129,7 +129,7 @@ export const PaymentsTable = ({
                             onClick={() => onCancelInvoice(payment)}
                             className="h-8 rounded-lg border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700"
                           >
-                            Отменить счёт
+                            Аннулировать ссылку
                           </Button>
                         )}
                         <Button

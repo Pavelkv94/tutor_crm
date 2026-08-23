@@ -21,12 +21,16 @@ import {
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { RegionSelect } from '@/components/shared/RegionSelect'
-import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
 import { MAX_STUDENT_DISCOUNT_PERCENT } from '@/constants/payments'
 import type { CreateStudentInput } from '@/types'
+import {
+  MARKETING_CONSENT_OPTIONS,
+  fromMarketingConsentValue,
+  type MarketingConsentValue,
+} from '@/constants/marketing-consent'
 
 interface CreateStudentDialogProps {
   open: boolean
@@ -39,7 +43,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
-	const [marketingConsent, setMarketingConsent] = useState(false)
+	const [marketingConsent, setMarketingConsent] = useState<MarketingConsentValue>('unasked')
   const [discount, setDiscount] = useState('0')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
@@ -69,7 +73,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       setBirthDate('')
       setTeacherId('')
       setTimezone('')
-			setMarketingConsent(false)
+			setMarketingConsent('unasked')
       setDiscount('0')
     },
   })
@@ -85,7 +89,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       teacher_id: isAdmin ? parseInt(teacherId, 10) : parseInt(user?.id || '0', 10),
       timezone: timezone || null,
-			marketing_consent: marketingConsent,
+			marketing_consent: fromMarketingConsentValue(marketingConsent),
     }
 
     // Скидку назначает только администратор — у преподавателя поля нет, и слать его нечего.
@@ -179,16 +183,26 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
                 </p>
               </div>
             )}
-						<div className="flex items-center gap-2">
-							<Checkbox
-								id="marketingConsent"
-								checked={marketingConsent}
-								onCheckedChange={(checked) => setMarketingConsent(checked === true)}
-								aria-label="Согласие на маркетинг"
-							/>
-							<Label htmlFor="marketingConsent" className="cursor-pointer">
-								Согласие на маркетинг
-							</Label>
+						<div className="grid gap-2">
+							<Label htmlFor="marketingConsent">Согласие на маркетинг</Label>
+							<Select
+								value={marketingConsent}
+								onValueChange={(value) => setMarketingConsent(value as MarketingConsentValue)}
+							>
+								<SelectTrigger id="marketingConsent" aria-label="Согласие на маркетинг">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{MARKETING_CONSENT_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">
+								«Не спрашивали» — вопрос про фото/видео задаст страница оплаты.
+							</p>
 						</div>
           </div>
           <DialogFooter>

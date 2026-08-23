@@ -25,8 +25,6 @@ export type InvoiceStudent = {
 	/** Персональная скидка в процентах. 0 — скидки нет. */
 	discount: number;
 	deleted_at: Date | null;
-	/** Условия обслуживания приняты — галочка на странице оплаты больше не нужна. */
-	terms_accepted: boolean;
 	/** Ответ про фото/видео получен, неважно да или нет — дропдаун больше не нужен. */
 	marketing_answered: boolean;
 };

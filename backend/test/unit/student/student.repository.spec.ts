@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StudentRepository } from '../../../src/modules/student/infrastructure/student.repository';
+import { StudentRepository, StudentUpdateData } from '../../../src/modules/student/infrastructure/student.repository';
 import { PrismaService } from '../../../src/infrastructure/prisma/prisma.service';
 import { FilterStudentQuery } from '../../../src/modules/student/interface/dto/requests/filter.query.dto';
 import { CreateStudentDto } from '../../../src/modules/student/interface/dto/requests/create-student.dto';
-import { UpdateStudentDto } from '../../../src/modules/student/interface/dto/requests/update-student.dto';
 
 describe('StudentRepository', () => {
 	let repository: StudentRepository;
@@ -114,7 +113,7 @@ describe('StudentRepository', () => {
 
 	describe('updateStudent', () => {
 		it('should update student and return true', async () => {
-			const dto: UpdateStudentDto = { name: 'Updated', class: 6, birth_date: new Date('2010-01-15') };
+			const dto: StudentUpdateData = { name: 'Updated', class: 6, birth_date: new Date('2010-01-15') };
 			jest.spyOn(prisma.student, 'update').mockResolvedValue({ ...mockStudent, name: 'Updated' } as any);
 
 			const result = await repository.updateStudent(1, dto);

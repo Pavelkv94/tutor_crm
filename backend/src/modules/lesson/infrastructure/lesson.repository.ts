@@ -381,8 +381,6 @@ export class LessonRepository {
 				timezone: lesson.student.timezone as Timezone,
 				marketing_consent: lesson.student.marketing_consent,
 				marketing_consent_at: lesson.student.marketing_consent_at,
-				terms_accepted: lesson.student.terms_accepted_at !== null,
-				terms_accepted_at: lesson.student.terms_accepted_at,
 				balance_currency: lesson.student.balance_currency as Currency | null,
 				balance: lesson.student.balance,
 				discount: lesson.student.discount,

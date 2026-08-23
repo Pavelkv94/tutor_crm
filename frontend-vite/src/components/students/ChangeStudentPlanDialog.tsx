@@ -138,6 +138,9 @@ export const ChangeStudentPlanDialog = ({
                           <span className="text-muted-foreground">
                             {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                           </span>
+                          {plan.deleted_at && (
+                            <span className="text-muted-foreground">(удалён)</span>
+                          )}
                         </span>
                       </SelectItem>
                     ))

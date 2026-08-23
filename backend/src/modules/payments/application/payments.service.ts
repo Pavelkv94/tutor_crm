@@ -349,9 +349,12 @@ export class PaymentsService {
 			const created = await this.stripeService.createPaymentLink({
 				items,
 				idempotencyKey: `invoice-${payment.id}`,
-				// Спрашиваем только то, на что ученик ещё не отвечал.
 				consents: {
-					collectTermsOfService: !student.terms_accepted,
+					// Условия обслуживания собираются на каждой оплате: плательщик принимает их
+					// применительно к конкретному счёту, а не один раз навсегда, поэтому в профиле
+					// ученика факт принятия не хранится.
+					collectTermsOfService: true,
+					// Про фото/видео спрашиваем только тех, кто ещё не отвечал.
 					collectMarketingConsent: !student.marketing_answered,
 				},
 				metadata: {

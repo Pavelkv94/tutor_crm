@@ -45,7 +45,9 @@ export class StudentService {
 		}
 		// Валюта баланса здесь не меняется вовсе: её единственный источник — BalanceService,
 		// см. комментарий в UpdateStudentDto.
-		const { terms_accepted, ...rest } = updateStudentDto;
+		// marketing_consent снимается со спреда: наружу это одно значение, а в БД оно хранится
+		// вместе с датой ответа — пару целиком собирает buildConsentPatch.
+		const { marketing_consent, ...rest } = updateStudentDto;
 		const isUpdated = await this.studentRepository.updateStudent(id, {
 			...rest,
 			...this.buildConsentPatch(student, updateStudentDto),
@@ -56,9 +58,9 @@ export class StudentService {
 	}
 
 	/**
-	 * Согласия хранятся вместе с датой ответа, но админ правит только сам ответ.
+	 * Ответ про фото/видео хранится вместе с датой, но админ правит только сам ответ.
 	 *
-	 * Дата переставляется, **только если значение изменилось**: форма редактирования шлёт
+	 * Дата переставляется, **только если ответ изменился**: форма редактирования шлёт
 	 * `marketing_consent` при каждом сохранении, и штамповать дату безусловно значило бы
 	 * закрыть вопрос у всех, кого просто открыли и сохранили, — дропдаун на странице оплаты
 	 * тогда не показался бы никогда.
@@ -66,30 +68,33 @@ export class StudentService {
 	private buildConsentPatch(
 		student: StudentExtendedDto,
 		dto: UpdateStudentDto,
-	): { marketing_consent_at?: Date | null; terms_accepted_at?: Date | null } {
-		const patch: { marketing_consent_at?: Date | null; terms_accepted_at?: Date | null } = {};
+	): { marketing_consent?: boolean; marketing_consent_at?: Date | null } {
+		const patch: {
+			marketing_consent?: boolean;
+			marketing_consent_at?: Date | null;
+		} = {};
 
-		if (dto.marketing_consent !== undefined && dto.marketing_consent !== student.marketing_consent) {
-			patch.marketing_consent_at = new Date();
-		}
-		if (dto.terms_accepted === true && !student.terms_accepted) {
-			patch.terms_accepted_at = new Date();
-		}
-		// Снятие галочки возвращает ученика в состояние «условия не приняты»:
-		// на следующей оплате он увидит их снова.
-		if (dto.terms_accepted === false && student.terms_accepted) {
-			patch.terms_accepted_at = null;
+		if (dto.marketing_consent !== undefined) {
+			// Сравнивается трёхзначный ответ целиком, а не одно булево: у неопрошенного ученика
+			// в колонке лежит false, и без учёта даты явный отказ выглядел бы как «ничего не
+			// изменилось» — зафиксировать «нет» было бы нельзя.
+			const currentAnswer = student.marketing_consent_at ? student.marketing_consent : null;
+			patch.marketing_consent = dto.marketing_consent ?? false;
+			if (dto.marketing_consent !== currentAnswer) {
+				// null возвращает ученика в «вопрос не задавали»: он снова появится на странице оплаты.
+				patch.marketing_consent_at = dto.marketing_consent === null ? null : new Date();
+			}
 		}
 
 		return patch;
 	}
 
 	/**
-	 * Фиксирует согласия, полученные на странице оплаты. Побеждает первый ответ: если поле
-	 * уже заполнено (ученик ответил раньше или админ поправил вручную), повторная доставка
-	 * события Stripe его не перезапишет.
+	 * Фиксирует ответ про фото/видео, полученный на странице оплаты. Побеждает первый ответ:
+	 * если поле уже заполнено (ученик ответил раньше или админ поправил вручную), повторная
+	 * доставка события Stripe его не перезапишет.
 	 */
-	async recordConsentsFromCheckout(studentId: number, consents: { termsAccepted?: boolean; marketingConsent?: boolean }): Promise<void> {
+	async recordConsentsFromCheckout(studentId: number, consents: { marketingConsent?: boolean }): Promise<void> {
 		await this.studentRepository.applyCheckoutConsents(studentId, consents, new Date());
 	}
 

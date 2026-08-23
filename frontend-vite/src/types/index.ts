@@ -33,8 +33,6 @@ export interface Student {
    * показан на странице оплаты. Отказ — такой же ответ, как согласие.
    */
   marketing_consent_at: string | null
-  terms_accepted: boolean
-  terms_accepted_at: string | null
   /**
    * Валюта остатка на балансе, а не постоянное свойство ученика.
    * null означает нулевой баланс — валюта «отпущена» и её задаёт первый платёж.
@@ -74,7 +72,8 @@ export interface CreateStudentInput {
   birth_date: string | null
   teacher_id: number
   timezone?: RegionCode | null
-  marketing_consent?: boolean
+  /** null — вопрос ещё не задавали; ответ спросит страница оплаты. */
+  marketing_consent?: boolean | null
   discount?: number
 }
 
@@ -84,8 +83,8 @@ export interface UpdateStudentInput {
   birth_date?: string
   teacher_id?: number
   timezone?: RegionCode | null
-  marketing_consent?: boolean
-  terms_accepted?: boolean
+  /** null возвращает ученика в «не спрашивали» — вопрос снова появится на странице оплаты. */
+  marketing_consent?: boolean | null
   discount?: number
 }
 

@@ -54,7 +54,6 @@ describe('Payments (e2e)', () => {
 			paymentLink?: string;
 			currency?: string;
 			type?: string;
-			termsAccepted?: boolean;
 			marketing?: 'yes' | 'no';
 		} = {},
 	) => ({
@@ -71,7 +70,8 @@ describe('Payments (e2e)', () => {
 				payment_link: overrides.paymentLink ?? createdPaymentLinks.at(-1),
 				payment_intent: 'pi_test_1',
 				metadata: {},
-				...(overrides.termsAccepted ? { consent: { terms_of_service: 'accepted', promotions: null } } : {}),
+				// Условия страница оплаты требует всегда, но нигде не сохраняет.
+				consent: { terms_of_service: 'accepted', promotions: null },
 				...(overrides.marketing
 					? { custom_fields: [{ key: 'marketingConsent', type: 'dropdown', dropdown: { value: overrides.marketing } }] }
 					: {}),
@@ -165,7 +165,7 @@ describe('Payments (e2e)', () => {
 				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
 				.expect(201);
 
-		it('спрашивает оба согласия у того, кто платит впервые', async () => {
+		it('спрашивает условия и вопрос про фото/видео у того, кто платит впервые', async () => {
 			await createLesson(5, plnPlanId);
 
 			await issueInvoice();
@@ -175,23 +175,22 @@ describe('Payments (e2e)', () => {
 			);
 		});
 
-		it('записывает ответы ученику и больше их не спрашивает', async () => {
+		it('записывает ответ про фото/видео и больше его не спрашивает', async () => {
 			await createLesson(5, plnPlanId);
 			await issueInvoice();
 
-			await postWebhook(checkoutSessionEvent({ amountTotal: 4000, termsAccepted: true, marketing: 'yes' })).expect(200);
+			await postWebhook(checkoutSessionEvent({ amountTotal: 4000, marketing: 'yes' })).expect(200);
 
 			const student = await getStudent();
-			expect(student.terms_accepted_at).toBeInstanceOf(Date);
 			expect(student.marketing_consent).toBe(true);
 			expect(student.marketing_consent_at).toBeInstanceOf(Date);
 
-			// Следующий счёт тому же ученику уже ничего не спрашивает.
+			// Следующий счёт про фото/видео уже не спрашивает, а условия требует снова.
 			await createLesson(12, plnPlanId);
 			await issueInvoice();
 
 			expect(stripeServiceMock.createPaymentLink).toHaveBeenLastCalledWith(
-				expect.objectContaining({ consents: { collectTermsOfService: false, collectMarketingConsent: false } }),
+				expect.objectContaining({ consents: { collectTermsOfService: true, collectMarketingConsent: false } }),
 			);
 		});
 
@@ -199,7 +198,7 @@ describe('Payments (e2e)', () => {
 			await createLesson(5, plnPlanId);
 			await issueInvoice();
 
-			await postWebhook(checkoutSessionEvent({ amountTotal: 4000, termsAccepted: true, marketing: 'no' })).expect(200);
+			await postWebhook(checkoutSessionEvent({ amountTotal: 4000, marketing: 'no' })).expect(200);
 
 			const student = await getStudent();
 			expect(student.marketing_consent).toBe(false);
@@ -227,7 +226,7 @@ describe('Payments (e2e)', () => {
 			expect(student.marketing_consent_at).toEqual(afterAdmin.marketing_consent_at);
 		});
 
-		it('переживает сессию без согласий', async () => {
+		it('переживает сессию без ответа про фото/видео', async () => {
 			await createLesson(5, plnPlanId);
 			await issueInvoice();
 
@@ -236,27 +235,8 @@ describe('Payments (e2e)', () => {
 
 			const student = await getStudent();
 			expect(student.balance).toBe(0);
-			expect(student.terms_accepted_at).toBeNull();
 			expect(student.marketing_consent_at).toBeNull();
 			expect((await getLessons())[0].status).toBe(LessonStatus.PENDING_PAID);
-		});
-
-		it('даёт админу снять принятие условий', async () => {
-			await request(app.getHttpServer())
-				.patch(`/students/${studentId}`)
-				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ terms_accepted: true })
-				.expect(204);
-			expect((await getStudent()).terms_accepted_at).toBeInstanceOf(Date);
-
-			await request(app.getHttpServer())
-				.patch(`/students/${studentId}`)
-				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ terms_accepted: false })
-				.expect(204);
-
-			// Вопрос вернётся на следующей оплате.
-			expect((await getStudent()).terms_accepted_at).toBeNull();
 		});
 	});
 

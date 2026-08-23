@@ -221,20 +221,22 @@ export class StripeWebhookService {
 	}
 
 	/**
-	 * Снимает с сессии согласия, которые собрала страница оплаты. Их может не быть вовсе:
-	 * ученику, ответившему раньше, поля не показывались, а по ссылкам, созданным до появления
-	 * этой фичи, их не будет никогда. Это штатная ситуация, а не ошибка.
+	 * Снимает с сессии ответ про фото/видео, который собрала страница оплаты. Его может не быть
+	 * вовсе: ученику, ответившему раньше, дропдаун не показывался, а по ссылкам, созданным до
+	 * появления этой фичи, его не будет никогда. Это штатная ситуация, а не ошибка.
+	 *
+	 * Принятие условий обслуживания не фиксируется: страница оплаты требует его на каждом счёте,
+	 * поэтому хранить его в профиле ученика незачем.
 	 */
 	private async recordConsents(session: Stripe.Checkout.Session, studentId: number): Promise<void> {
-		const termsAccepted = session.consent?.terms_of_service === "accepted";
 		const marketingConsent = this.readMarketingConsent(session);
 
-		if (!termsAccepted && marketingConsent === undefined) {
+		if (marketingConsent === undefined) {
 			return;
 		}
 
-		await this.studentService.recordConsentsFromCheckout(studentId, { termsAccepted, marketingConsent });
-		this.logger.log(`Согласия ученика ${studentId} из сессии ${session.id}: условия=${termsAccepted}, маркетинг=${marketingConsent ?? "не отвечал"}`);
+		await this.studentService.recordConsentsFromCheckout(studentId, { marketingConsent });
+		this.logger.log(`Ответ ученика ${studentId} про фото/видео из сессии ${session.id}: ${marketingConsent}`);
 	}
 
 	private readMarketingConsent(session: Stripe.Checkout.Session): boolean | undefined {

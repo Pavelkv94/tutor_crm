@@ -31,7 +31,6 @@ describe("PaymentsService", () => {
 		balance_currency: null as Currency | null,
 		discount: 0,
 		deleted_at: null as Date | null,
-		terms_accepted: false,
 		marketing_answered: false,
 	};
 
@@ -186,26 +185,15 @@ describe("PaymentsService", () => {
 			);
 		});
 
-		it("asks a returning payer for nothing", async () => {
-			paymentsRepository.getStudentById.mockResolvedValue({ ...student, terms_accepted: true, marketing_answered: true });
+		it("asks a returning payer to accept the terms again, but not about the photos", async () => {
+			// Условия принимаются к каждому счёту, поэтому прошлый ответ ссылку не сокращает.
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, marketing_answered: true });
 			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
 
 			await createInvoice();
 
 			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
-				expect.objectContaining({ consents: { collectTermsOfService: false, collectMarketingConsent: false } }),
-			);
-		});
-
-		it("treats the two consents independently", async () => {
-			// Условия приняты, а про фото/видео ученика ещё не спрашивали.
-			paymentsRepository.getStudentById.mockResolvedValue({ ...student, terms_accepted: true, marketing_answered: false });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
-
-			await createInvoice();
-
-			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
-				expect.objectContaining({ consents: { collectTermsOfService: false, collectMarketingConsent: true } }),
+				expect.objectContaining({ consents: { collectTermsOfService: true, collectMarketingConsent: false } }),
 			);
 		});
 

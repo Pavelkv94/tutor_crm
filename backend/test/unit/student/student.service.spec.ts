@@ -205,45 +205,59 @@ describe('StudentService', () => {
 			expect(payload).toEqual({ marketing_consent: true, marketing_consent_at: expect.any(Date) });
 		});
 
-		it('не двигает дату, когда значение не изменилось', async () => {
-			// Форма редактирования шлёт поле при каждом сохранении: безусловный штамп закрыл бы
-			// вопрос у всех, кого просто открыли и сохранили, и дропдаун не показался бы никогда.
-			const payload = await updateWith({ marketing_consent: false }, { marketing_consent: false });
+		it('фиксирует отказ у ученика, которого ещё не спрашивали', async () => {
+			// В колонке у неопрошенного уже лежит false, поэтому сравнивать надо трёхзначный ответ:
+			// иначе явное «нет» выглядело бы как отсутствие изменений и не записалось бы вовсе.
+			const payload = await updateWith(
+				{ marketing_consent: false, marketing_consent_at: null },
+				{ marketing_consent: false },
+			);
+
+			expect(payload).toEqual({ marketing_consent: false, marketing_consent_at: expect.any(Date) });
+		});
+
+		it('не двигает дату, когда ответ не изменился', async () => {
+			// Форма редактирования шлёт поле при каждом сохранении: безусловный штамп переписывал бы
+			// дату уже полученного ответа при каждом открытии карточки.
+			const payload = await updateWith(
+				{ marketing_consent: false, marketing_consent_at: new Date('2026-01-01') },
+				{ marketing_consent: false },
+			);
 
 			expect(payload).toEqual({ marketing_consent: false });
 		});
 
-		it('фиксирует принятие условий', async () => {
-			const payload = await updateWith({ terms_accepted: false }, { terms_accepted: true });
+		it('возвращает ученика в «не спрашивали», когда админ сбрасывает ответ', async () => {
+			// Вопрос снова появится на странице оплаты — так же, как при снятии условий обслуживания.
+			const payload = await updateWith(
+				{ marketing_consent: true, marketing_consent_at: new Date('2026-01-01') },
+				{ marketing_consent: null },
+			);
 
-			expect(payload).toEqual({ terms_accepted_at: expect.any(Date) });
+			expect(payload).toEqual({ marketing_consent: false, marketing_consent_at: null });
 		});
 
-		it('сохраняет исходный момент принятия при повторном сохранении', async () => {
-			const payload = await updateWith({ terms_accepted: true }, { terms_accepted: true });
+		it('ничего не меняет, когда неопрошенного оставляют неопрошенным', async () => {
+			const payload = await updateWith(
+				{ marketing_consent: false, marketing_consent_at: null },
+				{ marketing_consent: null },
+			);
 
-			expect(payload).toEqual({});
+			expect(payload).toEqual({ marketing_consent: false });
 		});
 
-		it('обнуляет дату, когда админ снимает принятие условий', async () => {
-			// Ученик снова увидит галочку на следующей оплате.
-			const payload = await updateWith({ terms_accepted: true }, { terms_accepted: false });
-
-			expect(payload).toEqual({ terms_accepted_at: null });
-		});
-
-		it('не трогает согласия, когда их нет в запросе', async () => {
+		it('не трогает ответ, когда его нет в запросе', async () => {
 			const payload = await updateWith({}, { name: 'Новое имя' });
 
 			expect(payload).toEqual({ name: 'Новое имя' });
 		});
 
-		it('передаёт ответы со страницы оплаты в репозиторий', async () => {
+		it('передаёт ответ со страницы оплаты в репозиторий', async () => {
 			jest.spyOn(repository, 'applyCheckoutConsents').mockResolvedValue(undefined);
 
-			await service.recordConsentsFromCheckout(1, { termsAccepted: true, marketingConsent: false });
+			await service.recordConsentsFromCheckout(1, { marketingConsent: false });
 
-			expect(repository.applyCheckoutConsents).toHaveBeenCalledWith(1, { termsAccepted: true, marketingConsent: false }, expect.any(Date));
+			expect(repository.applyCheckoutConsents).toHaveBeenCalledWith(1, { marketingConsent: false }, expect.any(Date));
 		});
 	});
 

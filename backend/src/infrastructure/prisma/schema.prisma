@@ -79,9 +79,6 @@ model Student {
 	/// и его нужно показать на странице оплаты. Отказ — такой же зафиксированный ответ,
 	/// как согласие, поэтому сам ответ живёт в marketing_consent, а факт ответа — здесь.
 	marketing_consent_at DateTime?
-	/// Когда приняты условия обслуживания. NULL — не приняты (Stripe отдаёт только
-	/// «accepted», отказа не бывает, поэтому отдельный boolean не нужен).
-	terms_accepted_at DateTime?
 	/// Валюта текущего остатка на балансе. NULL при balance = 0 — валюта «отпущена»,
 	/// ученик может перейти на другую. Инвариант закреплён CHECK-констрейнтом
 	/// student_balance_currency_check (см. миграцию rename_payment_currency_to_balance_currency).

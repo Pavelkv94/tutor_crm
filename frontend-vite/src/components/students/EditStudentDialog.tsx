@@ -22,11 +22,16 @@ import {
 import { studentsApi } from '@/api/students'
 import { teachersApi } from '@/api/teachers'
 import { RegionSelect } from '@/components/shared/RegionSelect'
-import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import type { RegionCode } from '@/constants/regions'
 import { STUDENT_CLASS_OPTIONS } from '@/constants/student-class'
 import type { UpdateStudentInput } from '@/types'
+import {
+  MARKETING_CONSENT_OPTIONS,
+  fromMarketingConsentValue,
+  toMarketingConsentValue,
+  type MarketingConsentValue,
+} from '@/constants/marketing-consent'
 import { MAX_STUDENT_DISCOUNT_PERCENT } from '@/constants/payments'
 import { formatMoney, getCurrencyFlag } from '@/constants/currency'
 
@@ -42,8 +47,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
   const [birthDate, setBirthDate] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
-	const [marketingConsent, setMarketingConsent] = useState(false)
-	const [termsAccepted, setTermsAccepted] = useState(false)
+	const [marketingConsent, setMarketingConsent] = useState<MarketingConsentValue>('unasked')
   const [discount, setDiscount] = useState('0')
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
@@ -74,8 +78,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
         setTeacherId('')
       }
       setTimezone(student.timezone || '')
-			setMarketingConsent(student.marketing_consent)
-			setTermsAccepted(student.terms_accepted)
+			setMarketingConsent(toMarketingConsentValue(student))
       setDiscount(student.discount.toString())
     }
   }, [student, open, studentId])
@@ -96,8 +99,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       setBirthDate('')
       setTeacherId('')
       setTimezone('')
-			setMarketingConsent(false)
-			setTermsAccepted(false)
+			setMarketingConsent('unasked')
       setDiscount('0')
     }
   }, [open])
@@ -115,8 +117,7 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
       class: parseInt(studentClass, 10),
       birth_date: birthDate ? new Date(birthDate).toISOString() : undefined,
       timezone: timezone || null,
-			marketing_consent: marketingConsent,
-			terms_accepted: termsAccepted,
+			marketing_consent: fromMarketingConsentValue(marketingConsent),
     }
 
     // Only include teacher_id if admin and it's provided
@@ -242,35 +243,29 @@ export const EditStudentDialog = ({ open, onOpenChange, studentId }: EditStudent
 								</div>
 							)}
 							<div className={`grid gap-3 ${isAdmin ? 'sm:col-span-2' : ''}`}>
-								<div className="flex items-center gap-2">
-									<Checkbox
-										id="edit-marketingConsent"
-										checked={marketingConsent}
-										onCheckedChange={(checked) => setMarketingConsent(checked === true)}
-										aria-label="Согласие на маркетинг"
-									/>
-									<Label htmlFor="edit-marketingConsent" className="cursor-pointer">
-										Согласие на маркетинг
-									</Label>
-								</div>
-								<div className="flex items-center gap-2">
-									<Checkbox
-										id="edit-termsAccepted"
-										checked={termsAccepted}
-										onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-										aria-label="Условия обслуживания приняты"
-									/>
-									<Label htmlFor="edit-termsAccepted" className="cursor-pointer">
-										Условия обслуживания приняты
-									</Label>
+								<div className="grid gap-2">
+									<Label htmlFor="edit-marketingConsent">Согласие на маркетинг</Label>
+									<Select
+										value={marketingConsent}
+										onValueChange={(value) => setMarketingConsent(value as MarketingConsentValue)}
+									>
+										<SelectTrigger id="edit-marketingConsent" aria-label="Согласие на маркетинг">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MARKETING_CONSENT_OPTIONS.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
 								</div>
 								<p className="text-xs text-muted-foreground">
 									{student.marketing_consent_at
 										? `Ответ про фото/видео получен ${format(new Date(student.marketing_consent_at), 'dd.MM.yyyy')}`
 										: 'Про фото/видео ещё не спрашивали — вопрос появится на странице оплаты'}
-									{student.terms_accepted_at
-										? ` · условия приняты ${format(new Date(student.terms_accepted_at), 'dd.MM.yyyy')}`
-										: ' · условия ещё не приняты'}
+									{'. «Не спрашивали» сбрасывает ответ — вопрос снова появится на странице оплаты'}
 								</p>
 							</div>
             </div>

@@ -12,12 +12,12 @@ import { Student, Plan } from '@/infrastructure/prisma/generated/client';
 import { Currency } from '@/shared/enums/currency.enum';
 
 /**
- * Поля ученика в том виде, в каком они лежат в БД: `terms_accepted` наружу отдаётся булевым,
- * но хранится датой, поэтому DTO нельзя спредить в Prisma как есть.
+ * Поля ученика в том виде, в каком они лежат в БД: ответ про маркетинг наружу отдаётся
+ * одним значением, но хранится парой «ответ + дата», поэтому DTO нельзя спредить в Prisma как есть.
  */
-export type StudentUpdateData = Omit<UpdateStudentDto, 'terms_accepted'> & {
+export type StudentUpdateData = Omit<UpdateStudentDto, 'marketing_consent'> & {
+	marketing_consent?: boolean;
 	marketing_consent_at?: Date | null;
-	terms_accepted_at?: Date | null;
 };
 
 @Injectable()
@@ -25,13 +25,16 @@ export class StudentRepository {
 	constructor(private readonly prisma: PrismaService) { }
 
 	async create(createStudentDto: CreateStudentDto): Promise<StudentDto> {
+		const { marketing_consent, ...rest } = createStudentDto;
 		const student = await this.prisma.student.create({
 			data: {
-				...createStudentDto,
+				...rest,
 				birth_date: createStudentDto.birth_date ? new Date(createStudentDto.birth_date) : null,
-				// Проставленная при заведении галочка — это уже полученный ответ; без даты
-				// ученик всё равно увидел бы вопрос на первой оплате.
-				marketing_consent_at: createStudentDto.marketing_consent ? new Date() : null,
+				// Выбранный при заведении ответ — уже полученный ответ, поэтому дата ставится сразу;
+				// без неё ученик увидел бы вопрос на первой оплате. null/undefined — ответа не было,
+				// в колонке остаётся false, а вопрос задаст страница оплаты.
+				marketing_consent: marketing_consent ?? false,
+				marketing_consent_at: marketing_consent === undefined || marketing_consent === null ? null : new Date(),
 			},
 		});
 		return this.mapStudentToView(student);
@@ -59,7 +62,9 @@ export class StudentRepository {
 			},
 		});
 
-		const plans = await this.prisma.plan.findMany({ where: { lessons: { some: { student_id: id, date: { gte: new Date() }, }, }, deleted_at: null }, distinct: ['id'], });
+		// Удалённые планы тоже нужны: план могли удалить после смены цены, а занятия на нём остались —
+		// их всё ещё требуется уметь перевести на новый план.
+		const plans = await this.prisma.plan.findMany({ where: { lessons: { some: { student_id: id, date: { gte: new Date() }, }, } }, distinct: ['id'], });
 		const uniquePlansIds = [...new Set(plans.map(p => p.id))];
 		const uniquePlans = plans.filter(p => uniquePlansIds.includes(p.id));
 		if (!student) {
@@ -99,18 +104,12 @@ export class StudentRepository {
 	}
 
 	/**
-	 * Записывает согласия, полученные на странице оплаты. Условие `*_at: null` в `where`
-	 * делает операцию идемпотентной без чтения состояния: Stripe ретраит упавшие события,
-	 * и read-modify-write здесь ловил бы гонку. «Ноль обновлённых строк» — нормальный исход,
-	 * поэтому updateMany, а не update.
+	 * Записывает ответ про фото/видео, полученный на странице оплаты. Условие
+	 * `marketing_consent_at: null` в `where` делает операцию идемпотентной без чтения состояния:
+	 * Stripe ретраит упавшие события, и read-modify-write здесь ловил бы гонку.
+	 * «Ноль обновлённых строк» — нормальный исход, поэтому updateMany, а не update.
 	 */
-	async applyCheckoutConsents(id: number, consents: { termsAccepted?: boolean; marketingConsent?: boolean }, at: Date): Promise<void> {
-		if (consents.termsAccepted) {
-			await this.prisma.student.updateMany({
-				where: { id, terms_accepted_at: null },
-				data: { terms_accepted_at: at },
-			});
-		}
+	async applyCheckoutConsents(id: number, consents: { marketingConsent?: boolean }, at: Date): Promise<void> {
 		if (consents.marketingConsent !== undefined) {
 			await this.prisma.student.updateMany({
 				where: { id, marketing_consent_at: null },
@@ -148,9 +147,6 @@ export class StudentRepository {
 			timezone: student.timezone as Timezone,
 			marketing_consent: student.marketing_consent,
 			marketing_consent_at: student.marketing_consent_at,
-			// Отдельной колонки нет: приняты — значит дата есть.
-			terms_accepted: student.terms_accepted_at !== null,
-			terms_accepted_at: student.terms_accepted_at,
 			balance_currency: student.balance_currency as Currency | null,
 			balance: student.balance,
 			discount: student.discount,

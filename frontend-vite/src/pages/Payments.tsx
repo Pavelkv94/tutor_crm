@@ -224,10 +224,10 @@ export const Payments = () => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Отменить счёт</DialogTitle>
+            <DialogTitle>Аннулировать ссылку</DialogTitle>
             <DialogDescription>
-              Ссылка на оплату будет деактивирована, счёт перейдёт в статус «Отменён». Отменить
-              можно только неоплаченный счёт.
+              Ссылка на оплату будет деактивирована, счёт перейдёт в статус «Отменён».
+              Аннулировать можно только неоплаченный счёт.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -245,7 +245,7 @@ export const Payments = () => {
                 if (cancelTarget) cancelMutation.mutate(cancelTarget)
               }}
             >
-              {cancelMutation.isPending ? 'Отмена счёта...' : 'Отменить счёт'}
+              {cancelMutation.isPending ? 'Аннулирование...' : 'Аннулировать ссылку'}
             </Button>
           </DialogFooter>
         </DialogContent>
