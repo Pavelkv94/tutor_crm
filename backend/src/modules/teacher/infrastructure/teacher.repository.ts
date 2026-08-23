@@ -1,5 +1,5 @@
 import { PrismaService } from '@/infrastructure/prisma/prisma.service';
-import { Teacher, TeacherRole, Telegram } from '@/infrastructure/prisma/generated/client';
+import { Teacher, TeacherBillingDetails, TeacherRole, Telegram } from '@/infrastructure/prisma/generated/client';
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { TeacherDto } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { CreateTeacherDto } from "@/modules/teacher/interface/dto/requests/create-teacher.input.dto";
@@ -8,6 +8,7 @@ import { UpdateTeacherDto } from "@/modules/teacher/interface/dto/requests/updat
 import { FilterTeacherQuery } from "@/modules/teacher/interface/dto/requests/filter.query.dto";
 import { Prisma } from "@/infrastructure/prisma/generated/client";
 import { TelegramUserEnum } from "@/modules/telegram/interface/dto/telegram-user.enum";
+import { TeacherBillingDetailsDto } from "@/modules/teacher/interface/dto/responses/teacher-billing-details.dto";
 
 @Injectable()
 export class TeacherRepository {
@@ -18,6 +19,7 @@ export class TeacherRepository {
 			where: { id },
 			include: {
 				telegrams: true,
+				billing_details: true,
 			}
 		});
 		if (!teacher) {
@@ -44,6 +46,7 @@ export class TeacherRepository {
 				deleted_at: true,
 				created_at: true,
 				telegrams: true,
+				billing_details: true,
 			},
 			orderBy: [{ deleted_at: 'desc' }, { role: 'desc' }, { name: 'asc' }],
 		});
@@ -61,13 +64,16 @@ export class TeacherRepository {
 	}
 
 	async createTeacher(createTeacherDto: CreateTeacherDto): Promise<TeacherDto> {
+		const { billing_details, ...teacherData } = createTeacherDto;
 		const teacher = await this.prisma.teacher.create({
 			data: {
-				...createTeacherDto,
+				...teacherData,
 				role: TeacherRole.TEACHER,
+				billing_details: billing_details ? { create: billing_details } : undefined,
 			},
 			include: {
 				telegrams: true,
+				billing_details: true,
 			},
 		});
 		return this.mapTeacherToView(teacher);
@@ -82,6 +88,7 @@ export class TeacherRepository {
 			},
 			include: {
 				telegrams: true,
+				billing_details: true,
 			},
 		});
 		return this.mapTeacherToView(admin);
@@ -94,9 +101,16 @@ export class TeacherRepository {
 		if (!teacher) {
 			throw new NotFoundException("Преподаватель не найден");
 		}
+		const { billing_details, ...teacherData } = updateTeacherDto;
 		await this.prisma.teacher.update({
 			where: { id },
-			data: updateTeacherDto,
+			data: {
+				...teacherData,
+				// upsert: карточка реквизитов создаётся при первом сохранении и обновляется дальше
+				billing_details: billing_details
+					? { upsert: { create: billing_details, update: billing_details } }
+					: undefined,
+			},
 		});
 	}
 
@@ -109,7 +123,7 @@ export class TeacherRepository {
 		});
 	}
 
-	private mapTeacherToView(teacher: Teacher & { telegrams: Telegram[] }): TeacherDto {
+	private mapTeacherToView(teacher: Omit<Teacher, 'password'> & { telegrams: Telegram[]; billing_details?: TeacherBillingDetails | null }): TeacherDto {
 		return {
 			id: teacher.id,
 			name: teacher.name,
@@ -125,6 +139,21 @@ export class TeacherRepository {
 				first_name: telegram.first_name ?? "",
 				type: telegram.type as TelegramUserEnum,
 			})),
+			billing_details: mapBillingDetailsToView(teacher.billing_details ?? null),
 		};
 	}
 }
+
+const mapBillingDetailsToView = (details: TeacherBillingDetails | null): TeacherBillingDetailsDto | null => {
+	if (!details) {
+		return null;
+	}
+	return {
+		full_name_latin: details.full_name_latin,
+		address: details.address,
+		passport: details.passport,
+		email: details.email,
+		bank_name: details.bank_name,
+		bank_account: details.bank_account,
+	};
+};

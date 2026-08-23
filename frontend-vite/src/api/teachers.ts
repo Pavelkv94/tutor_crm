@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Teacher, CreateTeacherInput, UpdateTeacherInput, SalaryDataOutputDto } from '@/types'
+import type { Teacher, CreateTeacherInput, UpdateTeacherInput, SalaryDataOutputDto, SalaryInvoiceInput, SalaryInvoiceOutput } from '@/types'
 
 export const teachersApi = {
   getAll: async (filter?: 'all' | 'active' | 'deleted'): Promise<Teacher[]> => {
@@ -25,6 +25,10 @@ export const teachersApi = {
 				teacher_id: teacherId.toString(),
 			},
 		})
+		return response.data
+	},
+	generateSalaryInvoice: async (data: SalaryInvoiceInput): Promise<SalaryInvoiceOutput> => {
+		const response = await apiClient.post<SalaryInvoiceOutput>('/reports/salary/invoice', data)
 		return response.data
 	},
 }

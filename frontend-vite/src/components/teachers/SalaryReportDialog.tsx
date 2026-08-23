@@ -5,14 +5,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog'
-import { useQuery } from '@tanstack/react-query'
-import type { Teacher } from '@/types'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import type { SalaryInvoiceDelivery, SalaryInvoiceInput, Teacher } from '@/types'
 import { teachersApi } from '@/api/teachers'
 import { useState, useEffect } from 'react'
 import { Label } from '@radix-ui/react-label'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from '../ui/table'
+import { showSuccessToast } from '@/lib/toast'
 
 
 const currencyFlags: Record<string, string> = {
@@ -22,6 +23,17 @@ const currencyFlags: Record<string, string> = {
 	BYN: '🇧🇾',
 	RUB: '🇷🇺',
 }
+
+/** Валюта счёта фиксирована бланком — расчёты с преподавателями идут только в BYN. */
+const INVOICE_CURRENCY = 'BYN'
+
+/** Номер счёта по умолчанию — «месяц/год» текущего месяца, дальше администратор правит руками. */
+const defaultInvoiceNumber = (): string => {
+	const now = new Date()
+	return `${now.getMonth() + 1}/${now.getFullYear()}`
+}
+
+const currentDate = (): string => new Date().toISOString().slice(0, 10)
 
 interface SalaryReportDialogProps {
 	open: boolean
@@ -37,6 +49,10 @@ export const SalaryReportDialog = ({
 	const [startDate, setStartDate] = useState<string>(new Date().toISOString())
 	const [endDate, setEndDate] = useState<string>(new Date().toISOString())
 	const [prices, setPrices] = useState<{ [key: string]: number }>({})
+	const [invoiceNumber, setInvoiceNumber] = useState<string>(defaultInvoiceNumber())
+	const [invoiceDate, setInvoiceDate] = useState<string>(currentDate())
+	const [extraAmount, setExtraAmount] = useState<number>(0)
+	const [pendingDelivery, setPendingDelivery] = useState<SalaryInvoiceDelivery | null>(null)
 
 	const { data: salaryReportData, isLoading, refetch } = useQuery({
 		queryKey: ['salary-report', selectedTeacher?.id, startDate, endDate],
@@ -72,9 +88,54 @@ export const SalaryReportDialog = ({
 		refetch()
 	}
 
+	const lessonsTotal = salaryReportData
+		? salaryReportData.lessons.reduce(
+			(acc, lesson) => acc + (prices[lesson.plan_name] || 0) * lesson.lessons_count,
+			0,
+		)
+		: 0
+	const total = lessonsTotal + extraAmount
+
+	const invoiceMutation = useMutation({
+		mutationFn: (delivery: SalaryInvoiceDelivery) => {
+			const payload: SalaryInvoiceInput = {
+				teacher_id: selectedTeacher!.id,
+				start_date: startDate,
+				end_date: endDate,
+				invoice_number: invoiceNumber,
+				invoice_date: invoiceDate,
+				lesson_rates: Object.entries(prices).map(([plan_name, rate]) => ({
+					plan_name,
+					rate: rate || 0,
+				})),
+				extra_amount: extraAmount > 0 ? extraAmount : undefined,
+				delivery: [delivery],
+			}
+			return teachersApi.generateSalaryInvoice(payload)
+		},
+		onSuccess: (result) => {
+			showSuccessToast(
+				result.sent_to_admin
+					? `Счёт ${invoiceNumber} отправлен администратору в Telegram`
+					: `Счёт ${invoiceNumber} отправлен преподавателю в Telegram`,
+			)
+		},
+		onSettled: () => setPendingDelivery(null),
+	})
+
+	const handleGenerateInvoice = (delivery: SalaryInvoiceDelivery) => {
+		if (!selectedTeacher) {
+			return
+		}
+		setPendingDelivery(delivery)
+		invoiceMutation.mutate(delivery)
+	}
+
+	const invoiceDisabled = !salaryReportData || total <= 0 || !invoiceNumber || invoiceMutation.isPending
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[600px] flex flex-col gap-4">
+			<DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto flex flex-col gap-4">
 				<DialogHeader>
 					<DialogTitle>Рассчет зарплаты</DialogTitle>
 					<DialogDescription>
@@ -144,24 +205,82 @@ export const SalaryReportDialog = ({
 												type="number"
 												value={prices[lesson.plan_name]}
 												onChange={(e) => {
-													setPrices({ ...prices, [lesson.plan_name]: parseInt(e.target.value) })
+													setPrices({ ...prices, [lesson.plan_name]: Number(e.target.value) || 0 })
 												}}
 												placeholder="Цена"
 												aria-label={`Цена за ${lesson.plan_name}`}
 											/>
 										</TableCell>
-										<TableCell>{prices[lesson.plan_name] * lesson.lessons_count}</TableCell>
+										<TableCell>{(prices[lesson.plan_name] || 0) * lesson.lessons_count}</TableCell>
 									</TableRow>
 								))
 							}
 						</TableBody>
 					</Table>
-					<div className="flex justify-end">
-						<b>Итого: {salaryReportData?.lessons.reduce((acc, lesson) => acc + prices[lesson.plan_name] * lesson.lessons_count, 0)}</b>
+
+					<div className="grid gap-4 mt-6 rounded-md border p-3">
+						<div>
+							<p className="text-sm font-medium">Счёт (rachunek)</p>
+							<p className="text-xs text-muted-foreground">
+								Реквизиты преподавателя берутся из его карточки.
+							</p>
+						</div>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="grid gap-2">
+								<Label htmlFor="invoiceNumber">Номер счёта</Label>
+								<Input
+									id="invoiceNumber"
+									value={invoiceNumber}
+									onChange={(e) => setInvoiceNumber(e.target.value)}
+									placeholder="7/2026"
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="invoiceDate">Дата счёта</Label>
+								<Input
+									id="invoiceDate"
+									type="date"
+									value={invoiceDate}
+									onChange={(e) => setInvoiceDate(e.target.value)}
+								/>
+							</div>
+						</div>
+
+						<div className="grid gap-2">
+							<Label htmlFor="extraAmount">Оплата за дополнительные услуги, {INVOICE_CURRENCY}</Label>
+							<Input
+								id="extraAmount"
+								type="number"
+								value={extraAmount}
+								onChange={(e) => setExtraAmount(Number(e.target.value) || 0)}
+								placeholder="0"
+							/>
+						</div>
+					</div>
+
+					<div className="flex flex-col items-end gap-1 mt-4">
+						<span>Занятия: {lessonsTotal} {INVOICE_CURRENCY}</span>
+						{extraAmount > 0 && <span>Дополнительные услуги: {extraAmount} {INVOICE_CURRENCY}</span>}
+						<b>Итого: {total} {INVOICE_CURRENCY}</b>
+					</div>
+
+					<div className="grid grid-cols-2 gap-2 mt-4">
+						<Button
+							variant="outline"
+							disabled={invoiceDisabled}
+							onClick={() => handleGenerateInvoice('TELEGRAM_ADMIN')}
+						>
+							{pendingDelivery === 'TELEGRAM_ADMIN' ? 'Отправка...' : 'Отправить админу в Telegram'}
+						</Button>
+						<Button
+							disabled={invoiceDisabled}
+							onClick={() => handleGenerateInvoice('TELEGRAM_TEACHER')}
+						>
+							{pendingDelivery === 'TELEGRAM_TEACHER' ? 'Отправка...' : 'Отправить преподавателю'}
+						</Button>
 					</div>
 				</div>}
 			</DialogContent>
 		</Dialog>
 	)
 }
-

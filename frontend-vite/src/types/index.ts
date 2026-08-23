@@ -115,6 +115,24 @@ export interface Telegram {
   type: string
 }
 
+export interface TeacherBillingDetails {
+  full_name_latin: string | null
+  address: string | null
+  passport: string | null
+  email: string | null
+  bank_name: string | null
+  bank_account: string | null
+}
+
+export interface TeacherBillingDetailsInput {
+  full_name_latin?: string | null
+  address?: string | null
+  passport?: string | null
+  email?: string | null
+  bank_name?: string | null
+  bank_account?: string | null
+}
+
 export interface Teacher {
   id: number
   name: string
@@ -122,6 +140,7 @@ export interface Teacher {
   role: string
   timezone: RegionCode
   telegrams: Telegram[]
+  billing_details: TeacherBillingDetails | null
   deleted_at: string | null
   created_at: string
 }
@@ -144,12 +163,35 @@ export interface CreateTeacherInput {
   login: string
   password: string
   timezone: RegionCode
+  billing_details?: TeacherBillingDetailsInput
 }
 
 export interface UpdateTeacherInput {
   name: string
   telegram_link?: string | null
   timezone: RegionCode
+  billing_details?: TeacherBillingDetailsInput
+}
+
+export type SalaryInvoiceDelivery = 'TELEGRAM_ADMIN' | 'TELEGRAM_TEACHER'
+
+export interface SalaryInvoiceInput {
+  teacher_id: number
+  start_date: string
+  end_date: string
+  invoice_number: string
+  invoice_date: string
+  lesson_rates: { plan_name: string; rate: number }[]
+  extra_amount?: number
+  delivery: SalaryInvoiceDelivery[]
+}
+
+export interface SalaryInvoiceOutput {
+  file_name: string
+  total: number
+  currency: string
+  sent_to_admin: boolean
+  sent_to_teacher: boolean
 }
 
 export type WeekDay = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'

@@ -1,6 +1,8 @@
 import {
+	Body,
 	Controller,
 	Get,
+	Post,
 	Query,
 	Res,
 	UseGuards,
@@ -17,6 +19,9 @@ import { ApiTags } from '@nestjs/swagger';
 import { FilterStudentQuery } from '@/modules/student/interface/dto/requests/filter.query.dto';
 import { AdminAccessGuard } from '@/shared/guards/admin-access.guard';
 import { SalaryDataOutputDto } from '@/modules/reports/interface/dto/responses/salary.output.dto';
+import { SalaryInvoiceDto } from '@/modules/reports/interface/dto/requests/salary-invoice.input.dto';
+import { SalaryInvoiceOutputDto } from '@/modules/reports/interface/dto/responses/salary-invoice.output.dto';
+import { GenerateSalaryInvoiceSwagger } from '@/shared/decorators/swagger/reports/generate-salary-invoice-swagger.decorator';
 @ApiTags('Reports')
 @Controller('reports')
 @UseGuards(JwtAccessGuard)
@@ -87,6 +92,14 @@ export class ReportsController {
 		@Query('end_date') end_date: string,
 		@Query('teacher_id') teacher_id: string): Promise<SalaryDataOutputDto> {
 		return await this.reportsService.getDataForSalary(start_date, end_date, +teacher_id);
+	}
+
+	@Post('salary/invoice')
+	@HttpCode(HttpStatus.CREATED)
+	@UseGuards(AdminAccessGuard)
+	@GenerateSalaryInvoiceSwagger()
+	async generateSalaryInvoice(@Body() dto: SalaryInvoiceDto): Promise<SalaryInvoiceOutputDto> {
+		return await this.reportsService.generateSalaryInvoice(dto);
 	}
 }
 

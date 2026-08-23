@@ -94,6 +94,35 @@ export class TelegramService extends Telegraf {
 		await this.telegram.sendMessage(user.telegram_id, message);
 	}
 
+	/** Отправляет файл администратору. Используется для сформированных отчётов и счетов. */
+	async sendDocumentToAdmin(document: { buffer: Buffer; fileName: string }, caption?: string) {
+		const admin = await this.telegramRepository.findTelegramByTelegramId(this.telegramConfig.adminId.toString());
+		if (!admin) {
+			throw new NotFoundException("Администратор не найден");
+		}
+		await this.telegram.sendDocument(
+			admin.telegram_id,
+			{ source: document.buffer, filename: document.fileName },
+			caption ? { caption, parse_mode: 'HTML' } : undefined,
+		);
+	}
+
+	/**
+	 * Отправляет файл преподавателю. В отличие от sendMessageToUser молчаливого выхода нет:
+	 * администратор нажимает кнопку и должен узнать, что у преподавателя не привязан Telegram.
+	 */
+	async sendDocumentToTeacher(teacherId: number, document: { buffer: Buffer; fileName: string }, caption?: string) {
+		const telegram = await this.telegramRepository.findTelegramByTeacherId(teacherId);
+		if (!telegram) {
+			throw new BadRequestException("У преподавателя не привязан Telegram");
+		}
+		await this.telegram.sendDocument(
+			telegram.telegram_id,
+			{ source: document.buffer, filename: document.fileName },
+			caption ? { caption, parse_mode: 'HTML' } : undefined,
+		);
+	}
+
 	async generateTelegramLink(telegramLinkInputDto: TelegramLinkInputDto): Promise<TelegramLinkOutputDto> {
 		if (!telegramLinkInputDto.teacher_id && !telegramLinkInputDto.student_id) {
 			throw new BadRequestException("Необходимо указать teacher_id или student_id");

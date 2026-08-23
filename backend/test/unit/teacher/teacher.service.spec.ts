@@ -38,6 +38,7 @@ describe('TeacherService', () => {
 		created_at: new Date(),
 		role: TeacherRoleEnum.TEACHER,
 		telegrams: [],
+		billing_details: null,
 	};
 
 	beforeEach(async () => {

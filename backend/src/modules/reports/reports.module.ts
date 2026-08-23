@@ -4,9 +4,10 @@ import { ReportsController } from './interface/reports.controller';
 import { LessonModule } from '../lesson/lesson.module';
 import { TeacherModule } from '../teacher/teacher.module';
 import { StudentModule } from '../student/student.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-	imports: [LessonModule, TeacherModule, StudentModule],
+	imports: [LessonModule, TeacherModule, StudentModule, TelegramModule],
 	controllers: [ReportsController],
 	providers: [ReportsService],
 })

@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { TelegramOutputDto } from "@/modules/telegram/interface/dto/responses/telegram.output.dto";
+import { TeacherBillingDetailsDto } from "@/modules/teacher/interface/dto/responses/teacher-billing-details.dto";
 
 export enum Timezone {
 	BY = "BY",
@@ -27,4 +28,6 @@ export class TeacherDto {
 	created_at: Date;
 	@ApiProperty({ description: 'The telegrams of the teacher', example: [{ id: 1, telegram_id: '1234567890', username: 'john.doe', first_name: 'John', type: 'STUDENT' }] })
 	telegrams: TelegramOutputDto[];
+	@ApiProperty({ description: 'Платёжные реквизиты преподавателя для счёта', type: TeacherBillingDetailsDto, nullable: true })
+	billing_details: TeacherBillingDetailsDto | null;
 }

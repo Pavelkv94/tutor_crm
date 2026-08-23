@@ -35,8 +35,32 @@ model Teacher {
 	file_accesses FileAccess[]
 	course_accesses CourseAccess[]
 	payments_created Payment[]
+	billing_details TeacherBillingDetails?
 
 	@@map("teacher")
+}
+
+/// Платёжные реквизиты преподавателя для счёта (rachunek), который он выставляет школе.
+/// Вынесены в отдельную таблицу, а не в teacher: полей много, все опциональные и нужны
+/// только при формировании счёта.
+model TeacherBillingDetails {
+	id              Int      @id @default(autoincrement())
+	teacher_id      Int      @unique
+
+	/// ФИО латиницей — в счёте шапка на польском и русском, а имя пишется транслитерацией.
+	full_name_latin String?
+	address         String?
+	passport        String?
+	email           String?
+	bank_name       String?
+	bank_account    String?
+
+	created_at      DateTime @default(now())
+	updated_at      DateTime @updatedAt
+
+	teacher         Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+	@@map("teacher_billing_details")
 }
 
 model Student {

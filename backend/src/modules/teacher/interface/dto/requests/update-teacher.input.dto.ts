@@ -1,6 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 import { Timezone } from "../responses/teacher.dto";
+import { TeacherBillingDetailsInputDto } from "@/modules/teacher/interface/dto/requests/teacher-billing-details.input.dto";
 
 export class UpdateTeacherDto {
 	@IsString()
@@ -18,4 +20,14 @@ export class UpdateTeacherDto {
 		example: "BY",
 	})
 	timezone: Timezone;
+
+	@IsObject()
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => TeacherBillingDetailsInputDto)
+	@ApiPropertyOptional({
+		description: "Платёжные реквизиты преподавателя для счёта",
+		type: TeacherBillingDetailsInputDto,
+	})
+	billing_details?: TeacherBillingDetailsInputDto;
 }

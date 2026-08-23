@@ -15,7 +15,9 @@ import { RegionSelect } from '@/components/shared/RegionSelect'
 import { DEFAULT_REGION } from '@/constants/regions'
 import type { RegionCode } from '@/constants/regions'
 import { teachersApi } from '@/api/teachers'
-import type { UpdateTeacherInput, Teacher } from '@/types'
+import { TeacherBillingDetailsFields } from '@/components/teachers/TeacherBillingDetailsFields'
+import { toBillingDetailsPayload } from '@/components/teachers/teacher-billing-utils'
+import type { UpdateTeacherInput, Teacher, TeacherBillingDetailsInput } from '@/types'
 
 interface EditTeacherDialogProps {
   open: boolean
@@ -26,6 +28,7 @@ interface EditTeacherDialogProps {
 export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDialogProps) => {
 	const [name, setName] = useState('')
   const [timezone, setTimezone] = useState<RegionCode>(DEFAULT_REGION)
+  const [billingDetails, setBillingDetails] = useState<TeacherBillingDetailsInput>({})
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -33,6 +36,14 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
       setName(teacher.name)
 			// telegram_link is no longer in the Teacher type, but we still allow editing it
       setTimezone(teacher.timezone)
+      setBillingDetails({
+        full_name_latin: teacher.billing_details?.full_name_latin ?? '',
+        address: teacher.billing_details?.address ?? '',
+        passport: teacher.billing_details?.passport ?? '',
+        email: teacher.billing_details?.email ?? '',
+        bank_name: teacher.billing_details?.bank_name ?? '',
+        bank_account: teacher.billing_details?.bank_account ?? '',
+      })
     }
   }, [teacher])
 
@@ -51,6 +62,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
     const data: UpdateTeacherInput = {
 			name,
       timezone,
+      billing_details: toBillingDetailsPayload(billingDetails),
     }
 
     updateMutation.mutate(data)
@@ -60,7 +72,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Редактировать преподавателя</DialogTitle>
           <DialogDescription>Обновить информацию о преподавателе.</DialogDescription>
@@ -78,6 +90,11 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
               />
             </div>
             <RegionSelect id="edit-timezone" value={timezone} onValueChange={setTimezone} />
+            <TeacherBillingDetailsFields
+              idPrefix="edit-teacher"
+              value={billingDetails}
+              onChange={setBillingDetails}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

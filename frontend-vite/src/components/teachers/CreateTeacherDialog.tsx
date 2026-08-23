@@ -15,7 +15,9 @@ import { RegionSelect } from '@/components/shared/RegionSelect'
 import { DEFAULT_REGION } from '@/constants/regions'
 import type { RegionCode } from '@/constants/regions'
 import { teachersApi } from '@/api/teachers'
-import type { CreateTeacherInput } from '@/types'
+import { TeacherBillingDetailsFields } from '@/components/teachers/TeacherBillingDetailsFields'
+import { hasBillingDetails, toBillingDetailsPayload } from '@/components/teachers/teacher-billing-utils'
+import type { CreateTeacherInput, TeacherBillingDetailsInput } from '@/types'
 
 interface CreateTeacherDialogProps {
   open: boolean
@@ -27,6 +29,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [timezone, setTimezone] = useState<RegionCode>(DEFAULT_REGION)
+  const [billingDetails, setBillingDetails] = useState<TeacherBillingDetailsInput>({})
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
@@ -38,6 +41,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       setLogin('')
       setPassword('')
       setTimezone(DEFAULT_REGION)
+      setBillingDetails({})
     },
   })
 
@@ -50,6 +54,9 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       login,
       password,
       timezone,
+      billing_details: hasBillingDetails(billingDetails)
+        ? toBillingDetailsPayload(billingDetails)
+        : undefined,
     }
 
     createMutation.mutate(data)
@@ -57,7 +64,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Создать преподавателя</DialogTitle>
           <DialogDescription>Добавить нового преподавателя в систему.</DialogDescription>
@@ -96,6 +103,11 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
               />
             </div>
             <RegionSelect value={timezone} onValueChange={setTimezone} />
+            <TeacherBillingDetailsFields
+              idPrefix="create-teacher"
+              value={billingDetails}
+              onChange={setBillingDetails}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

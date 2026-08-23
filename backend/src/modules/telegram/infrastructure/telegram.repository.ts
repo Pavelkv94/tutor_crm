@@ -40,6 +40,13 @@ export class TelegramRepository {
 		return telegram;
 	}
 
+	async findTelegramByTeacherId(teacherId: number): Promise<Telegram | null> {
+		return await this.prisma.telegram.findFirst({
+			where: { teacher_id: teacherId, type: 'TEACHER' },
+			orderBy: { created_at: 'asc' },
+		});
+	}
+
 	async createTelegramUser(telegramData: TelegramInputDto): Promise<Telegram> {
 		return await this.prisma.telegram.create({
 			data: telegramData,

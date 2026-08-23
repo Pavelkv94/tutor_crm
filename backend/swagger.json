@@ -1346,6 +1346,57 @@
         ]
       }
     },
+    "/reports/salary/invoice": {
+      "post": {
+        "description": "Собирает PDF-счёт (rachunek) по проведённым занятиям и дополнительным услугам. Ставки за занятие задаёт администратор, суммы считает сервер. Готовый файл уходит администратору или преподавателю в Telegram.",
+        "operationId": "ReportsController_generateSalaryInvoice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalaryInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Счёт сформирован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalaryInvoiceOutputDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не заполнены реквизиты преподавателя, нулевая сумма счёта или у преподавателя не привязан Telegram",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Преподаватель не найден"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Сформировать счёт преподавателя за период",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
     "/telegram/generate-telegram-link": {
       "post": {
         "operationId": "TelegramController_generateTelegramLink",
@@ -2975,6 +3026,55 @@
           "message"
         ]
       },
+      "TeacherBillingDetailsDto": {
+        "type": "object",
+        "properties": {
+          "full_name_latin": {
+            "type": "object",
+            "description": "ФИО преподавателя латиницей",
+            "example": "Demukh Anna Aleksandrovna",
+            "nullable": true
+          },
+          "address": {
+            "type": "object",
+            "description": "Адрес преподавателя",
+            "example": "Orsha, Belarus",
+            "nullable": true
+          },
+          "passport": {
+            "type": "object",
+            "description": "Паспорт преподавателя",
+            "example": "BM 2712432",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "description": "Email преподавателя",
+            "example": "teacher@gmail.com",
+            "nullable": true
+          },
+          "bank_name": {
+            "type": "object",
+            "description": "Название банка",
+            "example": "Belagroprombank",
+            "nullable": true
+          },
+          "bank_account": {
+            "type": "object",
+            "description": "Номер счёта",
+            "example": "BY81BAPB30140000064105565150",
+            "nullable": true
+          }
+        },
+        "required": [
+          "full_name_latin",
+          "address",
+          "passport",
+          "email",
+          "bank_name",
+          "bank_account"
+        ]
+      },
       "TeacherDto": {
         "type": "object",
         "properties": {
@@ -3029,6 +3129,16 @@
             "items": {
               "type": "string"
             }
+          },
+          "billing_details": {
+            "description": "Платёжные реквизиты преподавателя для счёта",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeacherBillingDetailsDto"
+              }
+            ]
           }
         },
         "required": [
@@ -3039,8 +3149,44 @@
           "timezone",
           "deleted_at",
           "created_at",
-          "telegrams"
+          "telegrams",
+          "billing_details"
         ]
+      },
+      "TeacherBillingDetailsInputDto": {
+        "type": "object",
+        "properties": {
+          "full_name_latin": {
+            "type": "object",
+            "description": "ФИО преподавателя латиницей (для шапки счёта)",
+            "example": "Demukh Anna Aleksandrovna"
+          },
+          "address": {
+            "type": "object",
+            "description": "Адрес преподавателя",
+            "example": "Vitebskaya obl., Orsha district, Orsha, Zadneprovskaya str., 8/121, Belarus"
+          },
+          "passport": {
+            "type": "object",
+            "description": "Паспорт преподавателя",
+            "example": "BM 2712432"
+          },
+          "email": {
+            "type": "object",
+            "description": "Email преподавателя",
+            "example": "annametlenokmm@gmail.com"
+          },
+          "bank_name": {
+            "type": "object",
+            "description": "Название банка",
+            "example": "Belagroprombank"
+          },
+          "bank_account": {
+            "type": "object",
+            "description": "Номер счёта",
+            "example": "BY81BAPB30140000064105565150"
+          }
+        }
       },
       "CreateTeacherDto": {
         "type": "object",
@@ -3064,6 +3210,14 @@
             "type": "string",
             "description": "The timezone of the teacher",
             "example": "BY"
+          },
+          "billing_details": {
+            "description": "Платёжные реквизиты преподавателя для счёта",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeacherBillingDetailsInputDto"
+              }
+            ]
           }
         },
         "required": [
@@ -3085,6 +3239,14 @@
             "type": "string",
             "description": "The timezone of the teacher",
             "example": "BY"
+          },
+          "billing_details": {
+            "description": "Платёжные реквизиты преподавателя для счёта",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeacherBillingDetailsInputDto"
+              }
+            ]
           }
         },
         "required": [
@@ -3557,7 +3719,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-08-22T17:41:30.349Z"
+            "example": "2026-08-23T08:26:53.742Z"
           },
           "status": {
             "type": "string",
@@ -3594,7 +3756,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-22T17:41:30.350Z",
+            "example": "2026-08-23T08:26:53.742Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -3606,14 +3768,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-08-22T17:41:30.350Z",
+            "example": "2026-08-23T08:26:53.742Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-08-22T17:41:30.350Z"
+            "example": "2026-08-23T08:26:53.742Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -3701,7 +3863,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-22T17:41:30.307Z"
+            "example": "2026-08-23T08:26:53.736Z"
           },
           "isFree": {
             "type": "boolean",
@@ -3735,7 +3897,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-22T17:41:30.395Z"
+            "example": "2026-08-23T08:26:53.751Z"
           }
         },
         "required": [
@@ -3779,13 +3941,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-08-22T17:41:30.456Z"
+            "example": "2026-08-23T08:26:53.807Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-08-22T17:41:30.456Z"
+            "example": "2026-08-23T08:26:53.807Z"
           },
           "plan": {
             "description": "Plan",
@@ -3797,7 +3959,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-08-22T17:41:30.456Z"
+              "created_at": "2026-08-23T08:26:53.807Z"
             },
             "allOf": [
               {
@@ -3854,13 +4016,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-22T17:41:30.462Z"
+            "example": "2026-08-23T08:26:53.811Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-08-22T17:41:30.462Z"
+            "example": "2026-08-23T08:26:53.811Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -3884,6 +4046,127 @@
           "new_plan_id",
           "old_plan_id",
           "student_id"
+        ]
+      },
+      "SalaryLessonRateDto": {
+        "type": "object",
+        "properties": {
+          "plan_name": {
+            "type": "string",
+            "description": "Название плана",
+            "example": "Индивидуальные занятия"
+          },
+          "rate": {
+            "type": "number",
+            "description": "Ставка за одно занятие по плану",
+            "example": 20
+          }
+        },
+        "required": [
+          "plan_name",
+          "rate"
+        ]
+      },
+      "SalaryInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "teacher_id": {
+            "type": "number",
+            "description": "Идентификатор преподавателя",
+            "example": 1
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Начало периода",
+            "example": "2026-06-01"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Конец периода",
+            "example": "2026-06-30"
+          },
+          "invoice_number": {
+            "type": "string",
+            "description": "Номер счёта",
+            "example": "7/2026"
+          },
+          "invoice_date": {
+            "type": "string",
+            "description": "Дата выставления счёта",
+            "example": "2026-07-01"
+          },
+          "lesson_rates": {
+            "description": "Ставки за занятие по планам",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalaryLessonRateDto"
+            }
+          },
+          "extra_amount": {
+            "type": "number",
+            "description": "Оплата за дополнительные услуги. 0 или пусто — строки в счёте не будет.",
+            "example": 250
+          },
+          "delivery": {
+            "type": "array",
+            "description": "Кому отправить счёт",
+            "example": [
+              "TELEGRAM_ADMIN"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "TELEGRAM_ADMIN",
+                "TELEGRAM_TEACHER"
+              ]
+            }
+          }
+        },
+        "required": [
+          "teacher_id",
+          "start_date",
+          "end_date",
+          "invoice_number",
+          "invoice_date",
+          "lesson_rates",
+          "delivery"
+        ]
+      },
+      "SalaryInvoiceOutputDto": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "Имя файла счёта",
+            "example": "2026-07-01_Rachunek_Demukh_Nr-7-2026.pdf"
+          },
+          "total": {
+            "type": "number",
+            "description": "Итоговая сумма счёта",
+            "example": 1152
+          },
+          "currency": {
+            "type": "string",
+            "description": "Валюта счёта",
+            "example": "BYN"
+          },
+          "sent_to_admin": {
+            "type": "boolean",
+            "description": "Счёт отправлен администратору в Telegram",
+            "example": true
+          },
+          "sent_to_teacher": {
+            "type": "boolean",
+            "description": "Счёт отправлен преподавателю в Telegram",
+            "example": false
+          }
+        },
+        "required": [
+          "file_name",
+          "total",
+          "currency",
+          "sent_to_admin",
+          "sent_to_teacher"
         ]
       },
       "TelegramLinkInputDto": {

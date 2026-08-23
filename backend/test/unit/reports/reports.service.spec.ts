@@ -3,9 +3,10 @@ import { ReportsService } from '../../../src/modules/reports/application/reports
 import { LessonService } from '../../../src/modules/lesson/application/lesson.service';
 import { TeacherService } from '../../../src/modules/teacher/application/teacher.service';
 import { StudentService } from '../../../src/modules/student/application/student.service';
+import { TelegramService } from '../../../src/modules/telegram/application/telegram.service';
 import { FilterStudentQuery } from '../../../src/modules/student/interface/dto/requests/filter.query.dto';
 import { LessonStatusEnum } from '../../../src/modules/lesson/interface/dto/lesson-status.enum';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 
 jest.mock('../../../src/modules/reports/schedule-excel.util', () => ({
@@ -16,14 +17,26 @@ jest.mock('../../../src/modules/reports/students-excel.util', () => ({
 	buildStudentsExcel: jest.fn(),
 }));
 
+// Рендер PDF поднимает Chromium — в юнит-тестах проверяем только данные, которые в него уходят
+jest.mock('../../../src/modules/reports/salary-invoice-pdf.util', () => {
+	const actual = jest.requireActual('../../../src/modules/reports/salary-invoice-pdf.util');
+	return {
+		...actual,
+		buildSalaryInvoicePdf: jest.fn().mockResolvedValue(Buffer.from('pdf')),
+	};
+});
+
 import { buildScheduleExcel } from '../../../src/modules/reports/schedule-excel.util';
 import { buildStudentsExcel } from '../../../src/modules/reports/students-excel.util';
+import { buildSalaryInvoicePdf } from '../../../src/modules/reports/salary-invoice-pdf.util';
+import { SalaryInvoiceDeliveryEnum } from '../../../src/modules/reports/interface/dto/salary-invoice-delivery.enum';
 
 describe('ReportsService', () => {
 	let service: ReportsService;
 	let lessonService: LessonService;
 	let teacherService: TeacherService;
 	let studentService: StudentService;
+	let telegramService: TelegramService;
 
 	const mockTeacher = {
 		id: 1,
@@ -107,6 +120,13 @@ describe('ReportsService', () => {
 						findAllForCurrentTeacher: jest.fn(),
 					},
 				},
+				{
+					provide: TelegramService,
+					useValue: {
+						sendDocumentToAdmin: jest.fn(),
+						sendDocumentToTeacher: jest.fn(),
+					},
+				},
 			],
 		}).compile();
 
@@ -114,6 +134,7 @@ describe('ReportsService', () => {
 		lessonService = module.get<LessonService>(LessonService);
 		teacherService = module.get<TeacherService>(TeacherService);
 		studentService = module.get<StudentService>(StudentService);
+		telegramService = module.get<TelegramService>(TelegramService);
 		jest.clearAllMocks();
 	});
 
@@ -218,6 +239,105 @@ describe('ReportsService', () => {
 
 			await expect(service.getDataForSalary('2024-01-01', '2024-01-31', 1)).rejects.toThrow(NotFoundException);
 			await expect(service.getDataForSalary('2024-01-01', '2024-01-31', 1)).rejects.toThrow('Teacher with id 1 not found');
+		});
+	});
+	describe('generateSalaryInvoice', () => {
+		const billingDetails = {
+			full_name_latin: 'Demukh Anna Aleksandrovna',
+			address: 'Orsha, Belarus',
+			passport: 'BM 2712432',
+			email: 'teacher@gmail.com',
+			bank_name: 'Belagroprombank',
+			bank_account: 'BY81BAPB30140000064105565150',
+		};
+
+		const invoiceDto = {
+			teacher_id: 1,
+			start_date: '2026-06-01T06:00:00.000Z',
+			end_date: '2026-06-30T06:00:00.000Z',
+			invoice_number: '7/2026',
+			invoice_date: '2026-07-01',
+			lesson_rates: [{ plan_name: 'Individual', rate: 20 }],
+			delivery: [SalaryInvoiceDeliveryEnum.TELEGRAM_ADMIN],
+		};
+
+		const mockSalarySources = (billing: unknown = billingDetails) => {
+			jest.spyOn(lessonService, 'findLessonsForPeriodForSalary').mockResolvedValue(mockLessons as any);
+			jest.spyOn(teacherService, 'getTeacherById').mockResolvedValue({
+				...mockTeacher,
+				billing_details: billing,
+			} as any);
+		};
+
+		it('should build the invoice and send it to the admin', async () => {
+			mockSalarySources();
+
+			const result = await service.generateSalaryInvoice(invoiceDto as any);
+
+			// 2 занятия по плану Individual по ставке 20
+			expect(result.total).toBe(40);
+			expect(result.currency).toBe('BYN');
+			expect(result.sent_to_admin).toBe(true);
+			expect(result.sent_to_teacher).toBe(false);
+			expect(result.file_name).toBe('2026-07-01_Rachunek_Demukh_Nr-7-2026.pdf');
+
+			const view = (buildSalaryInvoicePdf as jest.Mock).mock.calls[0][0];
+			expect(view.lines).toHaveLength(1);
+			expect(view.lines[0].amount).toBe('40,00');
+			expect(view.lines[0].period).toBe('01.06.2026 – 30.06.2026');
+			// Получатель платежа в бланке — всегда сам преподаватель
+			expect(view.payment.recipient).toBe('Demukh Anna Aleksandrovna');
+			expect(telegramService.sendDocumentToAdmin).toHaveBeenCalled();
+			expect(telegramService.sendDocumentToTeacher).not.toHaveBeenCalled();
+		});
+
+		it('should add a separate line for extra services', async () => {
+			mockSalarySources();
+
+			const result = await service.generateSalaryInvoice({
+				...invoiceDto,
+				extra_amount: 250,
+				delivery: [SalaryInvoiceDeliveryEnum.TELEGRAM_TEACHER],
+			} as any);
+
+			expect(result.total).toBe(290);
+			expect(result.sent_to_teacher).toBe(true);
+			expect(telegramService.sendDocumentToTeacher).toHaveBeenCalledWith(
+				1,
+				expect.objectContaining({ fileName: '2026-07-01_Rachunek_Demukh_Nr-7-2026.pdf' }),
+				expect.any(String),
+			);
+
+			const view = (buildSalaryInvoicePdf as jest.Mock).mock.calls[0][0];
+			expect(view.lines).toHaveLength(2);
+			expect(view.lines[1].index).toBe(2);
+			expect(view.lines[1].description_ru).toContain('§4.4 договора');
+			expect(view.total).toBe('290,00');
+		});
+
+		it('should not add an extra-services line when the amount is zero', async () => {
+			mockSalarySources();
+
+			await service.generateSalaryInvoice({ ...invoiceDto, extra_amount: 0 } as any);
+
+			const view = (buildSalaryInvoicePdf as jest.Mock).mock.calls[0][0];
+			expect(view.lines).toHaveLength(1);
+		});
+
+		it('should reject when billing details are missing', async () => {
+			mockSalarySources({ ...billingDetails, bank_account: null });
+
+			await expect(service.generateSalaryInvoice(invoiceDto as any)).rejects.toThrow(BadRequestException);
+			await expect(service.generateSalaryInvoice(invoiceDto as any)).rejects.toThrow('номер счёта');
+			expect(buildSalaryInvoicePdf).not.toHaveBeenCalled();
+		});
+
+		it('should reject a zero-amount invoice', async () => {
+			mockSalarySources();
+
+			await expect(
+				service.generateSalaryInvoice({ ...invoiceDto, lesson_rates: [] } as any),
+			).rejects.toThrow('сумма счёта равна нулю');
 		});
 	});
 });
