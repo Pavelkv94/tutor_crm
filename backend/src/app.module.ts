@@ -15,6 +15,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { MaterialModule } from './modules/material/material.module';
 import { BalanceModule } from '@/modules/balance/balance.module';
 import { PaymentsModule } from '@/modules/payments/payments.module';
+import { SettingsModule } from '@/modules/settings/settings.module';
 @Module({
 	imports: [
 		AppConfigModule,
@@ -38,6 +39,7 @@ import { PaymentsModule } from '@/modules/payments/payments.module';
 		MaterialModule,
 		BalanceModule,
 		PaymentsModule,
+		SettingsModule,
 	],
 	controllers: [],
 	providers: [],

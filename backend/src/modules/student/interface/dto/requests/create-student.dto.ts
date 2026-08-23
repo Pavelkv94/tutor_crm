@@ -3,6 +3,7 @@ import { IsString, IsNotEmpty, IsInt, IsDate, IsOptional, Min, Max, IsEnum, IsBo
 import { Type } from 'class-transformer';
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { MAX_STUDENT_DISCOUNT_PERCENT } from "@/shared/utils/discount.util";
+import { PaymentMethod } from "@/shared/enums/payment-method.enum";
 
 
 export class CreateStudentDto {
@@ -66,6 +67,20 @@ export class CreateStudentDto {
 	@Max(MAX_STUDENT_DISCOUNT_PERCENT)
 	@IsOptional()
 	discount?: number;
+
+	@ApiProperty({
+		description:
+			'Способ оплаты: STRIPE — счёт предъявляется ссылкой на оплату картой, BYN_ACCOUNT — оплата ' +
+			'принимается вне системы. null или отсутствие поля — способ не выбран, ведёт себя как BYN_ACCOUNT.',
+		enum: PaymentMethod,
+		example: PaymentMethod.STRIPE,
+		required: false,
+		nullable: true,
+	})
+	// @IsOptional() пропускает null мимо @IsEnum() — это и даёт «способ не выбран».
+	@IsEnum(PaymentMethod)
+	@IsOptional()
+	payment_method?: PaymentMethod | null;
 
 	// balance_currency сюда не входит намеренно: в БД стоит констрейнт
 	// student_balance_currency_check («balance = 0 ⟺ balance_currency IS NULL»), а у нового

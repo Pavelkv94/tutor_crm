@@ -11,6 +11,8 @@ import { StripeService } from "../../../src/infrastructure/stripe/stripe.service
 import { PlanService } from "../../../src/modules/plan/application/plan.service";
 import { TelegramService } from "../../../src/modules/telegram/application/telegram.service";
 import { Currency } from "../../../src/shared/enums/currency.enum";
+import { PaymentMethod } from "../../../src/shared/enums/payment-method.enum";
+import { SettingsService } from "../../../src/modules/settings/application/settings.service";
 
 describe("PaymentsService", () => {
 	let service: PaymentsService;
@@ -19,6 +21,7 @@ describe("PaymentsService", () => {
 	let stripeService: jest.Mocked<StripeService>;
 	let planService: jest.Mocked<PlanService>;
 	let telegramService: jest.Mocked<TelegramService>;
+	let settingsService: jest.Mocked<SettingsService>;
 
 	const from = new Date(Date.UTC(2026, 7, 1));
 	const to = new Date(Date.UTC(2026, 7, 31, 23, 59, 59, 999));
@@ -32,6 +35,7 @@ describe("PaymentsService", () => {
 		discount: 0,
 		deleted_at: null as Date | null,
 		marketing_answered: false,
+		payment_method: PaymentMethod.STRIPE as PaymentMethod | null,
 	};
 
 	const billableLesson = (id: number, day: number, price: number, currency = Currency.PLN, planId = 1, isFree = false) => ({
@@ -93,8 +97,10 @@ describe("PaymentsService", () => {
 					provide: PlanService,
 					useValue: {
 						ensureStripeIds: jest.fn(async (id: number) => ({ id, plan_price: 40 * id, stripe_price_id: `price_${id}`, stripe_product_id: `prod_${id}` })),
+						ensureStripeProduct: jest.fn(async (id: number) => ({ id, plan_price: 40 * id, stripe_price_id: null, stripe_product_id: `prod_${id}` })),
 					},
 				},
+				{ provide: SettingsService, useValue: { getEurRate: jest.fn().mockResolvedValue(0) } },
 				{ provide: TelegramService, useValue: { sendMessageToAdmin: jest.fn() } },
 				{ provide: PaymentsMetrics, useValue: { payment: jest.fn(), webhookEvent: jest.fn() } },
 			],
@@ -106,6 +112,7 @@ describe("PaymentsService", () => {
 		stripeService = module.get(StripeService);
 		planService = module.get(PlanService);
 		telegramService = module.get(TelegramService);
+		settingsService = module.get(SettingsService);
 	});
 
 	const createInvoice = (throwOnSkip = false) => service.createInvoice({ studentId: 1, from, to, createdById: 1, throwOnSkip });
@@ -126,8 +133,18 @@ describe("PaymentsService", () => {
 
 			const result = await createInvoice();
 
-			expect(result).toEqual({ payment_id: 7, student_id: 1, amount: 120, currency: Currency.PLN, lessons_count: 3, link: "https://buy.stripe.com/test_1" });
-			expect(paymentsRepository.setPaymentLink).toHaveBeenCalledWith(7, "plink_1");
+			expect(result).toEqual({
+				payment_id: 7,
+				student_id: 1,
+				amount: 120,
+				currency: Currency.PLN,
+				lessons_count: 3,
+				link: "https://buy.stripe.com/test_1",
+				link_issue: null,
+				charge_amount_minor: null,
+				charge_currency: null,
+			});
+			expect(paymentsRepository.setPaymentLink).toHaveBeenCalledWith(7, "plink_1", undefined);
 			expect(telegramService.sendMessageToAdmin).toHaveBeenCalled();
 		});
 
@@ -205,14 +222,103 @@ describe("PaymentsService", () => {
 			expect(planService.ensureStripeIds).toHaveBeenCalledWith(1);
 		});
 
-		it("issues a BYN invoice without a payment link", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 25, Currency.BYN)]);
+		// Ссылку решает способ оплаты ученика, а не валюта занятий.
+		it("issues no link for a student who pays outside the system", async () => {
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, payment_method: PaymentMethod.BYN_ACCOUNT });
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+
+			const result = await createInvoice();
+
+			expect(result?.link).toBeNull();
+			// Ссылки не ждали — это не сбой, причины быть не должно.
+			expect(result?.link_issue).toBeNull();
+			expect(stripeService.createPaymentLink).not.toHaveBeenCalled();
+			expect(telegramService.sendMessageToAdmin).toHaveBeenCalled();
+		});
+
+		it("issues no link when the payment method is not set", async () => {
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, payment_method: null });
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
 
 			const result = await createInvoice();
 
 			expect(result?.link).toBeNull();
 			expect(stripeService.createPaymentLink).not.toHaveBeenCalled();
+		});
+
+		it("converts a BYN invoice into a euro payment link", async () => {
+			settingsService.getEurRate.mockResolvedValue(500);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([
+				billableLesson(1, 5, 20, Currency.BYN),
+				billableLesson(2, 12, 20, Currency.BYN),
+				billableLesson(3, 19, 20, Currency.BYN),
+				billableLesson(4, 26, 20, Currency.BYN),
+			]);
+
+			const result = await createInvoice();
+
+			// Счёт и учёт остаются в BYN, евро — только способ предъявления.
+			expect(result).toMatchObject({ amount: 80, currency: Currency.BYN, charge_amount_minor: 1600, charge_currency: Currency.EUR });
+			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
+				expect.objectContaining({
+					items: [{ productId: "prod_1", unitAmountMajor: 4, currency: Currency.EUR, quantity: 4 }],
+				}),
+			);
+			expect(paymentsRepository.setPaymentLink).toHaveBeenCalledWith(7, "plink_1", { amount_minor: 1600, currency: Currency.EUR, rate: 500 });
+			// У BYN-плана нет и не может быть цены в Stripe — только продукт.
+			expect(planService.ensureStripeIds).not.toHaveBeenCalled();
+		});
+
+		it("converts the discounted price, not the full one", async () => {
+			settingsService.getEurRate.mockResolvedValue(500);
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN), billableLesson(2, 12, 20, Currency.BYN)]);
+
+			const result = await createInvoice();
+
+			// 20 → round(20 × 0.9) = 18 BYN → 360 центов за занятие.
+			expect(result).toMatchObject({ amount: 36, charge_amount_minor: 720 });
+			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
+				expect.objectContaining({ items: [{ productId: "prod_1", unitAmountMajor: 3.6, currency: Currency.EUR, quantity: 2 }] }),
+			);
+		});
+
+		it("rounds each lesson to the cent so the link matches the sum of its items", async () => {
+			settingsService.getEurRate.mockResolvedValue(330);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN), billableLesson(2, 12, 20, Currency.BYN)]);
+
+			const result = await createInvoice();
+
+			// 20 / 3.30 = 6.0606… → 6.06 € за занятие, итог — сумма позиций.
+			expect(result?.charge_amount_minor).toBe(1212);
+		});
+
+		it("refuses to build a link for BYN lessons when the rate is not set", async () => {
+			settingsService.getEurRate.mockResolvedValue(0);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 25, Currency.BYN)]);
+
+			const result = await createInvoice();
+
+			expect(result?.link).toBeNull();
+			expect(result?.link_issue).toContain("курс евро");
+			expect(stripeService.createPaymentLink).not.toHaveBeenCalled();
 			expect(telegramService.sendMessageToAdmin).toHaveBeenCalled();
+		});
+
+		it("refuses a link below the Stripe minimum charge", async () => {
+			settingsService.getEurRate.mockResolvedValue(50000);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN)]);
+
+			const result = await createInvoice();
+
+			// 20 / 500.00 = 0.04 € — Stripe отклонил бы такую ссылку сам, но с невнятной ошибкой.
+			expect(result?.link).toBeNull();
+			expect(result?.link_issue).toContain("меньше минимальной");
+			expect(stripeService.createPaymentLink).not.toHaveBeenCalled();
 		});
 
 		it("still sends the report when Stripe is down", async () => {

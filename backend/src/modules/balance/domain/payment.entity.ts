@@ -24,6 +24,19 @@ export class PaymentEntity {
 	stripe_payment_intent_id: string | null;
 	stripe_refund_id: string | null;
 
+	/**
+	 * Сумма, фактически предъявленная к оплате, когда ссылка выставлена не в валюте счёта
+	 * (BYN-занятия, оплата картой в евро). NULL — конвертации не было.
+	 *
+	 * Учёт всегда идёт в `amount`/`currency`: тройка нужна вебхуку, чтобы сверить валюту и
+	 * сумму сессии, и возврату — чтобы посчитать пропорцию к сумме счёта.
+	 */
+	charge_currency: Currency | null;
+	/** В минорных единицах `charge_currency` (евроцентах). */
+	charge_amount_minor: number | null;
+	/** Курс в сотых долях `currency` за единицу `charge_currency`: 500 = 1 € = 5.00 BYN. */
+	charge_rate: number | null;
+
 	paid_at: Date | null;
 	created_at: Date;
 	updated_at: Date;

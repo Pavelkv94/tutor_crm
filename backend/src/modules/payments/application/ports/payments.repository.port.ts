@@ -1,4 +1,5 @@
 import { Currency } from "@/shared/enums/currency.enum";
+import { PaymentMethod } from "@/shared/enums/payment-method.enum";
 import { PaymentEntity } from "@/modules/balance/domain/payment.entity";
 import { PaymentStatusEnum } from "@/modules/balance/domain/payment-status.enum";
 import { PaymentTypeEnum } from "@/modules/balance/domain/payment-type.enum";
@@ -27,6 +28,8 @@ export type InvoiceStudent = {
 	deleted_at: Date | null;
 	/** Ответ про фото/видео получен, неважно да или нет — дропдаун больше не нужен. */
 	marketing_answered: boolean;
+	/** Способ оплаты. Только STRIPE даёт ссылку; null и BYN_ACCOUNT — счёт уходит текстом. */
+	payment_method: PaymentMethod | null;
 };
 
 /**
@@ -34,6 +37,12 @@ export type InvoiceStudent = {
  * Имя джойнится только в этом read-пути — доменная сущность остаётся чистой.
  */
 export type PaymentListItem = PaymentEntity & { student_name: string };
+
+/**
+ * Сумма, предъявленная к оплате, когда ссылка выставлена не в валюте счёта.
+ * `amount_minor` — в минорных единицах `currency` (евроцентах), `rate` — курс в сотых.
+ */
+export type PaymentCharge = { amount_minor: number; currency: Currency; rate: number };
 
 export type PaymentsFilter = {
 	student_id?: number;
@@ -73,7 +82,12 @@ export abstract class PaymentsRepositoryPort {
 		created_by_id: number | null;
 	}): Promise<PaymentEntity>;
 
-	abstract setPaymentLink(paymentId: number, paymentLinkId: string): Promise<PaymentEntity>;
+	/**
+	 * Сохраняет ссылку на оплату и — если счёт предъявлен не в своей валюте — сумму списания
+	 * одним апдейтом. Вместе, а не двумя вызовами: тройка charge_* и ссылка не должны разъехаться,
+	 * а промежуточное состояние «ссылка есть, сумма списания неизвестна» сломало бы вебхук.
+	 */
+	abstract setPaymentLink(paymentId: number, paymentLinkId: string, charge?: PaymentCharge): Promise<PaymentEntity>;
 	abstract setStatus(paymentId: number, status: PaymentStatusEnum): Promise<PaymentEntity>;
 
 	abstract list(filter: PaymentsFilter): Promise<PaymentListItem[]>;

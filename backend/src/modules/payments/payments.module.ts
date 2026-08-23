@@ -4,6 +4,7 @@ import { BalanceModule } from "@/modules/balance/balance.module";
 import { PlanModule } from "@/modules/plan/plan.module";
 import { StudentModule } from "@/modules/student/student.module";
 import { TelegramModule } from "@/modules/telegram/telegram.module";
+import { SettingsModule } from "@/modules/settings/settings.module";
 import { PaymentsService } from "./application/payments.service";
 import { StripeWebhookService } from "./application/stripe-webhook.service";
 import { PaymentsInvoiceScheduler } from "./application/payments-invoice.scheduler";
@@ -22,9 +23,12 @@ import { LegacyInvoiceController } from "./interface/legacy-invoice.controller";
  *
  * StudentModule нужен для согласий, собранных на странице оплаты: писать в агрегат ученика
  * должен владеющий им модуль. Цикла нет — StudentModule зависит только от TeacherModule.
+ *
+ * SettingsModule даёт курс евро для счетов, пересчитанных из BYN. Он не зависит ни от чего,
+ * кроме Prisma, поэтому цикла тоже нет.
  */
 @Module({
-	imports: [StripeModule, BalanceModule, PlanModule, TelegramModule, StudentModule],
+	imports: [StripeModule, BalanceModule, PlanModule, TelegramModule, StudentModule, SettingsModule],
 	controllers: [PaymentsController, PaymentsWebhookController, LegacyInvoiceController],
 	providers: [
 		PaymentsService,

@@ -50,6 +50,14 @@ export class PlanRepository implements PlanRepositoryPort {
 		return this.mapPlanToEntity(plan);
 	}
 
+	async setStripeProductId(id: number, stripeProductId: string): Promise<PlanEntity> {
+		const plan = await this.prisma.plan.update({
+			where: { id },
+			data: { stripe_product_id: stripeProductId },
+		});
+		return this.mapPlanToEntity(plan);
+	}
+
 	private mapPlanToEntity(plan: Plan): PlanEntity {
 		return {
 			id: plan.id,

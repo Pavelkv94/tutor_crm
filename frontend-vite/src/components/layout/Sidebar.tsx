@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { getVisibleNavItems } from '@/constants/navigation'
 import { tasksApi } from '@/api/tasks'
 import { TasksNavBadge } from '@/components/tasks/TasksNavBadge'
+import { ExchangeRateWidget } from '@/components/settings/ExchangeRateWidget'
 
 const getInitials = (name: string): string => {
   return name
@@ -118,6 +119,9 @@ export const Sidebar = () => {
           )
         })}
       </nav>
+
+      {/* Exchange rate — админская настройка, преподавателю не показывается */}
+      {isAdmin && <ExchangeRateWidget />}
 
       {/* Profile block */}
       {user && (

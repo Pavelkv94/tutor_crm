@@ -11,6 +11,7 @@ import { CancelationStatusEnum, CancelLessonDto } from "@/modules/lesson/interfa
 import { ManageFreeLessonStatusDto } from "@/modules/lesson/interface/dto/requests/manage-free-lesson.input.dto";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { Currency } from '@/shared/enums/currency.enum';
+import { PaymentMethod } from '@/shared/enums/payment-method.enum';
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { UpdateLessonsPlanForPeriodDto } from "@/modules/lesson/interface/dto/requests/update-lesson-plan.input.dto";
 import { Prisma } from '@/infrastructure/prisma/generated/client';
@@ -384,6 +385,7 @@ export class LessonRepository {
 				balance_currency: lesson.student.balance_currency as Currency | null,
 				balance: lesson.student.balance,
 				discount: lesson.student.discount,
+				payment_method: lesson.student.payment_method as PaymentMethod | null,
 			},
 			plan: {
 				id: lesson.plan.id,

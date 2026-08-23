@@ -770,6 +770,53 @@ describe('StudentController (e2e)', () => {
 				.expect(401);
 		});
 
+		// Способ оплаты приходит в UpdateStudentDto через PartialType. Проверяем сквозь HTTP:
+		// e2e-приложение включает whitelist, и поле без унаследованных декораторов молча
+		// вырезалось бы из тела запроса.
+		it('should set and clear the payment method', async () => {
+			const teacherPasswordHash = await bcryptService.generateHash(testTeacher.password);
+			const teacher = await prisma.teacher.create({
+				data: { ...testTeacher, password: teacherPasswordHash, role: TeacherRole.TEACHER },
+			});
+			const createdStudent = await prisma.student.create({
+				data: { ...testStudent, birth_date: testStudent.birth_date, teacher_id: teacher.id },
+			});
+
+			const passwordHash = await bcryptService.generateHash(testAdmin.password);
+			const admin = await prisma.teacher.create({
+				data: { ...testAdmin, password: passwordHash, role: TeacherRole.ADMIN },
+			});
+			const jwtService = getJwtService(module);
+			const authConfig = getAuthConfig(module);
+			const adminToken = await generateTestAccessToken(jwtService, authConfig, {
+				id: admin.id.toString(),
+				login: admin.login,
+				name: admin.name,
+				role: admin.role,
+			});
+
+			await request(app.getHttpServer())
+				.patch(`/students/${createdStudent.id}`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ payment_method: 'STRIPE' })
+				.expect(204);
+			await expect(prisma.student.findUniqueOrThrow({ where: { id: createdStudent.id } })).resolves.toMatchObject({ payment_method: 'STRIPE' });
+
+			// null возвращает ученика в «способ не выбран» — ссылка снова перестаёт выставляться.
+			await request(app.getHttpServer())
+				.patch(`/students/${createdStudent.id}`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ payment_method: null })
+				.expect(204);
+			await expect(prisma.student.findUniqueOrThrow({ where: { id: createdStudent.id } })).resolves.toMatchObject({ payment_method: null });
+
+			await request(app.getHttpServer())
+				.patch(`/students/${createdStudent.id}`)
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ payment_method: 'CASH' })
+				.expect(400);
+		});
+
 		it('should return 404 if student not found', async () => {
 			// Create admin user
 			const passwordHash = await bcryptService.generateHash(testAdmin.password);

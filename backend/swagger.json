@@ -2929,6 +2929,79 @@
           "Telegram"
         ]
       }
+    },
+    "/settings": {
+      "get": {
+        "description": "Курс евро виден только администратору.",
+        "operationId": "SettingsController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Настройки школы",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Требуется роль администратора"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Настройки школы",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "patch": {
+        "description": "Курс евро задаётся в сотых долях BYN (500 = 1 € = 5.00 BYN). По нему пересчитываются счета учеников с BYN-планами, которые платят через Stripe. 0 — курс не задан, ссылки на оплату таким ученикам не выставляются.",
+        "operationId": "SettingsController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Настройки обновлены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректный курс"
+          },
+          "401": {
+            "description": "Требуется роль администратора"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить настройки школы",
+        "tags": [
+          "Settings"
+        ]
+      }
     }
   },
   "info": {
@@ -3391,6 +3464,16 @@
             "example": 0,
             "minimum": 0,
             "maximum": 10
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "Способ оплаты: STRIPE — счёт предъявляется ссылкой на оплату картой, BYN_ACCOUNT — оплата принимается вне системы. null или отсутствие поля — способ не выбран, ведёт себя как BYN_ACCOUNT.",
+            "enum": [
+              "STRIPE",
+              "BYN_ACCOUNT"
+            ],
+            "example": "STRIPE",
+            "nullable": true
           }
         },
         "required": [
@@ -3482,6 +3565,16 @@
             "type": "number",
             "description": "Персональная скидка в процентах, применяемая к цене каждого занятия",
             "example": 0
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "Способ оплаты. null — не выбран: ссылка на оплату не выставляется, в счёте просим прислать чек.",
+            "enum": [
+              "STRIPE",
+              "BYN_ACCOUNT"
+            ],
+            "example": "STRIPE",
+            "nullable": true
           }
         },
         "required": [
@@ -3498,7 +3591,8 @@
           "marketing_consent_at",
           "balance_currency",
           "balance",
-          "discount"
+          "discount",
+          "payment_method"
         ]
       },
       "StudentExtendedDto": {
@@ -3583,6 +3677,16 @@
             "description": "Персональная скидка в процентах, применяемая к цене каждого занятия",
             "example": 0
           },
+          "payment_method": {
+            "type": "string",
+            "description": "Способ оплаты. null — не выбран: ссылка на оплату не выставляется, в счёте просим прислать чек.",
+            "enum": [
+              "STRIPE",
+              "BYN_ACCOUNT"
+            ],
+            "example": "STRIPE",
+            "nullable": true
+          },
           "actualPlans": {
             "description": "The actual plans of the student",
             "type": "array",
@@ -3621,6 +3725,7 @@
           "balance_currency",
           "balance",
           "discount",
+          "payment_method",
           "actualPlans",
           "bookUntilCancellation",
           "notifyAboutBirthday",
@@ -3690,7 +3795,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-08-23T20:37:38.472Z"
+            "example": "2026-08-23T22:14:19.102Z"
           },
           "status": {
             "type": "string",
@@ -3727,7 +3832,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-23T20:37:38.472Z",
+            "example": "2026-08-23T22:14:19.102Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -3739,14 +3844,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-08-23T20:37:38.472Z",
+            "example": "2026-08-23T22:14:19.102Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-08-23T20:37:38.472Z"
+            "example": "2026-08-23T22:14:19.102Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -3834,7 +3939,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-23T20:37:38.467Z"
+            "example": "2026-08-23T22:14:19.092Z"
           },
           "isFree": {
             "type": "boolean",
@@ -3868,7 +3973,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-23T20:37:38.478Z"
+            "example": "2026-08-23T22:14:19.111Z"
           }
         },
         "required": [
@@ -3912,13 +4017,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-08-23T20:37:38.486Z"
+            "example": "2026-08-23T22:14:19.128Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-08-23T20:37:38.486Z"
+            "example": "2026-08-23T22:14:19.128Z"
           },
           "plan": {
             "description": "Plan",
@@ -3930,7 +4035,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-08-23T20:37:38.486Z"
+              "created_at": "2026-08-23T22:14:19.128Z"
             },
             "allOf": [
               {
@@ -3987,13 +4092,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-23T20:37:38.488Z"
+            "example": "2026-08-23T22:14:19.131Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-08-23T20:37:38.488Z"
+            "example": "2026-08-23T22:14:19.131Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -4792,9 +4897,31 @@
           },
           "link": {
             "type": "object",
-            "description": "Ссылка на оплату. null для BYN и при недоступности Stripe — отчёт админу уходит в любом случае.",
+            "description": "Ссылка на оплату. null, если у ученика способ оплаты не Stripe, а также при сбое — отчёт админу уходит в любом случае. Причину смотрите в link_issue.",
             "nullable": true,
             "example": "https://buy.stripe.com/test_xxx"
+          },
+          "link_issue": {
+            "type": "object",
+            "description": "Причина, по которой ссылка не сгенерирована, хотя её ждали. null — ссылка есть либо её и не ждали: оплата принимается вне системы.",
+            "nullable": true,
+            "example": "не задан курс евро — задайте его в панели администратора"
+          },
+          "charge_amount_minor": {
+            "type": "object",
+            "description": "Сумма ссылки в минорных единицах charge_currency (евроцентах), когда счёт предъявлен не в своей валюте. null — пересчёта не было.",
+            "nullable": true,
+            "example": 1600
+          },
+          "charge_currency": {
+            "type": "string",
+            "description": "Валюта ссылки, если она отличается от валюты счёта",
+            "enum": [
+              "EUR",
+              "PLN",
+              "BYN"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -4803,7 +4930,10 @@
           "amount",
           "currency",
           "lessons_count",
-          "link"
+          "link",
+          "link_issue",
+          "charge_amount_minor",
+          "charge_currency"
         ]
       },
       "PaymentDto": {
@@ -4992,6 +5122,41 @@
           "balance",
           "balance_currency",
           "affected_lessons"
+        ]
+      },
+      "SettingsDto": {
+        "type": "object",
+        "properties": {
+          "eur_rate": {
+            "type": "number",
+            "description": "Внутренний курс евро в сотых долях BYN: 500 = 1 € = 5.00 BYN. 0 — курс не задан.",
+            "example": 500
+          },
+          "updated_at": {
+            "type": "object",
+            "description": "null — курс ни разу не задавали",
+            "nullable": true,
+            "example": "2026-08-24T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "eur_rate",
+          "updated_at"
+        ]
+      },
+      "UpdateSettingsDto": {
+        "type": "object",
+        "properties": {
+          "eur_rate": {
+            "type": "number",
+            "description": "Внутренний курс евро в сотых долях BYN: 500 = 1 € = 5.00 BYN. 0 — курс не задан.",
+            "example": 500,
+            "minimum": 0,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "eur_rate"
         ]
       }
     }

@@ -26,6 +26,8 @@ describe('Payments (e2e)', () => {
 	/** StripeService подменён: сеть не трогаем, но подпись вебхука проверяется по-настоящему. */
 	const stripeServiceMock = {
 		createProductWithPrice: jest.fn(async ({ planId }: { planId: number }) => ({ productId: `prod_${planId}`, priceId: `price_${planId}` })),
+		// Планам в BYN заводится только продукт: цена у них считается по курсу на момент счёта.
+		createProduct: jest.fn(async ({ planId }: { planId: number }) => ({ productId: `prod_${planId}` })),
 		archiveProduct: jest.fn(),
 		createPaymentLink: jest.fn(async () => {
 			const id = `plink_${createdPaymentLinks.length + 1}`;
@@ -138,9 +140,13 @@ describe('Payments (e2e)', () => {
 		jest.clearAllMocks();
 
 		const student = await prisma.student.create({
-			data: { name: 'Payments E2E Student', class: 5, teacher_id: teacherId, balance: 0, balance_currency: null },
+			// Ссылку на оплату получает только ученик со способом STRIPE — без этого
+			// весь сценарий «счёт → ссылка → вебхук» просто не запускается.
+			data: { name: 'Payments E2E Student', class: 5, teacher_id: teacherId, balance: 0, balance_currency: null, payment_method: 'STRIPE' },
 		});
 		studentId = student.id;
+		// Курс — глобальная настройка, между тестами её надо возвращать в исходное состояние.
+		await prisma.schoolSettings.upsert({ where: { id: 1 }, create: { id: 1, eur_rate: 0 }, update: { eur_rate: 0 } });
 	});
 
 	afterEach(async () => {
@@ -446,7 +452,22 @@ describe('Payments (e2e)', () => {
 	});
 
 	describe('currency rules', () => {
-		it('issues a BYN invoice without a payment link', async () => {
+		// Ссылку решает способ оплаты ученика, а не валюта занятий.
+		it('issues no link for a student who pays outside the system', async () => {
+			await prisma.student.update({ where: { id: studentId }, data: { payment_method: 'BYN_ACCOUNT' } });
+			await createLesson(5, plnPlanId);
+
+			const response = await request(app.getHttpServer())
+				.post('/payments/invoices')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
+				.expect(201);
+
+			expect(response.body).toMatchObject({ amount: 40, currency: Currency.PLN, link: null, link_issue: null });
+			expect(stripeServiceMock.createPaymentLink).not.toHaveBeenCalled();
+		});
+
+		it('refuses a BYN link while the euro rate is not set', async () => {
 			await createLesson(5, bynPlanId);
 
 			const response = await request(app.getHttpServer())
@@ -456,7 +477,49 @@ describe('Payments (e2e)', () => {
 				.expect(201);
 
 			expect(response.body).toMatchObject({ amount: 25, currency: Currency.BYN, link: null });
+			expect(response.body.link_issue).toContain('курс евро');
 			expect(stripeServiceMock.createPaymentLink).not.toHaveBeenCalled();
+		});
+
+		it('charges a BYN invoice in euro and still settles it in BYN', async () => {
+			await prisma.schoolSettings.update({ where: { id: 1 }, data: { eur_rate: 500 } });
+			// Четыре занятия по 25 BYN: 100 BYN при курсе 5.00 — это ровно 20.00 €.
+			await createLesson(5, bynPlanId);
+			await createLesson(12, bynPlanId);
+			await createLesson(19, bynPlanId);
+			await createLesson(26, bynPlanId);
+
+			const invoiceResponse = await request(app.getHttpServer())
+				.post('/payments/invoices')
+				.set('Authorization', `Bearer ${adminToken}`)
+				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
+				.expect(201);
+
+			expect(invoiceResponse.body).toMatchObject({
+				amount: 100,
+				currency: Currency.BYN,
+				lessons_count: 4,
+				charge_amount_minor: 2000,
+				charge_currency: Currency.EUR,
+			});
+			expect(invoiceResponse.body.link).toContain('https://buy.stripe.com/');
+
+			await postWebhook(checkoutSessionEvent({ currency: 'eur', amountTotal: 2000 })).expect(200);
+
+			// Учёт целиком в BYN: зачислено 100 BYN, а не 20 «единиц».
+			const student = await getStudent();
+			expect(student.balance).toBe(0);
+			expect(student.balance_currency).toBeNull();
+
+			const lessons = await getLessons();
+			expect(lessons.every((lesson) => lesson.status === LessonStatus.PENDING_PAID)).toBe(true);
+
+			const payment = await prisma.payment.findUniqueOrThrow({ where: { id: invoiceResponse.body.payment_id } });
+			expect(payment.status).toBe(PaymentStatus.SUCCEEDED);
+			expect(payment.amount).toBe(100);
+			expect(payment.currency).toBe(Currency.BYN);
+			expect(payment.charge_amount_minor).toBe(2000);
+			expect(payment.charge_rate).toBe(500);
 		});
 
 		it('blocks a lesson in a currency conflicting with the balance', async () => {

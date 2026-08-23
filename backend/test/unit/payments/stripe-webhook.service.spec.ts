@@ -29,6 +29,10 @@ describe("StripeWebhookService", () => {
 		discount_percent: 0,
 		period_start: new Date(Date.UTC(2026, 7, 1)),
 		period_end: new Date(Date.UTC(2026, 7, 31)),
+		// Конвертации нет: счёт предъявлен в своей валюте.
+		charge_currency: null as Currency | null,
+		charge_amount_minor: null as number | null,
+		charge_rate: null as number | null,
 	};
 
 	const appliedResult = {
@@ -189,6 +193,39 @@ describe("StripeWebhookService", () => {
 			);
 		});
 
+		// Счёт в BYN, предъявленный картой в евро: 1600 евроцентов — это 80 BYN, а не 16.
+		const convertedInvoice = { ...invoice, amount: 80, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
+
+		it("credits the invoice currency, not the amount charged by Stripe", async () => {
+			paymentsRepository.findByPaymentLinkId.mockResolvedValue(convertedInvoice as any);
+
+			expect(await service.handleEvent(event("checkout.session.completed", session({ currency: "eur", amount_total: 1600 })))).toBe("handled");
+			expect(balanceService.reconcile).toHaveBeenCalledWith(
+				expect.objectContaining({
+					delta: 80,
+					currency: Currency.BYN,
+					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 80 }),
+				}),
+			);
+		});
+
+		it("rejects a session whose currency differs from the link currency", async () => {
+			paymentsRepository.findByPaymentLinkId.mockResolvedValue(convertedInvoice as any);
+
+			// Валюта счёта тут BYN, но ссылка была в евро — сверять надо со ссылкой.
+			expect(await service.handleEvent(event("checkout.session.completed", session({ currency: "byn", amount_total: 8000 })))).toBe("business_error");
+			expect(balanceService.reconcile).not.toHaveBeenCalled();
+		});
+
+		it("still settles a converted invoice when the charged amount differs, and warns the admin", async () => {
+			paymentsRepository.findByPaymentLinkId.mockResolvedValue(convertedInvoice as any);
+
+			// Останавливаться нельзя: деньги получены, а счёт в PENDING потом нечем применить.
+			expect(await service.handleEvent(event("checkout.session.completed", session({ currency: "eur", amount_total: 1500 })))).toBe("handled");
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: 80 }));
+			expect(telegramService.sendMessageToAdmin).toHaveBeenCalledWith(expect.stringContaining("проверьте разницу"));
+		});
+
 		it("spreads the money by the discount stored on the invoice", async () => {
 			// Скидку могли изменить после выставления — раскладывать надо по той, за которую заплатили.
 			paymentsRepository.findByPaymentLinkId.mockResolvedValue({ ...invoice, discount_percent: 10 } as any);
@@ -266,6 +303,35 @@ describe("StripeWebhookService", () => {
 	describe("refund.created", () => {
 		const refund = (overrides: Partial<Stripe.Refund> = {}): Stripe.Refund =>
 			({ id: "re_1", status: "succeeded", amount: 4000, payment_intent: "pi_1", ...overrides }) as Stripe.Refund;
+
+		// Пропорция к сумме списания, а не пересчёт по курсу: полный возврат обязан дать
+		// ровно сумму счёта, иначе на балансе навсегда останется хвост в копейки.
+		const convertedOriginal = { ...invoice, amount: 80, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
+
+		it("converts a partial refund proportionally to the invoice amount", async () => {
+			paymentsRepository.findSucceededByPaymentIntentId.mockResolvedValue(convertedOriginal as any);
+
+			await service.handleEvent(event("refund.created", refund({ amount: 800 })));
+
+			// Половина списания 8.00 € от 16.00 € → половина счёта, 40 BYN.
+			expect(balanceService.reconcile).toHaveBeenCalledWith(
+				expect.objectContaining({
+					delta: -40,
+					currency: Currency.BYN,
+					payment: expect.objectContaining({
+						data: expect.objectContaining({ amount: -40, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 800 }),
+					}),
+				}),
+			);
+		});
+
+		it("returns exactly the invoice amount on a full refund", async () => {
+			paymentsRepository.findSucceededByPaymentIntentId.mockResolvedValue(convertedOriginal as any);
+
+			await service.handleEvent(event("refund.created", refund({ amount: 1600 })));
+
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: -80 }));
+		});
 
 		it("books a negative payment and allows the balance to go negative", async () => {
 			await service.handleEvent(event("refund.created", refund()));

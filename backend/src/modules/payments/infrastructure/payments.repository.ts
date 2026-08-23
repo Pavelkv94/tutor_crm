@@ -1,13 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@/infrastructure/prisma/prisma.service";
-import { LessonStatus, Payment, PaymentStatus, PaymentType, Prisma } from "@/infrastructure/prisma/generated/client";
+import { Currency as PrismaCurrency, LessonStatus, Payment, PaymentStatus, PaymentType, Prisma } from "@/infrastructure/prisma/generated/client";
 import { Currency } from "@/shared/enums/currency.enum";
+import { PaymentMethod } from "@/shared/enums/payment-method.enum";
 import { PaymentEntity } from "@/modules/balance/domain/payment.entity";
 import { PaymentStatusEnum } from "@/modules/balance/domain/payment-status.enum";
 import { PaymentTypeEnum } from "@/modules/balance/domain/payment-type.enum";
 import {
 	BillableLesson,
 	InvoiceStudent,
+	PaymentCharge,
 	PaymentListItem,
 	PaymentsFilter,
 	PaymentsRepositoryPort,
@@ -123,10 +125,21 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 		return this.mapPayment(payment);
 	}
 
-	async setPaymentLink(paymentId: number, paymentLinkId: string): Promise<PaymentEntity> {
+	async setPaymentLink(paymentId: number, paymentLinkId: string, charge?: PaymentCharge): Promise<PaymentEntity> {
 		const payment = await this.prisma.payment.update({
 			where: { id: paymentId },
-			data: { stripe_payment_link_id: paymentLinkId },
+			data: {
+				stripe_payment_link_id: paymentLinkId,
+				// Тройку пишем условным спредом, а не undefined-полями: CHECK
+				// payment_charge_conversion_check требует, чтобы она была заполнена целиком.
+				...(charge
+					? {
+							charge_amount_minor: charge.amount_minor,
+							charge_currency: charge.currency as PrismaCurrency,
+							charge_rate: charge.rate,
+						}
+					: {}),
+			},
 		});
 		return this.mapPayment(payment);
 	}
@@ -199,6 +212,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 		discount: number;
 		deleted_at: Date | null;
 		marketing_consent_at: Date | null;
+		payment_method: string | null;
 	}): InvoiceStudent {
 		return {
 			id: student.id,
@@ -210,6 +224,7 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 			deleted_at: student.deleted_at,
 			// Наружу отдаём готовый признак: разбор трёх состояний ответа — забота модуля ученика.
 			marketing_answered: student.marketing_consent_at !== null,
+			payment_method: student.payment_method as PaymentMethod | null,
 		};
 	}
 
@@ -231,6 +246,9 @@ export class PaymentsRepository implements PaymentsRepositoryPort {
 			stripe_checkout_session_id: payment.stripe_checkout_session_id,
 			stripe_payment_intent_id: payment.stripe_payment_intent_id,
 			stripe_refund_id: payment.stripe_refund_id,
+			charge_currency: payment.charge_currency as Currency | null,
+			charge_amount_minor: payment.charge_amount_minor,
+			charge_rate: payment.charge_rate,
 			paid_at: payment.paid_at,
 			created_at: payment.created_at,
 			updated_at: payment.updated_at,

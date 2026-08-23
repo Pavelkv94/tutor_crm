@@ -33,12 +33,14 @@ describe('PlanService', () => {
 						getPlanById: jest.fn(),
 						deletePlan: jest.fn(),
 						updateStripeIds: jest.fn(),
+						setStripeProductId: jest.fn(),
 					},
 				},
 				{
 					provide: StripeService,
 					useValue: {
 						createProductWithPrice: jest.fn(),
+						createProduct: jest.fn(),
 						archiveProduct: jest.fn(),
 					},
 				},
@@ -157,6 +159,52 @@ describe('PlanService', () => {
 			jest.spyOn(repository, 'getPlanById').mockResolvedValue(null);
 
 			await expect(service.ensureStripeIds(1)).rejects.toThrow(NotFoundException);
+		});
+	});
+
+	describe('ensureStripeProduct', () => {
+		// У BYN-плана цены в Stripe нет и быть не может: сумма считается по курсу на момент
+		// счёта. Нужен только продукт, к которому привязывается разовая цена.
+		const bynPlan = { ...mockPlanOutput, plan_currency: Currency.BYN, plan_price: 20, stripe_product_id: null, stripe_price_id: null };
+
+		it('creates a product without a price for a plan that has none', async () => {
+			jest.spyOn(repository, 'getPlanById').mockResolvedValue(bynPlan as any);
+			jest.spyOn(stripeService, 'createProduct').mockResolvedValue({ productId: 'prod_1' });
+			jest.spyOn(repository, 'setStripeProductId').mockResolvedValue({ ...bynPlan, stripe_product_id: 'prod_1' } as any);
+
+			const result = await service.ensureStripeProduct(1);
+
+			expect(stripeService.createProduct).toHaveBeenCalledWith({ planId: 1, name: bynPlan.plan_name });
+			expect(stripeService.createProductWithPrice).not.toHaveBeenCalled();
+			expect(repository.setStripeProductId).toHaveBeenCalledWith(1, 'prod_1');
+			expect(result.stripe_product_id).toBe('prod_1');
+		});
+
+		it('is a no-op when the plan already has a product', async () => {
+			const plan = { ...bynPlan, stripe_product_id: 'prod_1' };
+			jest.spyOn(repository, 'getPlanById').mockResolvedValue(plan as any);
+
+			const result = await service.ensureStripeProduct(1);
+
+			expect(stripeService.createProduct).not.toHaveBeenCalled();
+			expect(result).toEqual(plan);
+		});
+
+		// В отличие от create, сбой Stripe не должен уносить план: по нему ведутся занятия
+		// и считается баланс, и без ссылки он вполне работоспособен.
+		it('does not delete the plan when Stripe fails', async () => {
+			jest.spyOn(repository, 'getPlanById').mockResolvedValue(bynPlan as any);
+			jest.spyOn(stripeService, 'createProduct').mockRejectedValue(new Error('stripe down'));
+
+			await expect(service.ensureStripeProduct(1)).rejects.toThrow('stripe down');
+			expect(repository.deletePlan).not.toHaveBeenCalled();
+			expect(stripeService.archiveProduct).not.toHaveBeenCalled();
+		});
+
+		it('should throw when the plan does not exist', async () => {
+			jest.spyOn(repository, 'getPlanById').mockResolvedValue(null);
+
+			await expect(service.ensureStripeProduct(1)).rejects.toThrow(NotFoundException);
 		});
 	});
 

@@ -1,5 +1,6 @@
 import { Currency } from "@/shared/enums/currency.enum";
 import { BillableLesson } from "@/modules/payments/application/ports/payments.repository.port";
+import { formatEurMinor, formatEurRate } from "@/shared/utils/exchange-rate.util";
 
 const MONTHS_UPPER = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"];
 
@@ -10,6 +11,18 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
 	[Currency.EUR]: "€",
 	[Currency.PLN]: "zł",
 	[Currency.BYN]: "р",
+};
+
+/**
+ * Сумма, предъявленная к оплате, когда счёт выставлен не в своей валюте: BYN-занятия
+ * оплачиваются картой в евро по внутреннему курсу школы.
+ */
+export type InvoiceCharge = {
+	/** В минорных единицах `currency` (евроцентах). */
+	amountMinor: number;
+	currency: Currency;
+	/** Курс в сотых долях валюты счёта за единицу `currency`: 500 = 1 € = 5.00 BYN. */
+	rate: number;
 };
 
 export type InvoiceMessageParams = {
@@ -24,6 +37,16 @@ export type InvoiceMessageParams = {
 	paymentLink: string | null;
 	/** Сообщение о причине, по которой ссылка не сгенерирована. */
 	linkIssue?: string;
+	/**
+	 * Ссылки не ждали: оплата принимается вне системы. Отличать это от сбоя обязательно —
+	 * иначе штатный счёт выглядел бы как авария.
+	 *
+	 * Признак, а не сам способ оплаты: билдер остаётся чистым форматированием и, как и
+	 * раньше, ничего не знает про Stripe — он получает уже готовую ссылку.
+	 */
+	expectsReceipt: boolean;
+	/** Сумма ссылки, когда счёт предъявлен не в своей валюте. */
+	charge?: InvoiceCharge;
 };
 
 export const currencySymbol = (currency: Currency): string => CURRENCY_SYMBOLS[currency];
@@ -74,10 +97,16 @@ export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 	const monthLabel = MONTHS_UPPER[params.periodStart.getMonth()];
 
 	let paymentNote: string;
-	if (params.currency === Currency.BYN) {
+	if (params.expectsReceipt) {
 		paymentNote = "💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) и прислать чек для подтверждения 😊";
 	} else if (params.paymentLink) {
-		paymentNote = `💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊\n🔗 ССЫЛКА НА ОПЛАТУ:\n${params.paymentLink}`;
+		// Сумма в евро берётся из позиций ссылки, а не пересчитывается от итога: округление
+		// идёт поштучно, и пересчитанный заново итог разошёлся бы со списанием на копейки.
+		const chargeLine = params.charge
+			? `\n💶 К оплате картой: ${formatEurMinor(params.charge.amountMinor)}${currencySymbol(params.charge.currency)} ` +
+				`(по курсу 1${currencySymbol(params.charge.currency)} = ${formatEurRate(params.charge.rate)}${symbol})`
+			: "";
+		paymentNote = `💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊${chargeLine}\n🔗 ССЫЛКА НА ОПЛАТУ:\n${params.paymentLink}`;
 	} else {
 		paymentNote = `💳 Просьба внести оплату до 10-го числа текущего месяца (включительно) 😊\n⚠️ Ссылка на оплату не сгенерирована${params.linkIssue ? `: ${params.linkIssue}` : ""}`;
 	}

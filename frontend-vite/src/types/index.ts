@@ -1,4 +1,5 @@
 import type { RegionCode } from '@/constants/regions'
+import type { PaymentMethod } from '@/constants/payment-method'
 import type { Currency } from '@/constants/currency'
 
 export interface LoginInput {
@@ -46,6 +47,11 @@ export interface Student {
    * а не к итогу счёта, поэтому влияет и на сумму к оплате, и на закрытие занятий балансом.
    */
   discount: number
+  /**
+   * Способ оплаты. Именно он решает, будет ли в счёте ссылка на оплату картой.
+   * null — способ не выбран, ведёт себя как «на счёт BYN»: ссылки нет, просим чек.
+   */
+  payment_method: PaymentMethod | null
 }
 
 export interface StudentExtended extends Student {
@@ -75,6 +81,8 @@ export interface CreateStudentInput {
   /** null — вопрос ещё не задавали; ответ спросит страница оплаты. */
   marketing_consent?: boolean | null
   discount?: number
+  /** null — способ оплаты не выбран: ссылка на оплату не выставляется. */
+  payment_method?: PaymentMethod | null
 }
 
 export interface UpdateStudentInput {
@@ -86,6 +94,8 @@ export interface UpdateStudentInput {
   /** null возвращает ученика в «не спрашивали» — вопрос снова появится на странице оплаты. */
   marketing_consent?: boolean | null
   discount?: number
+  /** null — способ оплаты не выбран: ссылка на оплату не выставляется. */
+  payment_method?: PaymentMethod | null
 }
 
 export interface Plan {
@@ -456,8 +466,23 @@ export interface Invoice {
   amount: number
   currency: Currency
   lessons_count: number
-  /** null для BYN и когда Stripe недоступен. */
+  /** null, если способ оплаты ученика не Stripe, а также при сбое — причина в link_issue. */
   link: string | null
+  /** Причина отсутствия ссылки, когда её ждали. null — ссылка есть либо её и не ждали. */
+  link_issue: string | null
+  /** Сумма ссылки в евроцентах, когда счёт в BYN предъявлен картой. null — пересчёта не было. */
+  charge_amount_minor: number | null
+  charge_currency: Currency | null
+}
+
+export interface SchoolSettings {
+  /** Внутренний курс евро в сотых долях BYN: 500 = 1 € = 5.00 BYN. 0 — курс не задан. */
+  eur_rate: number
+  updated_at: string | null
+}
+
+export interface UpdateSchoolSettingsInput {
+  eur_rate: number
 }
 
 export interface BalanceAllocation {

@@ -12,6 +12,7 @@ import { PaymentTypeEnum } from "@/modules/balance/domain/payment-type.enum";
 import { TelegramService } from "@/modules/telegram/application/telegram.service";
 import { PaymentsRepositoryPort } from "@/modules/payments/application/ports/payments.repository.port";
 import { PaymentsMetrics } from "@/modules/payments/application/payments.metrics";
+import { formatEurMinor } from "@/shared/utils/exchange-rate.util";
 
 /**
  * Результат обработки события.
@@ -107,12 +108,32 @@ export class StripeWebhookService {
 			return "ignored";
 		}
 
+		// Счёт мог быть предъявлен не в своей валюте: BYN Stripe не обслуживает, и такая ссылка
+		// выставляется в евро по курсу школы. Сверять надо с валютой ссылки, а не счёта.
+		const conversion = this.conversionOf(payment);
+		const expectedCurrency = conversion?.currency ?? payment.currency;
 		const sessionCurrency = session.currency?.toUpperCase();
-		if (sessionCurrency && sessionCurrency !== payment.currency) {
-			throw new WebhookBusinessError(`валюта оплаты ${sessionCurrency} не совпадает с валютой счёта ${payment.currency} (счёт ${payment.id})`);
+		if (sessionCurrency && sessionCurrency !== expectedCurrency) {
+			throw new WebhookBusinessError(`валюта оплаты ${sessionCurrency} не совпадает с валютой ссылки ${expectedCurrency} (счёт ${payment.id})`);
 		}
 
-		const amountMajor = this.toMajorUnits(session.amount_total ?? 0, payment.id);
+		// Учёт ведётся в валюте счёта, поэтому у пересчитанного счёта в баланс уходит его
+		// собственная сумма, а не то, что списала платёжка: 1600 евроцентов — это 80 BYN,
+		// а не 16, и зачисление евро развалило бы аллокацию занятий.
+		// У обычного счёта поведение прежнее, включая приём переплаты.
+		const amountMajor = conversion ? payment.amount : this.toMajorUnits(session.amount_total ?? 0, payment.id);
+
+		if (conversion && session.amount_total !== conversion.amountMinor) {
+			// Деньги уже получены — останавливаться нельзя: счёт застрял бы в PENDING, а
+			// применить его вручную нечем (applyParkedPayment работает только с REQUIRES_ATTENTION).
+			// Ledger от суммы списания не зависит, поэтому проводим платёж и зовём человека.
+			this.logger.warn(`Счёт ${payment.id}: списано ${session.amount_total} ${expectedCurrency} (минорных), ссылка выставлялась на ${conversion.amountMinor}`);
+			await this.notifyAdmin(
+				`⚠️ Счёт ${payment.id}: оплачено ${formatEurMinor(session.amount_total ?? 0)} ${expectedCurrency}, ` +
+					`а ссылка выставлялась на ${formatEurMinor(conversion.amountMinor)} ${expectedCurrency}. ` +
+					`Счёт закрыт на ${payment.amount} ${payment.currency} — проверьте разницу.`,
+			);
+		}
 
 		const result = await this.balanceService.reconcile({
 			studentId: payment.student_id,
@@ -183,7 +204,17 @@ export class StripeWebhookService {
 			throw new WebhookBusinessError(`не найден исходный платёж по payment_intent ${paymentIntentId} (возврат ${refund.id})`);
 		}
 
-		const amountMajor = this.toMajorUnits(refund.amount, original.id);
+		// Возврат приходит в валюте списания. Пересчитываем не по курсу, а пропорцией к сумме
+		// списания: при полном возврате это даёт ровно сумму счёта, тогда как обратный пересчёт
+		// разошёлся бы с ней на копейки (сумма ссылки — это сумма округлённых позиций, а не
+		// округлённый итог) и оставил бы вечный хвост на балансе. Курс в расчёте не участвует,
+		// поэтому его правка между оплатой и возвратом ни на что не влияет.
+		const conversion = this.conversionOf(original);
+		const amountMajor = conversion
+			? // Math.min — защита арифметики: Stripe не даёт вернуть больше списанного,
+				// но расчёт не должен на это опираться.
+				Math.min(original.amount, Math.round((original.amount * refund.amount) / conversion.amountMinor))
+			: this.toMajorUnits(refund.amount, original.id);
 
 		const result = await this.balanceService.reconcile({
 			studentId: original.student_id,
@@ -201,6 +232,14 @@ export class StripeWebhookService {
 					currency: original.currency,
 					comment: `Возврат по платежу ${original.id}`,
 					stripe_refund_id: refund.id,
+					// Аудит: в какой валюте и по какому курсу деньги уходили обратно.
+					...(conversion
+						? {
+								charge_currency: conversion.currency,
+								charge_amount_minor: refund.amount,
+								charge_rate: original.charge_rate,
+							}
+						: {}),
 					paid_at: new Date(),
 				},
 			},
@@ -281,6 +320,20 @@ export class StripeWebhookService {
 		}
 
 		throw new WebhookBusinessError(`не найден счёт для сессии ${session.id} (payment_link=${paymentLinkId ?? "нет"})`);
+	}
+
+	/**
+	 * Счёт предъявлен не в своей валюте: BYN-занятия оплачены картой в евро по курсу школы.
+	 * null — конвертации не было, всё считается как раньше.
+	 *
+	 * Проверка на истинность, а не на `!== null`: сумма 0 в тройке невозможна по
+	 * CHECK payment_charge_conversion_check, а частично заполненную сущность лучше
+	 * трактовать как «конвертации нет», чем зачислить не ту сумму.
+	 */
+	private conversionOf(payment: PaymentEntity): { currency: Currency; amountMinor: number } | null {
+		return payment.charge_currency && payment.charge_amount_minor
+			? { currency: payment.charge_currency as Currency, amountMinor: payment.charge_amount_minor }
+			: null;
 	}
 
 	/**

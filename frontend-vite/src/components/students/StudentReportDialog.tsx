@@ -411,6 +411,13 @@ export const StudentReportDialog = ({
 										<p className="text-sm text-green-700">
 											Занятий: {createInvoiceMutation.data.lessons_count}
 										</p>
+										{createInvoiceMutation.data.charge_amount_minor !== null && (
+											<p className="text-sm text-green-700">
+												К оплате картой:{' '}
+												{(createInvoiceMutation.data.charge_amount_minor / 100).toFixed(2)}{' '}
+												{createInvoiceMutation.data.charge_currency}
+											</p>
+										)}
 									</div>
 
 									{createInvoiceMutation.data.link ? (
@@ -432,20 +439,21 @@ export const StudentReportDialog = ({
 												{isLinkCopied ? 'Скопировано' : 'Копировать ссылку'}
 											</Button>
 										</div>
-									) : createInvoiceMutation.data.currency === 'BYN' ? (
-										<p className="text-sm text-green-700">
-											Оплата в BYN — ссылка не требуется, ожидается чек.
-										</p>
-									) : (
+									) : createInvoiceMutation.data.link_issue ? (
 										<div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
 											<p className="text-sm text-amber-700">
-												Платёжный сервис не ответил: отчёт админу отправлен, но ссылки на
-												оплату нет.
+												Ссылка на оплату не сгенерирована: {createInvoiceMutation.data.link_issue}. Отчёт
+												админу отправлен.
 											</p>
 											<Button type="button" variant="outline" size="sm" onClick={handleCreateInvoice}>
 												Выставить счёт заново
 											</Button>
 										</div>
+									) : (
+										/* Ссылки и не ждали: у ученика способ оплаты не Stripe. */
+										<p className="text-sm text-green-700">
+											Ссылка не требуется — оплата принимается вне системы, ожидается чек.
+										</p>
 									)}
 								</div>
 							)}

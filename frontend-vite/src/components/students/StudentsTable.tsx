@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { RegionDisplay } from '@/components/shared/RegionDisplay'
 import { formatStudentClassLabel } from '@/constants/student-class'
+import { getPaymentMethodLabel } from '@/constants/payment-method'
 import type { Student } from '@/types'
 import { BalanceDisplay } from '@/components/shared/BalanceDisplay'
 
@@ -120,7 +121,7 @@ export const StudentsTable = ({
     return 0
   })
 
-	const columnCount = showAdminColumns ? 8 : 6
+	const columnCount = showAdminColumns ? 9 : 6
 
   return (
 		<div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -165,6 +166,7 @@ export const StudentsTable = ({
 								</button>
 							</TableHead>
 							{showAdminColumns && <TableHead className={headerCellClass}>Баланс</TableHead>}
+							{showAdminColumns && <TableHead className={headerCellClass}>Способ оплаты</TableHead>}
 							<TableHead className={headerCellClass}>Маркетинг</TableHead>
 							<TableHead className={headerCellClass}>Архивация</TableHead>
 							<TableHead className={cn(headerCellClass, 'text-right')}>Действия</TableHead>
@@ -220,6 +222,12 @@ export const StudentsTable = ({
 													balance={student.balance}
 													currency={student.balance_currency}
 												/>
+											</TableCell>
+										)}
+										{showAdminColumns && (
+											<TableCell className={bodyCellClass}>
+												{/* Прочерк — способ не выбран: ссылка на оплату не выставляется. */}
+												{getPaymentMethodLabel(student.payment_method)}
 											</TableCell>
 										)}
 										<TableCell className={bodyCellClass}>

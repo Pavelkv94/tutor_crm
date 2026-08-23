@@ -112,6 +112,28 @@ async function applyHandWrittenConstraints(databaseUrl: string): Promise<void> {
 				CHECK ("discount" >= 0 AND "discount" <= 100)
 		`);
 
+		// Тройка полей конвертации на счёте живёт целиком или не живёт вовсе.
+		await client.query(`ALTER TABLE "payment" DROP CONSTRAINT IF EXISTS "payment_charge_conversion_check"`);
+		await client.query(`
+			ALTER TABLE "payment" ADD CONSTRAINT "payment_charge_conversion_check"
+				CHECK (
+					("charge_amount_minor" IS NULL AND "charge_currency" IS NULL AND "charge_rate" IS NULL)
+					OR ("charge_amount_minor" > 0 AND "charge_currency" IS NOT NULL AND "charge_rate" > 0)
+				)
+		`);
+
+		// Настройки школы — ровно одна строка.
+		await client.query(`ALTER TABLE "school_settings" DROP CONSTRAINT IF EXISTS "school_settings_singleton_check"`);
+		await client.query(`ALTER TABLE "school_settings" ADD CONSTRAINT "school_settings_singleton_check" CHECK ("id" = 1)`);
+		await client.query(`ALTER TABLE "school_settings" DROP CONSTRAINT IF EXISTS "school_settings_eur_rate_check"`);
+		await client.query(`ALTER TABLE "school_settings" ADD CONSTRAINT "school_settings_eur_rate_check" CHECK ("eur_rate" >= 0)`);
+
+		// Сид синглтона: db push создаёт таблицу пустой, а INSERT из миграции не выполняется.
+		await client.query(`
+			INSERT INTO "school_settings" ("id", "eur_rate", "updated_at")
+				VALUES (1, 0, NOW()) ON CONFLICT ("id") DO NOTHING
+		`);
+
 		console.log('✓ Hand-written indexes and constraints applied');
 	} finally {
 		await client.end();

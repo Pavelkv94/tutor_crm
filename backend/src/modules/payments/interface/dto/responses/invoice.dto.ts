@@ -18,11 +18,30 @@ export class InvoiceDto {
 	lessons_count: number;
 
 	@ApiProperty({
-		description: "Ссылка на оплату. null для BYN и при недоступности Stripe — отчёт админу уходит в любом случае.",
+		description:
+			"Ссылка на оплату. null, если у ученика способ оплаты не Stripe, а также при сбое — " +
+			"отчёт админу уходит в любом случае. Причину смотрите в link_issue.",
 		nullable: true,
 		example: "https://buy.stripe.com/test_xxx",
 	})
 	link: string | null;
+
+	@ApiProperty({
+		description: "Причина, по которой ссылка не сгенерирована, хотя её ждали. null — ссылка есть " + "либо её и не ждали: оплата принимается вне системы.",
+		nullable: true,
+		example: "не задан курс евро — задайте его в панели администратора",
+	})
+	link_issue: string | null;
+
+	@ApiProperty({
+		description: "Сумма ссылки в минорных единицах charge_currency (евроцентах), когда счёт предъявлен " + "не в своей валюте. null — пересчёта не было.",
+		nullable: true,
+		example: 1600,
+	})
+	charge_amount_minor: number | null;
+
+	@ApiProperty({ description: "Валюта ссылки, если она отличается от валюты счёта", enum: Currency, nullable: true })
+	charge_currency: Currency | null;
 }
 
 export class BalanceDto {

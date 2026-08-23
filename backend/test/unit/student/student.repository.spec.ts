@@ -18,6 +18,7 @@ describe('StudentRepository', () => {
 		marketing_consent: false,
 		balance_currency: null,
 		discount: 0,
+		payment_method: null,
 		bookUntilCancellation: false,
 		notifyAboutBirthday: false,
 		notifyAboutLessons: false,
@@ -72,6 +73,33 @@ describe('StudentRepository', () => {
 
 			expect(result.name).toBe('Test Student');
 			expect(prisma.student.create).toHaveBeenCalled();
+		});
+	});
+
+	describe('payment_method', () => {
+		it('is passed through to the view', async () => {
+			jest.spyOn(prisma.student, 'findMany').mockResolvedValue([{ ...mockStudent, payment_method: 'STRIPE' }] as any);
+
+			const result = await repository.getStudentsByTeacherId(1, 'all' as any);
+
+			expect(result[0].payment_method).toBe('STRIPE');
+		});
+
+		// null — способ не выбран: ссылка на оплату не выставляется.
+		it('is null when the method has not been chosen', async () => {
+			jest.spyOn(prisma.student, 'findMany').mockResolvedValue([mockStudent] as any);
+
+			const result = await repository.getStudentsByTeacherId(1, 'all' as any);
+
+			expect(result[0].payment_method).toBeNull();
+		});
+
+		it('is cleared when the admin resets it', async () => {
+			const update = jest.spyOn(prisma.student, 'update').mockResolvedValue(mockStudent as any);
+
+			await repository.updateStudent(1, { payment_method: null } as StudentUpdateData);
+
+			expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ payment_method: null }) }));
 		});
 	});
 

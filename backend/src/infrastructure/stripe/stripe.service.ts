@@ -23,6 +23,9 @@ export type CreateProductWithPriceResult = {
  * существует: сумма зависит от ученика, а не от плана. Заводить Price на каждую пару
  * «план + скидка» не нужно — Stripe принимает цену «на лету» через `price_data`,
  * привязанную к тому же продукту плана.
+ *
+ * Тот же вариант обслуживает счёт, пересчитанный по курсу: цена принадлежит счёту, а не
+ * плану. `unitAmountMajor` там дробный (6.06) — в минорные единицы его переводит `toLineItem`.
  */
 export type PaymentLinkItem = { priceId: string; quantity: number } | { productId: string; unitAmountMajor: number; currency: Currency; quantity: number };
 
@@ -151,6 +154,29 @@ export class StripeService {
 			return { productId: product.id, priceId: price.id };
 		} catch (error) {
 			this.handleStripeError("createProductWithPrice", error);
+		}
+	}
+
+	/**
+	 * Заводит продукт без цены. Нужен планам в валюте, которую Stripe у нас напрямую не
+	 * обслуживает: цена такой позиции зависит от курса на момент счёта, поэтому готового
+	 * Price у плана не существует и существовать не должно. Сам продукт валюты не имеет.
+	 *
+	 * Ключ идемпотентности тот же, что у createProductWithPrice: если плану позже заведут
+	 * цену, второго продукта не появится.
+	 */
+	async createProduct(params: { planId: number; name: string }): Promise<{ productId: string }> {
+		try {
+			const product = await this.stripe.products.create(
+				{
+					name: params.name,
+					metadata: { plan_id: String(params.planId) },
+				},
+				{ idempotencyKey: `plan-${params.planId}-product` },
+			);
+			return { productId: product.id };
+		} catch (error) {
+			this.handleStripeError("createProduct", error);
 		}
 	}
 

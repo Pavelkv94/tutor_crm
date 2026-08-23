@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Timezone } from "@/modules/teacher/interface/dto/responses/teacher.dto";
 import { PlanDto } from '@/modules/plan/interface/dto/responses/plan.dto';
 import { Currency } from '@/shared/enums/currency.enum';
+import { PaymentMethod } from '@/shared/enums/payment-method.enum';
 
 export class StudentDto {
 	@ApiProperty({ description: 'The id of the student', example: 1 })
@@ -36,6 +37,13 @@ export class StudentDto {
 	balance: number;
 	@ApiProperty({ description: 'Персональная скидка в процентах, применяемая к цене каждого занятия', example: 0 })
 	discount: number;
+	@ApiProperty({
+		description: 'Способ оплаты. null — не выбран: ссылка на оплату не выставляется, в счёте просим прислать чек.',
+		enum: PaymentMethod,
+		example: PaymentMethod.STRIPE,
+		nullable: true,
+	})
+	payment_method: PaymentMethod | null;
 }
 
 export class StudentExtendedDto extends StudentDto {

@@ -47,6 +47,14 @@ export type CreatePaymentData = {
 	stripe_checkout_session_id?: string | null;
 	stripe_payment_intent_id?: string | null;
 	stripe_refund_id?: string | null;
+	/**
+	 * Аудит списания, когда деньги приняты не в валюте счёта: сумма в минорных единицах
+	 * charge_currency и курс в сотых. Тройка заполняется целиком либо не заполняется вовсе —
+	 * это требование CHECK payment_charge_conversion_check.
+	 */
+	charge_currency?: Currency | null;
+	charge_amount_minor?: number | null;
+	charge_rate?: number | null;
 	paid_at?: Date | null;
 };
 

@@ -31,6 +31,11 @@ import {
   fromMarketingConsentValue,
   type MarketingConsentValue,
 } from '@/constants/marketing-consent'
+import {
+  PAYMENT_METHOD_OPTIONS,
+  fromPaymentMethodValue,
+  type PaymentMethodValue,
+} from '@/constants/payment-method'
 
 interface CreateStudentDialogProps {
   open: boolean
@@ -45,6 +50,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
   const [timezone, setTimezone] = useState<RegionCode | ''>('')
 	const [marketingConsent, setMarketingConsent] = useState<MarketingConsentValue>('unasked')
   const [discount, setDiscount] = useState('0')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>('unset')
   const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -75,6 +81,7 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
       setTimezone('')
 			setMarketingConsent('unasked')
       setDiscount('0')
+      setPaymentMethod('unset')
     },
   })
 
@@ -92,9 +99,10 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
 			marketing_consent: fromMarketingConsentValue(marketingConsent),
     }
 
-    // Скидку назначает только администратор — у преподавателя поля нет, и слать его нечего.
+    // Скидку и способ оплаты назначает только администратор — у преподавателя полей нет.
     if (isAdmin) {
       data.discount = discountValue
+      data.payment_method = fromPaymentMethodValue(paymentMethod)
     }
 
     createMutation.mutate(data)
@@ -180,6 +188,30 @@ export const CreateStudentDialog = ({ open, onOpenChange }: CreateStudentDialogP
                 <p className="text-xs text-muted-foreground">
                   Уменьшает цену каждого занятия в счёте. 0 — без скидки, максимум{' '}
                   {MAX_STUDENT_DISCOUNT_PERCENT}%.
+                </p>
+              </div>
+            )}
+            {isAdmin && (
+              <div className="grid gap-2">
+                <Label htmlFor="paymentMethod">Способ оплаты</Label>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(value) => setPaymentMethod(value as PaymentMethodValue)}
+                >
+                  <SelectTrigger id="paymentMethod" aria-label="Способ оплаты">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHOD_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Только «Stripe» даёт ссылку на оплату в счёте. В остальных случаях в счёте
+                  просим прислать чек.
                 </p>
               </div>
             )}

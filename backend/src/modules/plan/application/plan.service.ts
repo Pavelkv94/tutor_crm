@@ -45,6 +45,32 @@ export class PlanService {
 		return this.createStripeProduct(plan);
 	}
 
+	/**
+	 * Дозаводит плану только продукт в Stripe, без цены. Нужен планам в валюте, которую
+	 * Stripe у нас напрямую не обслуживает (BYN): счёт таким ученикам предъявляется в евро
+	 * по курсу школы, цена позиции считается на момент выставления и передаётся разовой
+	 * `price_data`, привязанной к этому продукту. Готового Price у плана нет и быть не может.
+	 *
+	 * В отличие от createStripeProduct, ошибка Stripe здесь НЕ удаляет план: план в BYN
+	 * полезен сам по себе — по нему ведутся занятия и считается баланс, — и терять его
+	 * из-за недоступности платёжки нельзя. Ошибка уходит наверх, вызывающий выставляет
+	 * счёт без ссылки.
+	 *
+	 * Идемпотентно: у плана с готовым продуктом ничего не делает.
+	 */
+	async ensureStripeProduct(id: number): Promise<PlanEntity> {
+		const plan = await this.planRepository.getPlanById(id);
+		if (!plan) {
+			throw new NotFoundException('План не найден');
+		}
+		if (plan.stripe_product_id) {
+			return plan;
+		}
+
+		const created = await this.stripeService.createProduct({ planId: plan.id, name: plan.plan_name });
+		return this.planRepository.setStripeProductId(plan.id, created.productId);
+	}
+
 	async remove(id: number): Promise<boolean> {
 		const plan = await this.planRepository.getPlanById(id);
 		if (!plan) {

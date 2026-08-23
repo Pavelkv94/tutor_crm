@@ -7,4 +7,6 @@ export abstract class PlanRepositoryPort {
 	abstract getPlanById(id: number): Promise<PlanEntity | null>;
 	abstract deletePlan(id: number): Promise<boolean>;
 	abstract updateStripeIds(id: number, stripeProductId: string, stripePriceId: string): Promise<PlanEntity>;
+	/** Для планов, у которых есть продукт, но нет и не будет цены в Stripe (см. PlanService.ensureStripeProduct). */
+	abstract setStripeProductId(id: number, stripeProductId: string): Promise<PlanEntity>;
 }

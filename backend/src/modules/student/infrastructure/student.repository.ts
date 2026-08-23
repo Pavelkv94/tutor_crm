@@ -10,6 +10,7 @@ import { PlanDto } from "@/modules/plan/interface/dto/responses/plan.dto";
 import { calculateAgeFromBirthDate } from '@/shared/utils/calculate-age.util';
 import { Student, Plan } from '@/infrastructure/prisma/generated/client';
 import { Currency } from '@/shared/enums/currency.enum';
+import { PaymentMethod } from '@/shared/enums/payment-method.enum';
 
 /**
  * Поля ученика в том виде, в каком они лежат в БД: ответ про маркетинг наружу отдаётся
@@ -150,6 +151,7 @@ export class StudentRepository {
 			balance_currency: student.balance_currency as Currency | null,
 			balance: student.balance,
 			discount: student.discount,
+			payment_method: student.payment_method as PaymentMethod | null,
 		};
 	}
 

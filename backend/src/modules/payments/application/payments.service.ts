@@ -12,18 +12,30 @@ import { PaymentTypeEnum } from "@/modules/balance/domain/payment-type.enum";
 import {
 	BillableLesson,
 	InvoiceStudent,
+	PaymentCharge,
 	PaymentListItem,
 	PaymentsFilter,
 	PaymentsRepositoryPort,
 } from "@/modules/payments/application/ports/payments.repository.port";
-import { buildInvoiceMessage, currencySymbol } from "@/modules/payments/application/invoice-message.builder";
+import { InvoiceCharge, buildInvoiceMessage, currencySymbol } from "@/modules/payments/application/invoice-message.builder";
 import { AdjustBalanceDto } from "@/modules/payments/interface/dto/requests/adjust-balance.dto";
 import { AdjustBalanceResultDto, BalanceDto, InvoiceDto } from "@/modules/payments/interface/dto/responses/invoice.dto";
 import { PaymentsMetrics } from "@/modules/payments/application/payments.metrics";
 import { applyDiscount } from "@/shared/utils/discount.util";
+import { EUR_MINOR_UNITS, MIN_EUR_CHARGE_MINOR, bynToEurMinor, formatEurMinor } from "@/shared/utils/exchange-rate.util";
+import { PaymentMethod } from "@/shared/enums/payment-method.enum";
+import { SettingsService } from "@/modules/settings/application/settings.service";
 
-/** Валюты, по которым выставляется ссылка Stripe. BYN оплачивается вне системы. */
-const STRIPE_CURRENCIES: Currency[] = [Currency.PLN, Currency.EUR];
+/** Валюты, которые Stripe обслуживает напрямую: счёт в них уходит как есть, без пересчёта. */
+const STRIPE_DIRECT_CURRENCIES: Currency[] = [Currency.PLN, Currency.EUR];
+
+/**
+ * Как счёт предъявляется к оплате.
+ * - `direct` — в своей валюте, готовыми ценами плана (прежнее поведение);
+ * - `converted` — пересчитан в евро по курсу школы: Stripe не обслуживает BYN;
+ * - `blocked` — предъявить нельзя, причина уходит в отчёт администратору.
+ */
+type ChargeMode = { kind: "direct" } | { kind: "converted"; rate: number; currency: Currency } | { kind: "blocked"; issue: string };
 
 /** Ограничение Stripe на количество позиций в Payment Link. */
 const MAX_LINE_ITEMS = 20;
@@ -42,6 +54,7 @@ export class PaymentsService {
 		private readonly planService: PlanService,
 		private readonly telegramService: TelegramService,
 		private readonly metrics: PaymentsMetrics,
+		private readonly settingsService: SettingsService,
 	) {}
 
 	/**
@@ -115,7 +128,10 @@ export class PaymentsService {
 			created_by_id: params.createdById,
 		});
 
-		const { link, issue } = await this.createPaymentLink(payment, student, paidLessons, currency);
+		const { link, issue, charge } = await this.createPaymentLink(payment, student, paidLessons, currency);
+		// Ссылки не ждали — оплата принимается вне системы. Отличать это от сбоя важно:
+		// в первом случае в счёте просто просим прислать чек, во втором предупреждаем админа.
+		const expectsReceipt = student.payment_method !== PaymentMethod.STRIPE;
 
 		await this.notifyAdmin(
 			buildInvoiceMessage({
@@ -127,6 +143,8 @@ export class PaymentsService {
 				discountPercent: student.discount,
 				paymentLink: link,
 				linkIssue: issue,
+				expectsReceipt,
+				charge,
 			}),
 		);
 
@@ -140,6 +158,9 @@ export class PaymentsService {
 			currency,
 			lessons_count: paidLessons.length,
 			link,
+			link_issue: issue ?? null,
+			charge_amount_minor: charge?.amountMinor ?? null,
+			charge_currency: charge?.currency ?? null,
 		};
 	}
 
@@ -327,21 +348,38 @@ export class PaymentsService {
 	/**
 	 * Ошибка Stripe здесь не фатальна: отчёт администратору уходит в любом случае,
 	 * просто без ссылки — иначе одна недоступность платёжки лишила бы всех учеников счетов.
+	 *
+	 * Ссылка создаётся только ученикам со способом оплаты STRIPE. Валюта занятий решает не
+	 * «выставлять ли ссылку», а «нужен ли пересчёт»: BYN Stripe не обслуживает, поэтому такой
+	 * счёт предъявляется в евро по внутреннему курсу школы.
 	 */
 	private async createPaymentLink(
 		payment: PaymentEntity,
 		student: InvoiceStudent,
 		lessons: BillableLesson[],
 		currency: Currency,
-	): Promise<{ link: string | null; issue?: string }> {
-		if (!STRIPE_CURRENCIES.includes(currency)) {
+	): Promise<{ link: string | null; issue?: string; charge?: InvoiceCharge }> {
+		if (student.payment_method !== PaymentMethod.STRIPE) {
 			return { link: null };
 		}
 
+		const mode = await this.resolveChargeMode(currency);
+		if (mode.kind === "blocked") {
+			this.logger.error(`Счёт ${payment.id}: ${mode.issue}`);
+			return { link: null, issue: mode.issue };
+		}
+
 		try {
-			const items = await this.buildLineItems(lessons, student.discount, currency);
+			const { items, chargeAmountMinor } = await this.buildLineItems(lessons, student.discount, currency, mode);
 			if (items.length > MAX_LINE_ITEMS) {
 				const issue = `в счёте ${items.length} позиций, Stripe допускает не больше ${MAX_LINE_ITEMS}`;
+				this.logger.error(`Счёт ${payment.id}: ${issue}`);
+				return { link: null, issue };
+			}
+			// Порог Stripe проверяем сами: иначе отказ платёжки пришёл бы под общим текстом
+			// «сервис недоступен», и админ искал бы проблему не там.
+			if (chargeAmountMinor !== null && chargeAmountMinor < MIN_EUR_CHARGE_MINOR) {
+				const issue = `сумма к оплате ${formatEurMinor(chargeAmountMinor)}${currencySymbol(mode.kind === "converted" ? mode.currency : currency)} меньше минимальной для оплаты картой`;
 				this.logger.error(`Счёт ${payment.id}: ${issue}`);
 				return { link: null, issue };
 			}
@@ -365,23 +403,78 @@ export class PaymentsService {
 				},
 			});
 
-			await this.paymentsRepository.setPaymentLink(payment.id, created.id);
-			return { link: created.url };
+			const charge: PaymentCharge | undefined =
+				mode.kind === "converted" && chargeAmountMinor !== null ? { amount_minor: chargeAmountMinor, currency: mode.currency, rate: mode.rate } : undefined;
+
+			await this.paymentsRepository.setPaymentLink(payment.id, created.id, charge);
+			return {
+				link: created.url,
+				charge: charge ? { amountMinor: charge.amount_minor, currency: charge.currency, rate: charge.rate } : undefined,
+			};
 		} catch (error) {
 			this.logger.error(`Не удалось создать ссылку для счёта ${payment.id}: ${(error as Error).message}`);
 			return { link: null, issue: "платёжный сервис недоступен" };
 		}
 	}
 
-	/** Группирует занятия по плану: одна позиция на план с количеством занятий. */
-	private async buildLineItems(lessons: BillableLesson[], discountPercent: number, currency: Currency): Promise<PaymentLinkItem[]> {
+	/** Нужен ли счёту пересчёт и можно ли его вообще предъявить к оплате картой. */
+	private async resolveChargeMode(currency: Currency): Promise<ChargeMode> {
+		if (STRIPE_DIRECT_CURRENCIES.includes(currency)) {
+			return { kind: "direct" };
+		}
+
+		const rate = await this.settingsService.getEurRate();
+		if (rate <= 0) {
+			return { kind: "blocked", issue: "не задан курс евро — задайте его в панели администратора" };
+		}
+		return { kind: "converted", rate, currency: Currency.EUR };
+	}
+
+	/**
+	 * Группирует занятия по плану: одна позиция на план с количеством занятий.
+	 *
+	 * `chargeAmountMinor` — итог ссылки в минорных единицах валюты списания, накопленный по
+	 * позициям. Именно он, а не пересчёт итога счёта, попадает и в Stripe, и в отчёт админу:
+	 * округление идёт по каждой позиции, и пересчитанный заново итог разошёлся бы с суммой
+	 * позиций на копейки. Для счёта без пересчёта — null.
+	 */
+	private async buildLineItems(
+		lessons: BillableLesson[],
+		discountPercent: number,
+		currency: Currency,
+		mode: Exclude<ChargeMode, { kind: "blocked" }>,
+	): Promise<{ items: PaymentLinkItem[]; chargeAmountMinor: number | null }> {
 		const countByPlan = new Map<number, number>();
 		for (const lesson of lessons) {
 			countByPlan.set(lesson.plan_id, (countByPlan.get(lesson.plan_id) ?? 0) + 1);
 		}
 
 		const items: PaymentLinkItem[] = [];
+		let chargeAmountMinor = 0;
+
 		for (const [planId, quantity] of countByPlan) {
+			if (mode.kind === "converted") {
+				// У плана в BYN нет и не может быть цены в Stripe, поэтому быстрый путь через
+				// priceId здесь недоступен принципиально — нужен только продукт.
+				const plan = await this.planService.ensureStripeProduct(planId);
+				if (!plan.stripe_product_id) {
+					throw new Error(`У плана ${planId} нет продукта в Stripe`);
+				}
+
+				// Скидка применяется до конверсии: она целочисленная и определена только
+				// в валюте плана.
+				const unitMinor = bynToEurMinor(applyDiscount(plan.plan_price, discountPercent), mode.rate);
+				items.push({
+					productId: plan.stripe_product_id,
+					// toLineItem умножит обратно на 100 с Math.round — исходные центы вернутся ровно.
+					unitAmountMajor: unitMinor / EUR_MINOR_UNITS,
+					currency: mode.currency,
+					quantity,
+				});
+				chargeAmountMinor += unitMinor * quantity;
+				continue;
+			}
+
 			// Планы, заведённые до появления оплат, приходят без цены в Stripe — создаём на лету.
 			const plan = await this.planService.ensureStripeIds(planId);
 
@@ -405,7 +498,8 @@ export class PaymentsService {
 			}
 			items.push({ priceId: plan.stripe_price_id, quantity });
 		}
-		return items;
+
+		return { items, chargeAmountMinor: mode.kind === "converted" ? chargeAmountMinor : null };
 	}
 
 	private async notifyAdmin(message: string): Promise<void> {
