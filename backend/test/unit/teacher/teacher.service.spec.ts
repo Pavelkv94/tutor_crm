@@ -23,6 +23,7 @@ describe('TeacherService', () => {
 		telegram_id: null,
 		telegram_link: null,
 		timezone: Timezone.BY,
+		birth_date: null,
 		deleted_at: null,
 		created_at: new Date(),
 	};
@@ -34,6 +35,7 @@ describe('TeacherService', () => {
 		telegram_id: null,
 		telegram_link: null,
 		timezone: Timezone.BY,
+		birth_date: null,
 		deleted_at: null,
 		created_at: new Date(),
 		role: TeacherRoleEnum.TEACHER,

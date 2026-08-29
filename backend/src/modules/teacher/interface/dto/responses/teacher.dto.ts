@@ -22,6 +22,8 @@ export class TeacherDto {
 	role: string;
 	@ApiProperty({ description: 'The timezone of the teacher', example: 'BY' })
 	timezone: Timezone;
+	@ApiProperty({ description: 'The birth date of the teacher', example: '1990-01-01', nullable: true })
+	birth_date: Date | null;
 	@ApiProperty({ description: 'The deleted at of the teacher', example: '2026-01-01T00:00:00.000Z' })
 	deleted_at: Date | null;
 	@ApiProperty({ description: 'The created at of the teacher', example: '2026-01-01T00:00:00.000Z' })

@@ -21,6 +21,7 @@ model Teacher {
 	password    String
 	role        TeacherRole @default(TEACHER)
 	timezone    Timezone?
+	birth_date  DateTime?
 
 	lessons Lesson[]
 	students Student[]

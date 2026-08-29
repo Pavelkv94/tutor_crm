@@ -63,8 +63,11 @@ export class LessonService {
 		if (lessonAlreadyBooked.filter(el => el.student.id === student_id).length > 0) {
 			throw new BadRequestException(`Это время уже назначено у ${lessonAlreadyBooked[0].student.name}: ${date.toLocaleDateString()}`);
 		}
-		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== plan_id) {
-			throw new BadRequestException(`Не совпадает тарифный план: ${date.toLocaleDateString()}`);
+		if (
+			lessonAlreadyBooked.length === 1 &&
+			(lessonAlreadyBooked[0].plan.plan_type !== plan.plan_type || lessonAlreadyBooked[0].plan.duration !== plan.duration)
+		) {
+			throw new BadRequestException(`Не совпадает тип или длительность занятия: ${date.toLocaleDateString()}`);
 		}
 
 		await this.balanceService.assertLessonCurrencyAllowed({
@@ -115,8 +118,11 @@ export class LessonService {
 		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan.plan_type === PlanTypeEnum.INDIVIDUAL) {
 			throw new BadRequestException(`Это время занято индивидуальным занятием у ${lessonAlreadyBooked[0].student.name}: ${new Date(start_date).toLocaleDateString()}`);
 		}
-		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== lesson.plan.id) {
-			throw new BadRequestException(`Не совпадает тарифный план: ${new Date(start_date).toLocaleDateString()}`);
+		if (
+			lessonAlreadyBooked.length === 1 &&
+			(lessonAlreadyBooked[0].plan.plan_type !== lesson.plan.plan_type || lessonAlreadyBooked[0].plan.duration !== lesson.plan.duration)
+		) {
+			throw new BadRequestException(`Не совпадает тип или длительность занятия: ${new Date(start_date).toLocaleDateString()}`);
 		}
 		if (lessonAlreadyBooked.filter(el => el.student.id === lesson.student.id).length > 0) {
 			throw new BadRequestException(`Это время уже назначено у ${lessonAlreadyBooked[0].student.name}: ${new Date(start_date).toLocaleDateString()}`);
@@ -301,8 +307,11 @@ export class LessonService {
 				if (existingLessons.filter(el => el.student.id === student_id).length > 0) {
 					throw new BadRequestException(`Это время уже назначено у ${existingLessons[0].student.name}: ${mergedDate}`);
 				}
-				if (existingLessons.length > 0 && existingLessons[0].plan_id !== plan_id) {
-					throw new BadRequestException(`Не совпадает тарифный план: ${mergedDate}`);
+				if (
+					existingLessons.length > 0 &&
+					(existingLessons[0].plan.plan_type !== plan.plan_type || existingLessons[0].plan.duration !== plan.duration)
+				) {
+					throw new BadRequestException(`Не совпадает тип или длительность занятия: ${mergedDate}`);
 				}
 			}
 
@@ -351,8 +360,11 @@ export class LessonService {
 		if (lessonAlreadyBooked.filter(el => el.student.id === lesson.student.id).length > 0) {
 			throw new BadRequestException(`Это время уже назначено у ${lesson.student.name}: ${dateLabel}`);
 		}
-		if (lessonAlreadyBooked.length === 1 && lessonAlreadyBooked[0].plan_id !== lesson.plan.id) {
-			throw new BadRequestException(`Не совпадает тарифный план: ${dateLabel}`);
+		if (
+			lessonAlreadyBooked.length === 1 &&
+			(lessonAlreadyBooked[0].plan.plan_type !== lesson.plan.plan_type || lessonAlreadyBooked[0].plan.duration !== lesson.plan.duration)
+		) {
+			throw new BadRequestException(`Не совпадает тип или длительность занятия: ${dateLabel}`);
 		}
 
 		await this.lessonRepository.changeTeacher(lessonId, changeTeacherDto.teacher_id);

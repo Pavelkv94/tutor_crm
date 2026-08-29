@@ -148,6 +148,7 @@ export interface Teacher {
   login: string
   role: string
   timezone: RegionCode
+  birth_date: string | null
   telegrams: Telegram[]
   billing_details: TeacherBillingDetails | null
   deleted_at: string | null
@@ -172,6 +173,7 @@ export interface CreateTeacherInput {
   login: string
   password: string
   timezone: RegionCode
+  birth_date?: string | null
   billing_details?: TeacherBillingDetailsInput
 }
 
@@ -179,6 +181,7 @@ export interface UpdateTeacherInput {
   name: string
   telegram_link?: string | null
   timezone: RegionCode
+  birth_date?: string | null
   billing_details?: TeacherBillingDetailsInput
 }
 

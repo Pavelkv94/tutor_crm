@@ -24,6 +24,10 @@ export class TeacherService {
 		return await this.teacherRepository.getTeachers(filter);
 	}
 
+	async findAllActiveWithBirthdays(): Promise<Teacher[]> {
+		return await this.teacherRepository.getActiveTeachersWithBirthdays();
+	}
+
 	async createTeacher(createTeacherDto: CreateTeacherDto): Promise<TeacherDto> {
 		const existingTeacher = await this.teacherRepository.getTeacherByLogin(createTeacherDto.login);
 		if (existingTeacher) {

@@ -43,6 +43,7 @@ export class TeacherRepository {
 				login: true,
 				role: true,
 				timezone: true,
+				birth_date: true,
 				deleted_at: true,
 				created_at: true,
 				telegrams: true,
@@ -51,6 +52,20 @@ export class TeacherRepository {
 			orderBy: [{ deleted_at: 'desc' }, { role: 'desc' }, { name: 'asc' }],
 		});
 		return teachers.map(this.mapTeacherToView);
+	}
+
+	/**
+	 * Преподаватели, о днях рождения которых напоминаем администратору. Роль ADMIN отсеяна:
+	 * получатель напоминаний сам администратор, напоминать ему о собственном дне рождения незачем.
+	 */
+	async getActiveTeachersWithBirthdays(): Promise<Teacher[]> {
+		return await this.prisma.teacher.findMany({
+			where: {
+				deleted_at: null,
+				birth_date: { not: null },
+				role: TeacherRole.TEACHER,
+			},
+		});
 	}
 
 	async getTeacherByLogin(login: string): Promise<Teacher | null> {
@@ -68,6 +83,8 @@ export class TeacherRepository {
 		const teacher = await this.prisma.teacher.create({
 			data: {
 				...teacherData,
+				// ValidationPipe работает без transform, поэтому дата приходит строкой
+				birth_date: teacherData.birth_date ? new Date(teacherData.birth_date) : null,
 				role: TeacherRole.TEACHER,
 				billing_details: billing_details ? { create: billing_details } : undefined,
 			},
@@ -102,10 +119,14 @@ export class TeacherRepository {
 			throw new NotFoundException("Преподаватель не найден");
 		}
 		const { billing_details, ...teacherData } = updateTeacherDto;
+		const teacherPatch: Prisma.TeacherUpdateInput = { ...teacherData };
+		if (teacherData.birth_date) {
+			teacherPatch.birth_date = new Date(teacherData.birth_date);
+		}
 		await this.prisma.teacher.update({
 			where: { id },
 			data: {
-				...teacherData,
+				...teacherPatch,
 				// upsert: карточка реквизитов создаётся при первом сохранении и обновляется дальше
 				billing_details: billing_details
 					? { upsert: { create: billing_details, update: billing_details } }
@@ -130,6 +151,7 @@ export class TeacherRepository {
 			login: teacher.login,
 			role: teacher.role,
 			timezone: teacher.timezone as Timezone,
+			birth_date: teacher.birth_date ?? null,
 			deleted_at: teacher.deleted_at ?? null,
 			created_at: teacher.created_at,
 			telegrams: teacher.telegrams.map((telegram) => ({

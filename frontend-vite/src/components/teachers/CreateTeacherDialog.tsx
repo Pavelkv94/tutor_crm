@@ -29,6 +29,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [timezone, setTimezone] = useState<RegionCode>(DEFAULT_REGION)
+  const [birthDate, setBirthDate] = useState('')
   const [billingDetails, setBillingDetails] = useState<TeacherBillingDetailsInput>({})
   const queryClient = useQueryClient()
 
@@ -41,6 +42,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       setLogin('')
       setPassword('')
       setTimezone(DEFAULT_REGION)
+      setBirthDate('')
       setBillingDetails({})
     },
   })
@@ -54,6 +56,7 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
       login,
       password,
       timezone,
+      birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       billing_details: hasBillingDetails(billingDetails)
         ? toBillingDetailsPayload(billingDetails)
         : undefined,
@@ -100,6 +103,15 @@ export const CreateTeacherDialog = ({ open, onOpenChange }: CreateTeacherDialogP
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Введите пароль"
                 required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="birthDate">Дата рождения</Label>
+              <Input
+                id="birthDate"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>
             <RegionSelect value={timezone} onValueChange={setTimezone} />

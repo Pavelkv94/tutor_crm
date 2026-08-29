@@ -65,6 +65,7 @@ describe('TelegramService', () => {
 					provide: TeacherService,
 					useValue: {
 						getTeacherById: jest.fn(),
+						findAllActiveWithBirthdays: jest.fn().mockResolvedValue([]),
 					},
 				},
 				{
@@ -422,6 +423,56 @@ describe('TelegramService', () => {
 			expect(studentService.findAllActiveWithBirthdays).toHaveBeenCalled();
 			expect(telegramRepository.findTelegramByTelegramId).toHaveBeenCalledWith('123456789');
 			expect((service as any).telegram.sendMessage).toHaveBeenCalled();
+		});
+
+		it('should send a day-before reminder for students with birthdays tomorrow', async () => {
+			const tomorrow = new Date();
+			tomorrow.setDate(tomorrow.getDate() + 1);
+			const studentsWithBirthday = [
+				{
+					id: 1,
+					name: 'Student 1',
+					birth_date: new Date(2000, tomorrow.getMonth(), tomorrow.getDate()),
+					teacher: {
+						telegrams: [
+							{
+								telegram_id: '123456789',
+							},
+						],
+					},
+				},
+			];
+
+			jest.spyOn(studentService, 'findAllActiveWithBirthdays').mockResolvedValue(studentsWithBirthday as any);
+			jest.spyOn(telegramRepository, 'findTelegramByTelegramId').mockResolvedValue(mockTelegramUser as any);
+
+			await service.birthdayRemind();
+
+			expect((service as any).telegram.sendMessage).toHaveBeenCalledTimes(1);
+			const message = (service as any).telegram.sendMessage.mock.calls[0][1];
+			expect(message).toContain('завтра день рождения');
+			expect(message).toContain(`Исполнится ${tomorrow.getFullYear() - 2000}`);
+		});
+
+		it('should notify the admin about teacher birthdays', async () => {
+			const today = new Date();
+			const teachersWithBirthday = [
+				{
+					id: 1,
+					name: 'Teacher 1',
+					birth_date: new Date(1990, today.getMonth(), today.getDate()),
+				},
+			];
+
+			jest.spyOn(studentService, 'findAllActiveWithBirthdays').mockResolvedValue([]);
+			jest.spyOn(teacherService, 'findAllActiveWithBirthdays').mockResolvedValue(teachersWithBirthday as any);
+			jest.spyOn(telegramRepository, 'findTelegramByTelegramId').mockResolvedValue(mockTelegramUser as any);
+
+			await service.birthdayRemind();
+
+			expect(telegramRepository.findTelegramByTelegramId).toHaveBeenCalledWith(mockTelegramConfig.adminId.toString());
+			expect((service as any).telegram.sendMessage).toHaveBeenCalledTimes(1);
+			expect((service as any).telegram.sendMessage.mock.calls[0][1]).toContain('У Teacher 1 сегодня день рождения!');
 		});
 
 		it('should not send reminders when no students have birthdays today', async () => {

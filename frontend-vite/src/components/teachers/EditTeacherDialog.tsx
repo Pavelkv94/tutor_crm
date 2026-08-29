@@ -28,6 +28,7 @@ interface EditTeacherDialogProps {
 export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDialogProps) => {
 	const [name, setName] = useState('')
   const [timezone, setTimezone] = useState<RegionCode>(DEFAULT_REGION)
+  const [birthDate, setBirthDate] = useState('')
   const [billingDetails, setBillingDetails] = useState<TeacherBillingDetailsInput>({})
   const queryClient = useQueryClient()
 
@@ -36,6 +37,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
       setName(teacher.name)
 			// telegram_link is no longer in the Teacher type, but we still allow editing it
       setTimezone(teacher.timezone)
+      setBirthDate(teacher.birth_date ? teacher.birth_date.split('T')[0] : '')
       setBillingDetails({
         full_name_latin: teacher.billing_details?.full_name_latin ?? '',
         address: teacher.billing_details?.address ?? '',
@@ -62,6 +64,7 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
     const data: UpdateTeacherInput = {
 			name,
       timezone,
+      birth_date: birthDate ? new Date(birthDate).toISOString() : null,
       billing_details: toBillingDetailsPayload(billingDetails),
     }
 
@@ -87,6 +90,16 @@ export const EditTeacherDialog = ({ open, onOpenChange, teacher }: EditTeacherDi
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Введите имя преподавателя"
                 required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-birthDate">Дата рождения</Label>
+              <Input
+                id="edit-birthDate"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                aria-label="Дата рождения"
               />
             </div>
             <RegionSelect id="edit-timezone" value={timezone} onValueChange={setTimezone} />

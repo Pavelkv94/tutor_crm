@@ -259,12 +259,13 @@ describe('LessonService', () => {
 			await expect(service.createSingleLessonByAdmin(singleLessonDto)).rejects.toThrow(BadRequestException);
 		});
 
-		it('should throw BadRequestException if plan_id does not match existing lesson', async () => {
+		it('should throw BadRequestException if plan type or duration does not match existing lesson', async () => {
 			const existingLesson = {
 				...mockLesson,
 				plan_id: 2,
+				plan: { ...mockPlan, id: 2, plan_type: PlanTypeEnum.PAIR, duration: 20 },
 			};
-			jest.spyOn(planService, 'findById').mockResolvedValue(mockPlan);
+			jest.spyOn(planService, 'findById').mockResolvedValue({ ...mockPlan, plan_type: PlanTypeEnum.PAIR });
 			jest.spyOn(studentService, 'findById').mockResolvedValue(mockStudent as any);
 			jest.spyOn(lessonRepository, 'findExistingLessonsByDateAndTeacher').mockResolvedValue([existingLesson as any]);
 

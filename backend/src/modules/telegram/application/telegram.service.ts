@@ -175,44 +175,102 @@ export class TelegramService extends Telegraf {
 		return `${day} ${month} ${year}`;
 	}
 
+	/**
+	 * Напоминания о днях рождения: за день до и в сам день, оба в одно и то же утро.
+	 * Преподавателю приходят дни рождения его учеников, администратору — преподавателей.
+	 */
 	@Cron(CronExpression.EVERY_DAY_AT_6AM)
 	async birthdayRemind() {
-		const allStudents = await this.studentService.findAllActiveWithBirthdays();
 		const today = new Date();
-		const todayMonth = today.getMonth() + 1; // месяцы от 0
-		const todayDate = today.getDate();
+		const tomorrow = new Date(today);
+		tomorrow.setDate(tomorrow.getDate() + 1);
 
-		const studentsWithBirthday = allStudents.filter(student => {
-			const birthDate = new Date(student.birth_date as Date);
-			return (
-				birthDate.getMonth() + 1 === todayMonth &&
-				birthDate.getDate() === todayDate
-			);
-		});
+		await this.remindTeachersAboutStudentBirthdays(today, tomorrow);
+		await this.remindAdminAboutTeacherBirthdays(today, tomorrow);
+	}
 
-		if (studentsWithBirthday.length > 0) {
-			for (const student of studentsWithBirthday) {
-				const message = this.createBirthdayReminderMessage(student);
-				await this.sendMessageToUser(student.teacher.telegrams[0].telegram_id, message);
+	private async remindTeachersAboutStudentBirthdays(today: Date, tomorrow: Date) {
+		const allStudents = await this.studentService.findAllActiveWithBirthdays();
+
+		for (const student of allStudents) {
+			const celebration = this.matchBirthdayCelebration(student.birth_date, today, tomorrow);
+			if (!celebration) {
+				continue;
+			}
+			const message = this.createBirthdayReminderMessage(student.name, student.birth_date, celebration);
+			await this.sendMessageToUser(student.teacher.telegrams[0].telegram_id, message);
+		}
+	}
+
+	private async remindAdminAboutTeacherBirthdays(today: Date, tomorrow: Date) {
+		const teachers = await this.teacherService.findAllActiveWithBirthdays();
+
+		for (const teacher of teachers) {
+			const celebration = this.matchBirthdayCelebration(teacher.birth_date, today, tomorrow);
+			if (!celebration) {
+				continue;
+			}
+			const message = this.createBirthdayReminderMessage(teacher.name, teacher.birth_date as Date, celebration);
+			// Непривязанный Telegram администратора не должен обрывать рассылку по остальным
+			// преподавателям, поэтому исключение sendMessageToAdmin только логируется.
+			try {
+				await this.sendMessageToAdmin(message);
+			} catch (error) {
+				console.error(`Не удалось отправить напоминание о дне рождения преподавателя: ${(error as Error).message}`);
 			}
 		}
 	}
 
-	private createBirthdayReminderMessage(student: any): string {
+	/**
+	 * Совпадает ли день рождения с сегодняшним днём или с завтрашним. Возвращает дату
+	 * празднования (её год нужен для расчёта возраста) и признак «сегодня», иначе null.
+	 */
+	private matchBirthdayCelebration(
+		birthDate: Date | string | null,
+		today: Date,
+		tomorrow: Date,
+	): { date: Date; isToday: boolean } | null {
+		if (!birthDate) {
+			return null;
+		}
+		const birth = new Date(birthDate);
+		if (Number.isNaN(birth.getTime())) {
+			return null;
+		}
+		for (const candidate of [{ date: today, isToday: true }, { date: tomorrow, isToday: false }]) {
+			if (birth.getMonth() === candidate.date.getMonth() && birth.getDate() === candidate.date.getDate()) {
+				return candidate;
+			}
+		}
+		return null;
+	}
+
+	private createBirthdayReminderMessage(
+		name: string,
+		birthDate: Date | string,
+		celebration: { date: Date; isToday: boolean },
+	): string {
 		const reminderEmoji = '📅';
 		const cakeEmoji = '🎂';
 		const bellEmoji = '🔔';
 		const noteEmoji = '📝';
 
-		const age = calculateAgeFromBirthDate(student.birth_date) ?? '?';
+		// Возраст считается на дату празднования: у напоминания за день это то число лет,
+		// которое исполнится завтра, а не сегодняшний возраст.
+		const age = calculateAgeFromBirthDate(birthDate, celebration.date) ?? '?';
+		const dayLabel = celebration.isToday ? 'сегодня' : 'завтра';
+		const ageLabel = celebration.isToday ? 'Исполняется' : 'Исполнится';
+		const callToAction = celebration.isToday
+			? 'Не забудьте поздравить с Днем рождения!'
+			: 'Не забудьте поздравить завтра!';
 
 		return `
 		${bellEmoji} НАПОМИНАНИЕ О ДНЕ РОЖДЕНИЯ ${bellEmoji}
 		
-		${reminderEmoji} У ${student.name} сегодня день рождения!
-		${cakeEmoji} Исполняется ${age}!
+		${reminderEmoji} У ${name} ${dayLabel} день рождения!
+		${cakeEmoji} ${ageLabel} ${age}!
 		
-		${noteEmoji} Не забудьте поздравить с Днем рождения!
+		${noteEmoji} ${callToAction}
 			`.trim();
 	}
 

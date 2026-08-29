@@ -31,6 +31,7 @@ describe('AuthService', () => {
 		password: 'hashedPassword',
 		role: TeacherRoleEnum.TEACHER,
 		timezone: Timezone.BY,
+		birth_date: null,
 		deleted_at: null,
 		created_at: new Date(),
 	};
