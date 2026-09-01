@@ -124,28 +124,16 @@ export const Schedule = () => {
 
   // Convert UTC+0 date to UTC+3 and get day/hour/minutes
   const getUTC3DateParts = (utcDate: string) => {
-    const date = new Date(utcDate)
-    // Get UTC components
-    const utcYear = date.getUTCFullYear()
-    const utcMonth = date.getUTCMonth()
-    const utcDay = date.getUTCDate()
-    let utcHours = date.getUTCHours()
-    const utcMinutes = date.getUTCMinutes()
-    
-    // Add 3 hours for UTC+3
-    utcHours += 3
-    
-    // Handle day overflow
-    let day = utcDay
-    let hours = utcHours
-    if (hours >= 24) {
-      hours -= 24
-      day += 1
-      // Note: We don't handle month/year overflow here as it's unlikely for schedule display
-      // and the backend should handle date ranges correctly
+    // Shift the timestamp by 3 hours so that day/month/year overflow is handled by Date itself
+    const date = new Date(new Date(utcDate).getTime() + 3 * 60 * 60 * 1000)
+
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth(),
+      day: date.getUTCDate(),
+      hours: date.getUTCHours(),
+      minutes: date.getUTCMinutes(),
     }
-    
-    return { year: utcYear, month: utcMonth, day, hours, minutes: utcMinutes }
   }
 
   // Map lessons to cells: { day-hour: lesson[] }

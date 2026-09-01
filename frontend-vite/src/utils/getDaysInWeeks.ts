@@ -7,6 +7,7 @@
 export const getDaysInWeeks = (year: number, month: number): (number | null)[][] => {
   const firstDayOfMonth = new Date(year, month - 1, 1)
   const daysInMonth = new Date(year, month, 0).getDate()
+  const lastDayOfMonth = new Date(year, month - 1, daysInMonth)
   
   // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
   // Convert to Monday = 0, Tuesday = 1, ..., Sunday = 6
@@ -40,8 +41,7 @@ export const getDaysInWeeks = (year: number, month: number): (number | null)[][]
     currentWeekStart.setDate(currentWeekStart.getDate() + 7)
     
     // Stop if we've passed the month
-    if (currentWeekStart.getMonth() > month - 1 || 
-        (currentWeekStart.getMonth() === month - 1 && currentWeekStart.getDate() > daysInMonth)) {
+    if (currentWeekStart.getTime() > lastDayOfMonth.getTime()) {
       // Check if the last week has any days from the current month
       const hasCurrentMonthDays = weekDays.some(day => day !== null)
       if (!hasCurrentMonthDays) break
