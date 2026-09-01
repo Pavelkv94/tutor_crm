@@ -7,7 +7,7 @@ import { STRIPE_CLIENT } from "./stripe.constants";
 export type CreateProductWithPriceParams = {
 	planId: number;
 	name: string;
-	priceMajor: number;
+	priceMinor: number;
 	currency: Currency;
 };
 
@@ -25,9 +25,9 @@ export type CreateProductWithPriceResult = {
  * привязанную к тому же продукту плана.
  *
  * Тот же вариант обслуживает счёт, пересчитанный по курсу: цена принадлежит счёту, а не
- * плану. `unitAmountMajor` там дробный (6.06) — в минорные единицы его переводит `toLineItem`.
+ * плану.
  */
-export type PaymentLinkItem = { priceId: string; quantity: number } | { productId: string; unitAmountMajor: number; currency: Currency; quantity: number };
+export type PaymentLinkItem = { priceId: string; quantity: number } | { productId: string; unitAmountMinor: number; currency: Currency; quantity: number };
 
 /**
  * Какие согласия страница оплаты должна собрать у плательщика. Признаки независимы:
@@ -111,9 +111,6 @@ export type CreatePaymentLinkResult = {
 	url: string;
 };
 
-/** Цены Stripe считает в минорных единицах, а суммы в приложении хранятся в целых. */
-const MINOR_UNITS_IN_MAJOR = 100;
-
 const toLineItem = (item: PaymentLinkItem): Stripe.PaymentLinkCreateParams.LineItem =>
 	"priceId" in item
 		? { price: item.priceId, quantity: item.quantity }
@@ -121,7 +118,7 @@ const toLineItem = (item: PaymentLinkItem): Stripe.PaymentLinkCreateParams.LineI
 				price_data: {
 					product: item.productId,
 					currency: item.currency.toLowerCase(),
-					unit_amount: Math.round(item.unitAmountMajor * MINOR_UNITS_IN_MAJOR),
+					unit_amount: item.unitAmountMinor,
 				},
 				quantity: item.quantity,
 			};
@@ -145,7 +142,7 @@ export class StripeService {
 			const price = await this.stripe.prices.create(
 				{
 					product: product.id,
-					unit_amount: Math.round(params.priceMajor * 100),
+					unit_amount: params.priceMinor,
 					currency: params.currency.toLowerCase(),
 				},
 				{ idempotencyKey: `plan-${params.planId}-price` },

@@ -125,12 +125,12 @@ describe('Payments (e2e)', () => {
 		});
 
 		const plnPlan = await prisma.plan.create({
-			data: { plan_type: PlanType.INDIVIDUAL, plan_currency: Currency.PLN, plan_name: 'PLN 60 мин', duration: 60, plan_price: 40 },
+			data: { plan_type: PlanType.INDIVIDUAL, plan_currency: Currency.PLN, plan_name: 'PLN 60 мин', duration: 60, plan_price: 4000 },
 		});
 		plnPlanId = plnPlan.id;
 
 		const bynPlan = await prisma.plan.create({
-			data: { plan_type: PlanType.INDIVIDUAL, plan_currency: Currency.BYN, plan_name: 'BYN 60 мин', duration: 60, plan_price: 25 },
+			data: { plan_type: PlanType.INDIVIDUAL, plan_currency: Currency.BYN, plan_name: 'BYN 60 мин', duration: 60, plan_price: 2500 },
 		});
 		bynPlanId = bynPlan.id;
 	});
@@ -259,22 +259,22 @@ describe('Payments (e2e)', () => {
 				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
 				.expect(201);
 
-			expect(invoiceResponse.body).toMatchObject({ amount: 160, currency: Currency.PLN, lessons_count: 4 });
+			expect(invoiceResponse.body).toMatchObject({ amount: 16000, currency: Currency.PLN, lessons_count: 4 });
 			expect(invoiceResponse.body.link).toContain('https://buy.stripe.com/');
 
-			// Оплачено на одно занятие больше, чем назначено: 200 при счёте на 160.
+			// Оплачено на одно занятие больше, чем назначено: 200,00 при счёте на 160,00.
 			await postWebhook(checkoutSessionEvent({ amountTotal: 20000 })).expect(200);
 
 			const lessons = await getLessons();
 			expect(lessons.every((lesson) => lesson.status === LessonStatus.PENDING_PAID)).toBe(true);
 
 			const student = await getStudent();
-			expect(student.balance).toBe(40);
+			expect(student.balance).toBe(4000);
 			expect(student.balance_currency).toBe(Currency.PLN);
 
 			const payment = await prisma.payment.findUniqueOrThrow({ where: { id: invoiceResponse.body.payment_id } });
 			expect(payment.status).toBe(PaymentStatus.SUCCEEDED);
-			expect(payment.amount).toBe(200);
+			expect(payment.amount).toBe(20000);
 		});
 
 		it('pays a newly scheduled lesson straight from the balance', async () => {
@@ -286,7 +286,7 @@ describe('Payments (e2e)', () => {
 				.expect(201);
 			await postWebhook(checkoutSessionEvent({ amountTotal: 8000 })).expect(200);
 
-			expect((await getStudent()).balance).toBe(40);
+			expect((await getStudent()).balance).toBe(4000);
 
 			await request(app.getHttpServer())
 				.post('/lessons/single')
@@ -314,7 +314,7 @@ describe('Payments (e2e)', () => {
 			await postWebhook(checkoutSessionEvent({ amountTotal: 8000 })).expect(200);
 			await postWebhook(checkoutSessionEvent({ amountTotal: 8000 })).expect(200);
 
-			expect((await getStudent()).balance).toBe(40);
+			expect((await getStudent()).balance).toBe(4000);
 			expect(await prisma.lessonPayment.count({ where: { student_id: studentId, reverted_at: null } })).toBe(1);
 		});
 
@@ -342,15 +342,15 @@ describe('Payments (e2e)', () => {
 			await createLesson(19, plnPlanId);
 			await createLesson(26, plnPlanId);
 
-			// 4 × round(40 × 0.9) = 144 вместо 160. Скидка на итог дала бы столько же,
-			// но занятия закрывались бы по 40 — и на четвёртое денег бы не хватило.
+			// 4 × round(4000 × 0.9) = 14400 вместо 16000. Скидка на итог дала бы столько же,
+			// но занятия закрывались бы по 40,00 — и на четвёртое денег бы не хватило.
 			const invoiceResponse = await issueInvoice().expect(201);
-			expect(invoiceResponse.body).toMatchObject({ amount: 144, currency: Currency.PLN, lessons_count: 4 });
+			expect(invoiceResponse.body).toMatchObject({ amount: 14400, currency: Currency.PLN, lessons_count: 4 });
 
-			// Готовой цены на 36 в Stripe нет: она принадлежит ученику, а не плану.
+			// Готовой цены на 36,00 в Stripe нет: она принадлежит ученику, а не плану.
 			expect(stripeServiceMock.createPaymentLink).toHaveBeenLastCalledWith(
 				expect.objectContaining({
-					items: [{ productId: `prod_${plnPlanId}`, unitAmountMajor: 36, currency: Currency.PLN, quantity: 4 }],
+					items: [{ productId: `prod_${plnPlanId}`, unitAmountMinor: 3600, currency: Currency.PLN, quantity: 4 }],
 				}),
 			);
 
@@ -427,26 +427,26 @@ describe('Payments (e2e)', () => {
 			const credited = await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 100, currency: Currency.PLN, comment: 'Оплата наличными' })
+				.send({ amount: 10000, currency: Currency.PLN, comment: 'Оплата наличными' })
 				.expect(200);
 
-			expect(credited.body.balance).toBe(60);
+			expect(credited.body.balance).toBe(6000);
 			expect(credited.body.affected_lessons).toHaveLength(1);
 
 			const debited = await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: -30, comment: 'Корректировка' })
+				.send({ amount: -3000, comment: 'Корректировка' })
 				.expect(200);
 
-			expect(debited.body.balance).toBe(30);
+			expect(debited.body.balance).toBe(3000);
 		});
 
 		it('refuses to spend more than the student has', async () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: -100, currency: Currency.PLN, comment: 'Слишком много' })
+				.send({ amount: -10000, currency: Currency.PLN, comment: 'Слишком много' })
 				.expect(400);
 		});
 	});
@@ -463,7 +463,7 @@ describe('Payments (e2e)', () => {
 				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
 				.expect(201);
 
-			expect(response.body).toMatchObject({ amount: 40, currency: Currency.PLN, link: null, link_issue: null });
+			expect(response.body).toMatchObject({ amount: 4000, currency: Currency.PLN, link: null, link_issue: null });
 			expect(stripeServiceMock.createPaymentLink).not.toHaveBeenCalled();
 		});
 
@@ -476,14 +476,14 @@ describe('Payments (e2e)', () => {
 				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
 				.expect(201);
 
-			expect(response.body).toMatchObject({ amount: 25, currency: Currency.BYN, link: null });
+			expect(response.body).toMatchObject({ amount: 2500, currency: Currency.BYN, link: null });
 			expect(response.body.link_issue).toContain('курс евро');
 			expect(stripeServiceMock.createPaymentLink).not.toHaveBeenCalled();
 		});
 
 		it('charges a BYN invoice in euro and still settles it in BYN', async () => {
 			await prisma.schoolSettings.update({ where: { id: 1 }, data: { eur_rate: 500 } });
-			// Четыре занятия по 25 BYN: 100 BYN при курсе 5.00 — это ровно 20.00 €.
+			// Четыре занятия по 25,00 BYN: 100,00 BYN при курсе 5.00 — это ровно 20.00 €.
 			await createLesson(5, bynPlanId);
 			await createLesson(12, bynPlanId);
 			await createLesson(19, bynPlanId);
@@ -496,7 +496,7 @@ describe('Payments (e2e)', () => {
 				.expect(201);
 
 			expect(invoiceResponse.body).toMatchObject({
-				amount: 100,
+				amount: 10000,
 				currency: Currency.BYN,
 				lessons_count: 4,
 				charge_amount_minor: 2000,
@@ -506,7 +506,7 @@ describe('Payments (e2e)', () => {
 
 			await postWebhook(checkoutSessionEvent({ currency: 'eur', amountTotal: 2000 })).expect(200);
 
-			// Учёт целиком в BYN: зачислено 100 BYN, а не 20 «единиц».
+			// Учёт целиком в BYN: зачислено 100,00 BYN, а не 20,00 «единиц».
 			const student = await getStudent();
 			expect(student.balance).toBe(0);
 			expect(student.balance_currency).toBeNull();
@@ -516,7 +516,7 @@ describe('Payments (e2e)', () => {
 
 			const payment = await prisma.payment.findUniqueOrThrow({ where: { id: invoiceResponse.body.payment_id } });
 			expect(payment.status).toBe(PaymentStatus.SUCCEEDED);
-			expect(payment.amount).toBe(100);
+			expect(payment.amount).toBe(10000);
 			expect(payment.currency).toBe(Currency.BYN);
 			expect(payment.charge_amount_minor).toBe(2000);
 			expect(payment.charge_rate).toBe(500);
@@ -526,7 +526,7 @@ describe('Payments (e2e)', () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 100, currency: Currency.PLN, comment: 'Пополнение' })
+				.send({ amount: 10000, currency: Currency.PLN, comment: 'Пополнение' })
 				.expect(200);
 
 			await request(app.getHttpServer())
@@ -541,7 +541,7 @@ describe('Payments (e2e)', () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 40, currency: Currency.PLN, comment: 'Ровно на одно занятие' })
+				.send({ amount: 4000, currency: Currency.PLN, comment: 'Ровно на одно занятие' })
 				.expect(200);
 
 			const spent = await getStudent();
@@ -587,7 +587,7 @@ describe('Payments (e2e)', () => {
 				.send({ student_id: studentId, start_date: AUGUST.start, end_date: AUGUST.end })
 				.expect(201);
 
-			expect(response.body).toMatchObject({ amount: 40, lessons_count: 1 });
+			expect(response.body).toMatchObject({ amount: 4000, lessons_count: 1 });
 		});
 	});
 
@@ -612,7 +612,7 @@ describe('Payments (e2e)', () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 100, currency: Currency.PLN, comment: 'Пополнение' })
+				.send({ amount: 10000, currency: Currency.PLN, comment: 'Пополнение' })
 				.expect(200);
 
 			const response = await request(app.getHttpServer())
@@ -620,7 +620,7 @@ describe('Payments (e2e)', () => {
 				.set('Authorization', `Bearer ${adminToken}`)
 				.expect(200);
 
-			expect(response.body).toMatchObject({ student_id: studentId, balance: 60, balance_currency: Currency.PLN });
+			expect(response.body).toMatchObject({ student_id: studentId, balance: 6000, balance_currency: Currency.PLN });
 			expect(response.body.allocations).toHaveLength(1);
 		});
 
@@ -639,7 +639,7 @@ describe('Payments (e2e)', () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 100, currency: Currency.PLN, comment: 'Пополнение' })
+				.send({ amount: 10000, currency: Currency.PLN, comment: 'Пополнение' })
 				.expect(200);
 
 			// student_id/from/to проходят через @Type(() => Number|Date): без transform они
@@ -662,7 +662,7 @@ describe('Payments (e2e)', () => {
 				student_name: 'Payments E2E Student',
 				type: PaymentType.MANUAL_ADJUSTMENT,
 				status: PaymentStatus.SUCCEEDED,
-				amount: 100,
+				amount: 10000,
 				currency: Currency.PLN,
 				comment: 'Пополнение',
 			});
@@ -672,7 +672,7 @@ describe('Payments (e2e)', () => {
 			await request(app.getHttpServer())
 				.post(`/payments/students/${studentId}/balance/adjust`)
 				.set('Authorization', `Bearer ${adminToken}`)
-				.send({ amount: 100, currency: Currency.PLN, comment: 'Пополнение' })
+				.send({ amount: 10000, currency: Currency.PLN, comment: 'Пополнение' })
 				.expect(200);
 
 			const response = await request(app.getHttpServer())

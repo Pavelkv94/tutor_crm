@@ -91,18 +91,18 @@ describe('PlanService', () => {
 		});
 
 		it('should create a Stripe product and price for PLN plans', async () => {
-			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 40 };
+			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 4000 };
 			const storedPlan = { ...plnPlan, stripe_product_id: 'prod_1', stripe_price_id: 'price_1' };
 			jest.spyOn(repository, 'createPlan').mockResolvedValue(plnPlan as any);
 			jest.spyOn(stripeService, 'createProductWithPrice').mockResolvedValue({ productId: 'prod_1', priceId: 'price_1' });
 			jest.spyOn(repository, 'updateStripeIds').mockResolvedValue(storedPlan as any);
 
-			const result = await service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 40 });
+			const result = await service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 4000 });
 
 			expect(stripeService.createProductWithPrice).toHaveBeenCalledWith({
 				planId: plnPlan.id,
 				name: plnPlan.plan_name,
-				priceMajor: 40,
+				priceMinor: 4000,
 				currency: Currency.PLN,
 			});
 			expect(repository.updateStripeIds).toHaveBeenCalledWith(plnPlan.id, 'prod_1', 'price_1');
@@ -110,31 +110,31 @@ describe('PlanService', () => {
 		});
 
 		it('should roll back the plan when Stripe fails', async () => {
-			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 40 };
+			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 4000 };
 			jest.spyOn(repository, 'createPlan').mockResolvedValue(plnPlan as any);
 			jest.spyOn(stripeService, 'createProductWithPrice').mockRejectedValue(new Error('stripe down'));
 			jest.spyOn(repository, 'deletePlan').mockResolvedValue(true);
 
-			await expect(service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 40 })).rejects.toThrow('stripe down');
+			await expect(service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 4000 })).rejects.toThrow('stripe down');
 			// План без цены в Stripe бесполезен — он не должен остаться в базе.
 			expect(repository.deletePlan).toHaveBeenCalledWith(plnPlan.id);
 		});
 
 		it('should archive an orphaned product when saving ids fails', async () => {
-			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 40 };
+			const plnPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 4000 };
 			jest.spyOn(repository, 'createPlan').mockResolvedValue(plnPlan as any);
 			jest.spyOn(stripeService, 'createProductWithPrice').mockResolvedValue({ productId: 'prod_1', priceId: 'price_1' });
 			jest.spyOn(repository, 'updateStripeIds').mockRejectedValue(new Error('db down'));
 			jest.spyOn(repository, 'deletePlan').mockResolvedValue(true);
 
-			await expect(service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 40 })).rejects.toThrow('db down');
+			await expect(service.create({ ...createPlanDto, plan_currency: Currency.PLN, plan_price: 4000 })).rejects.toThrow('db down');
 			expect(stripeService.archiveProduct).toHaveBeenCalledWith('prod_1');
 		});
 	});
 
 	describe('ensureStripeIds', () => {
 		it('should create product and price for a legacy plan without them', async () => {
-			const legacyPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 40, stripe_price_id: null };
+			const legacyPlan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 4000, stripe_price_id: null };
 			jest.spyOn(repository, 'getPlanById').mockResolvedValue(legacyPlan as any);
 			jest.spyOn(stripeService, 'createProductWithPrice').mockResolvedValue({ productId: 'prod_1', priceId: 'price_1' });
 			jest.spyOn(repository, 'updateStripeIds').mockResolvedValue({ ...legacyPlan, stripe_price_id: 'price_1' } as any);
@@ -146,7 +146,7 @@ describe('PlanService', () => {
 		});
 
 		it('should be a no-op when the plan already has a price', async () => {
-			const plan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 40, stripe_price_id: 'price_1' };
+			const plan = { ...mockPlanOutput, plan_currency: Currency.PLN, plan_price: 4000, stripe_price_id: 'price_1' };
 			jest.spyOn(repository, 'getPlanById').mockResolvedValue(plan as any);
 
 			const result = await service.ensureStripeIds(1);

@@ -151,7 +151,7 @@ Several fields carry comments explaining backend constraints that the type alone
 (e.g. why `balance_currency` is absent from `CreateStudentInput`). Preserve those comments.
 
 Domain constants and label maps live in `src/constants/`:
-`currency.ts` (`formatMoney` — **amounts are whole currency units, not minor units**),
+`currency.ts` (`formatMoney`/`formatMoneyValue`/`parseMoney` — **amounts are minor units: 4000 = 40,00**),
 `payments.ts` (status/type labels + option arrays), `regions.ts`, `student-class.ts`,
 `navigation.ts`.
 

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import type { RegularLessonInput, WeekDay, Teacher, Plan } from '@/types'
-import { type Currency, getCurrencyFlag } from '@/constants/currency'
+import { type Currency, formatMoneyValue, getCurrencyFlag } from '@/constants/currency'
 import { isPlanSelectable } from '@/lib/lesson-currency'
 
 interface RegularLessonCardProps {
@@ -121,7 +121,7 @@ export const RegularLessonCard = ({
                       <span className="flex items-center gap-2">
                         <span>{plan.plan_name}</span>
                         <span className="text-muted-foreground">
-                          {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                          {formatMoneyValue(plan.plan_price)} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                         </span>
                         {!isSelectable && (
                           <span className="text-muted-foreground">(другая валюта)</span>

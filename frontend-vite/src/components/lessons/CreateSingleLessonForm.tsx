@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import { formatStudentClassShort } from '@/constants/student-class'
 import type { Student, Plan, Teacher, SingleLessonInput } from '@/types'
-import { formatMoney, getCurrencyFlag } from '@/constants/currency'
+import { formatMoney, formatMoneyValue, getCurrencyFlag } from '@/constants/currency'
 import { getAllowedPlanCurrency, isPlanSelectable } from '@/lib/lesson-currency'
 
 // Generate minutes options with 5-minute intervals from 00 to 55
@@ -170,7 +170,7 @@ export const CreateSingleLessonForm = ({
                         <span className="flex items-center gap-2">
                           <span>{plan.plan_name}</span>
                         <span className="text-muted-foreground">
-                          {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                          {formatMoneyValue(plan.plan_price)} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                         </span>
                         {!isSelectable && (
                           <span className="text-muted-foreground">(другая валюта)</span>

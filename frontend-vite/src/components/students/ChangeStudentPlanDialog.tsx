@@ -21,7 +21,7 @@ import {
 import { plansApi } from '@/api/plans'
 import { lessonsApi } from '@/api/lessons'
 import { studentsApi } from '@/api/students'
-import { formatMoney, getCurrencyFlag } from '@/constants/currency'
+import { formatMoney, formatMoneyValue, getCurrencyFlag } from '@/constants/currency'
 import { getAllowedPlanCurrency, isPlanSelectable } from '@/lib/lesson-currency'
 import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 import { showSuccessToast } from '@/lib/toast'
@@ -136,7 +136,7 @@ export const ChangeStudentPlanDialog = ({
                         <span className="flex items-center gap-2">
                           <span>{plan.plan_name}</span>
                           <span className="text-muted-foreground">
-                            {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                            {formatMoneyValue(plan.plan_price)} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                           </span>
                           {plan.deleted_at && (
                             <span className="text-muted-foreground">(удалён)</span>
@@ -187,7 +187,7 @@ export const ChangeStudentPlanDialog = ({
                         <span className="flex items-center gap-2">
                           <span>{plan.plan_name}</span>
                           <span className="text-muted-foreground">
-                            {plan.plan_price.toLocaleString()} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
+                            {formatMoneyValue(plan.plan_price)} {plan.plan_currency} {getCurrencyFlag(plan.plan_currency)}
                           </span>
                           {!isSelectable && (
                             <span className="text-muted-foreground">(другая валюта)</span>

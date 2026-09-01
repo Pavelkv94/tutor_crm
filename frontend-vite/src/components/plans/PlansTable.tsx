@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { Plan } from '@/types'
-import { getCurrencyFlag } from '@/constants/currency'
+import { formatMoneyValue, getCurrencyFlag } from '@/constants/currency'
 
 interface PlansTableProps {
   plans: Plan[]
@@ -129,7 +129,7 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
                     {plan.plan_name}
                   </TableCell>
                   <TableCell className="px-5 py-4 font-extrabold text-foreground">
-                    {plan.plan_price.toLocaleString()}
+                    {formatMoneyValue(plan.plan_price)}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

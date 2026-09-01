@@ -242,6 +242,19 @@ describe("BalanceService", () => {
 			expect(await repository.invariantHolds()).toBe(true);
 		});
 
+		it("keeps the kopecks of a discounted lesson", async () => {
+			// Цены в минорных единицах: 3400 со скидкой 10% — это ровно 3060 (30,60) за занятие.
+			// В целых единицах то же округление давало 31 и съедало 60 копеек с каждого урока.
+			repository.student.discount = 10;
+			repository.lessons = [lesson(1, 5, 3400), lesson(2, 10, 3400), lesson(3, 15, 3400), lesson(4, 20, 3400)];
+
+			const result = await service.reconcile(topUp(12240));
+
+			expect(result.allocated.map((change) => change.amount)).toEqual([3060, 3060, 3060, 3060]);
+			expect(result.balance).toBe(0);
+			expect(await repository.invariantHolds()).toBe(true);
+		});
+
 		it("stops at the first lesson it cannot afford instead of skipping ahead", async () => {
 			repository.lessons = [lesson(1, 5, 100), lesson(2, 10, 30)];
 

@@ -22,7 +22,8 @@ import { AdjustBalanceDto } from "@/modules/payments/interface/dto/requests/adju
 import { AdjustBalanceResultDto, BalanceDto, InvoiceDto } from "@/modules/payments/interface/dto/responses/invoice.dto";
 import { PaymentsMetrics } from "@/modules/payments/application/payments.metrics";
 import { applyDiscount } from "@/shared/utils/discount.util";
-import { EUR_MINOR_UNITS, MIN_EUR_CHARGE_MINOR, bynToEurMinor, formatEurMinor } from "@/shared/utils/exchange-rate.util";
+import { MIN_EUR_CHARGE_MINOR, bynToEurMinor, formatEurMinor } from "@/shared/utils/exchange-rate.util";
+import { formatMoneyMinor } from "@/shared/utils/money.util";
 import { PaymentMethod } from "@/shared/enums/payment-method.enum";
 import { SettingsService } from "@/modules/settings/application/settings.service";
 
@@ -102,7 +103,7 @@ export class PaymentsService {
 		const actualStudent = (await this.paymentsRepository.getStudentById(student.id)) ?? student;
 		if (actualStudent.balance !== 0 && actualStudent.balance_currency && actualStudent.balance_currency !== currency) {
 			const message =
-				`У ученика ${student.name} на балансе ${actualStudent.balance}${currencySymbol(actualStudent.balance_currency)}, ` +
+				`У ученика ${student.name} на балансе ${formatMoneyMinor(actualStudent.balance)}${currencySymbol(actualStudent.balance_currency)}, ` +
 				`а занятия периода в ${currency} — счёт не выставлен. Сначала израсходуйте или скорректируйте остаток.`;
 			this.logger.error(message);
 			await this.notifyAdmin(`⚠️ ${message}`);
@@ -211,7 +212,9 @@ export class PaymentsService {
 			throw new BadRequestException("Баланс пуст — укажите валюту операции");
 		}
 		if (student.balance !== 0 && student.balance_currency && student.balance_currency !== currency) {
-			throw new BadRequestException(`На балансе ${student.balance} ${student.balance_currency} — корректировка возможна только в этой валюте`);
+			throw new BadRequestException(
+				`На балансе ${formatMoneyMinor(student.balance)} ${student.balance_currency} — корректировка возможна только в этой валюте`,
+			);
 		}
 
 		const result = await this.balanceService.reconcile({
@@ -267,7 +270,7 @@ export class PaymentsService {
 
 		if (result.outcome === "CURRENCY_CONFLICT") {
 			throw new BadRequestException(
-				`Конфликт не разрешён: на балансе ${result.conflict?.balance} ${result.conflict?.balance_currency}, платёж в ${payment.currency}`,
+				`Конфликт не разрешён: на балансе ${formatMoneyMinor(result.conflict?.balance ?? 0)} ${result.conflict?.balance_currency}, платёж в ${payment.currency}`,
 			);
 		}
 
@@ -466,8 +469,7 @@ export class PaymentsService {
 				const unitMinor = bynToEurMinor(applyDiscount(plan.plan_price, discountPercent), mode.rate);
 				items.push({
 					productId: plan.stripe_product_id,
-					// toLineItem умножит обратно на 100 с Math.round — исходные центы вернутся ровно.
-					unitAmountMajor: unitMinor / EUR_MINOR_UNITS,
+					unitAmountMinor: unitMinor,
 					currency: mode.currency,
 					quantity,
 				});
@@ -486,7 +488,7 @@ export class PaymentsService {
 				}
 				items.push({
 					productId: plan.stripe_product_id,
-					unitAmountMajor: applyDiscount(plan.plan_price, discountPercent),
+					unitAmountMinor: applyDiscount(plan.plan_price, discountPercent),
 					currency,
 					quantity,
 				});

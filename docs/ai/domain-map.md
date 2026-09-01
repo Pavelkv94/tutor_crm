@@ -39,11 +39,15 @@ see the comment at `student.service.ts` (`buildConsentPatch` region).
 
 ### Units
 
-All money is stored and transported in **whole currency units**, not minor units.
-`40` means 40 PLN. The Stripe webhook divides `amount_total` by 100
-(`MINOR_UNITS_IN_MAJOR`, `stripe-webhook.service.ts`) and logs a warning if the amount is not
-a multiple of 100. Frontend `formatMoney` does not divide
+All money is stored and transported in **minor units**: `4000` means 40,00 PLN
+(`MONEY_MINOR_UNITS`, `backend/src/shared/utils/money.util.ts`). The same unit is used by
+Stripe, so the webhook credits `amount_total` as-is. Print backend amounts with
+`formatMoneyMinor` (always two decimals, comma separator); on the frontend, `formatMoney` /
+`formatMoneyValue` divide by 100 and `parseMoney` turns «34,50» back into `3450`
 (`frontend-vite/src/constants/currency.ts`).
+
+Not affected by the unit: `school_settings.eur_rate` and `payment.charge_rate` are hundredths
+of a rate, `student.discount` is a percent.
 
 ### Allocation semantics
 

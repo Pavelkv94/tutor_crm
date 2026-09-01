@@ -7,6 +7,7 @@ import { PaymentEntity } from "@/modules/balance/domain/payment.entity";
 import { PaymentStatusEnum } from "@/modules/balance/domain/payment-status.enum";
 import { BalanceRepositoryPort, CreatePaymentData, UpdatePaymentData } from "@/modules/balance/application/ports/balance.repository.port";
 import { applyDiscount } from "@/shared/utils/discount.util";
+import { formatMoneyMinor } from "@/shared/utils/money.util";
 
 /** Как поступить со строкой Payment в рамках операции. */
 export type ReconcilePaymentRef =
@@ -19,7 +20,7 @@ export type ReconcilePaymentRef =
 
 export type ReconcileInput = {
 	studentId: number;
-	/** Знаковое изменение баланса в целых единицах валюты. 0 — просто переразложить остаток. */
+	/** Знаковое изменение баланса в минорных единицах валюты. 0 — просто переразложить остаток. */
 	delta: number;
 	/** Валюта delta. Обязательна при delta ≠ 0. */
 	currency: Currency | null;
@@ -275,7 +276,7 @@ export class BalanceService {
 
 		if (student.balance !== 0 && student.balance_currency && student.balance_currency !== params.planCurrency) {
 			throw new BadRequestException(
-				`На балансе ученика ${student.balance} ${student.balance_currency} — нельзя назначить занятие по плану в ${params.planCurrency}. ` +
+				`На балансе ученика ${formatMoneyMinor(student.balance)} ${student.balance_currency} — нельзя назначить занятие по плану в ${params.planCurrency}. ` +
 					`Сначала израсходуйте или скорректируйте остаток.`,
 			);
 		}

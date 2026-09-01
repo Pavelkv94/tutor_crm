@@ -13,6 +13,7 @@ import { TelegramService } from "@/modules/telegram/application/telegram.service
 import { PaymentsRepositoryPort } from "@/modules/payments/application/ports/payments.repository.port";
 import { PaymentsMetrics } from "@/modules/payments/application/payments.metrics";
 import { formatEurMinor } from "@/shared/utils/exchange-rate.util";
+import { formatMoneyMinor } from "@/shared/utils/money.util";
 
 /**
  * Результат обработки события.
@@ -22,8 +23,6 @@ import { formatEurMinor } from "@/shared/utils/exchange-rate.util";
  * транзиентные ошибки не попадают сюда — они пробрасываются наружу и превращаются в 500.
  */
 export type WebhookOutcome = "handled" | "ignored" | "business_error";
-
-const MINOR_UNITS_IN_MAJOR = 100;
 
 @Injectable()
 export class StripeWebhookService {
@@ -118,10 +117,11 @@ export class StripeWebhookService {
 		}
 
 		// Учёт ведётся в валюте счёта, поэтому у пересчитанного счёта в баланс уходит его
-		// собственная сумма, а не то, что списала платёжка: 1600 евроцентов — это 80 BYN,
-		// а не 16, и зачисление евро развалило бы аллокацию занятий.
-		// У обычного счёта поведение прежнее, включая приём переплаты.
-		const amountMajor = conversion ? payment.amount : this.toMajorUnits(session.amount_total ?? 0, payment.id);
+		// собственная сумма, а не то, что списала платёжка: 1600 евроцентов — это 8000 копеек
+		// BYN, а не 1600, и зачисление евро развалило бы аллокацию занятий.
+		// У обычного счёта поведение прежнее, включая приём переплаты: минорные единицы Stripe
+		// совпадают с теми, в которых считает приложение.
+		const amountMinor = conversion ? payment.amount : (session.amount_total ?? 0);
 
 		if (conversion && session.amount_total !== conversion.amountMinor) {
 			// Деньги уже получены — останавливаться нельзя: счёт застрял бы в PENDING, а
@@ -131,13 +131,13 @@ export class StripeWebhookService {
 			await this.notifyAdmin(
 				`⚠️ Счёт ${payment.id}: оплачено ${formatEurMinor(session.amount_total ?? 0)} ${expectedCurrency}, ` +
 					`а ссылка выставлялась на ${formatEurMinor(conversion.amountMinor)} ${expectedCurrency}. ` +
-					`Счёт закрыт на ${payment.amount} ${payment.currency} — проверьте разницу.`,
+					`Счёт закрыт на ${formatMoneyMinor(payment.amount)} ${payment.currency} — проверьте разницу.`,
 			);
 		}
 
 		const result = await this.balanceService.reconcile({
 			studentId: payment.student_id,
-			delta: amountMajor,
+			delta: amountMinor,
 			currency: payment.currency as Currency,
 			allocateFrom: payment.period_start ? startOfMonth(payment.period_start) : undefined,
 			// Скидка берётся со счёта, а не из карточки ученика: если её успели изменить после
@@ -147,7 +147,7 @@ export class StripeWebhookService {
 			payment: {
 				kind: "settle",
 				paymentId: payment.id,
-				amount: amountMajor,
+				amount: amountMinor,
 				patch: {
 					paid_at: new Date(),
 					stripe_checkout_session_id: session.id,
@@ -159,15 +159,15 @@ export class StripeWebhookService {
 		if (result.outcome === "CURRENCY_CONFLICT") {
 			this.metrics.payment(PaymentTypeEnum.STRIPE_PAYMENT, PaymentStatusEnum.REQUIRES_ATTENTION);
 			await this.notifyAdmin(
-				`⚠️ Платёж ${amountMajor} ${payment.currency} по счёту ${payment.id} отложен: ` +
-					`на балансе ученика ${payment.student_id} лежит ${result.conflict?.balance} ${result.conflict?.balance_currency}. ` +
+				`⚠️ Платёж ${formatMoneyMinor(amountMinor)} ${payment.currency} по счёту ${payment.id} отложен: ` +
+					`на балансе ученика ${payment.student_id} лежит ${formatMoneyMinor(result.conflict?.balance ?? 0)} ${result.conflict?.balance_currency}. ` +
 					`Обнулите остаток и примените платёж вручную.`,
 			);
 			return "business_error";
 		}
 
 		this.metrics.payment(PaymentTypeEnum.STRIPE_PAYMENT, PaymentStatusEnum.SUCCEEDED);
-		this.logger.log(`Счёт ${payment.id} оплачен: ${amountMajor} ${payment.currency}, занятий закрыто ${result.allocated.length}`);
+		this.logger.log(`Счёт ${payment.id} оплачен: ${amountMinor} ${payment.currency}, занятий закрыто ${result.allocated.length}`);
 		return "handled";
 	}
 
@@ -210,15 +210,15 @@ export class StripeWebhookService {
 		// округлённый итог) и оставил бы вечный хвост на балансе. Курс в расчёте не участвует,
 		// поэтому его правка между оплатой и возвратом ни на что не влияет.
 		const conversion = this.conversionOf(original);
-		const amountMajor = conversion
+		const amountMinor = conversion
 			? // Math.min — защита арифметики: Stripe не даёт вернуть больше списанного,
 				// но расчёт не должен на это опираться.
 				Math.min(original.amount, Math.round((original.amount * refund.amount) / conversion.amountMinor))
-			: this.toMajorUnits(refund.amount, original.id);
+			: refund.amount;
 
 		const result = await this.balanceService.reconcile({
 			studentId: original.student_id,
-			delta: -amountMajor,
+			delta: -amountMinor,
 			currency: original.currency as Currency,
 			reason: `stripe:refund.created:${refund.id}`,
 			// Деньги в Stripe уже вернулись — отказать нельзя. Если откатывать нечего
@@ -228,7 +228,7 @@ export class StripeWebhookService {
 				kind: "create",
 				data: {
 					type: PaymentTypeEnum.STRIPE_REFUND,
-					amount: -amountMajor,
+					amount: -amountMinor,
 					currency: original.currency,
 					comment: `Возврат по платежу ${original.id}`,
 					stripe_refund_id: refund.id,
@@ -251,11 +251,13 @@ export class StripeWebhookService {
 		}
 
 		if (result.balance < 0) {
-			await this.notifyAdmin(`⚠️ После возврата ${amountMajor} ${original.currency} баланс ученика ${original.student_id} ушёл в минус: ${result.balance}`);
+			await this.notifyAdmin(
+				`⚠️ После возврата ${formatMoneyMinor(amountMinor)} ${original.currency} баланс ученика ${original.student_id} ушёл в минус: ${formatMoneyMinor(result.balance)}`,
+			);
 		}
 
 		this.metrics.payment(PaymentTypeEnum.STRIPE_REFUND, PaymentStatusEnum.SUCCEEDED);
-		this.logger.log(`Возврат ${refund.id}: -${amountMajor} ${original.currency}, откачено занятий ${result.reverted.length}`);
+		this.logger.log(`Возврат ${refund.id}: -${amountMinor} ${original.currency}, откачено занятий ${result.reverted.length}`);
 		return "handled";
 	}
 
@@ -334,17 +336,6 @@ export class StripeWebhookService {
 		return payment.charge_currency && payment.charge_amount_minor
 			? { currency: payment.charge_currency as Currency, amountMinor: payment.charge_amount_minor }
 			: null;
-	}
-
-	/**
-	 * Баланс хранится в целых единицах валюты, поэтому дробный остаток представить нечем.
-	 * При наших целых ценах это не должно происходить — но если произошло, лучше знать.
-	 */
-	private toMajorUnits(amountMinor: number, paymentId: number): number {
-		if (amountMinor % MINOR_UNITS_IN_MAJOR !== 0) {
-			this.logger.warn(`Сумма ${amountMinor} по счёту ${paymentId} не кратна ${MINOR_UNITS_IN_MAJOR} — остаток отброшен`);
-		}
-		return Math.floor(amountMinor / MINOR_UNITS_IN_MAJOR);
 	}
 
 	private async notifyAdmin(message: string): Promise<void> {

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { plansApi } from '@/api/plans'
 import type { CreatePlanInput } from '@/types'
-import { CURRENCIES, type Currency } from '@/constants/currency'
+import { CURRENCIES, type Currency, parseMoney } from '@/constants/currency'
 
 interface CreatePlanDialogProps {
 	open: boolean
@@ -46,12 +46,15 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 		},
 	})
 
+	// Цена вводится в единицах валюты («34» или «34,50»), а на бэкенд уходит в минорных.
+	const parsedPrice = parseMoney(planPrice)
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault()
-		if (!planPrice || !duration) return
+		if (parsedPrice === null || !duration) return
 
 		const data: CreatePlanInput = {
-			plan_price: parseInt(planPrice, 10),
+			plan_price: parsedPrice,
 			plan_currency: planCurrency,
 			duration: parseInt(duration, 10),
 			plan_type: planType,
@@ -73,11 +76,10 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 							<Label htmlFor="planPrice">Цена</Label>
 							<Input
 								id="planPrice"
-								type="number"
-								min="0"
+								inputMode="decimal"
 								value={planPrice}
 								onChange={(e) => setPlanPrice(e.target.value)}
-								placeholder="Например, 50"
+								placeholder="Например, 50 или 50,50"
 								required
 							/>
 						</div>
@@ -128,7 +130,7 @@ export const CreatePlanDialog = ({ open, onOpenChange }: CreatePlanDialogProps) 
 						<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 							Отмена
 						</Button>
-						<Button type="submit" disabled={createMutation.isPending}>
+						<Button type="submit" disabled={createMutation.isPending || parsedPrice === null}>
 							{createMutation.isPending ? 'Создание...' : 'Создать'}
 						</Button>
 					</DialogFooter>
