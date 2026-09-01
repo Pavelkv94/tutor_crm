@@ -24,6 +24,7 @@ import { plansApi } from '@/api/plans'
 import { teachersApi } from '@/api/teachers'
 import { useAuth } from '@/contexts/AuthContext'
 import { invalidateMoneyQueries } from '@/lib/invalidate-money'
+import { getUTC3DateParts, formatUTC3Time, formatUTC3DateNumeric } from '@/utils/utc3'
 import type { Lesson } from '@/types'
 
 interface ScheduleCellModalProps {
@@ -51,24 +52,6 @@ const convertUTC3ToUTC0Date = (year: number, month: number, day: number, hour: n
   
   // Return full ISO string
   return utc0Date.toISOString()
-}
-
-// Get UTC+3 time string from UTC+0 date
-const getUTC3TimeString = (utcDate: string): { hours: number; minutes: number } => {
-  const date = new Date(utcDate)
-  let utcHours = date.getUTCHours()
-  const utcMinutes = date.getUTCMinutes()
-  
-  // Add 3 hours for UTC+3
-  utcHours += 3
-  
-  // Handle day overflow
-  let hours = utcHours
-  if (hours >= 24) {
-    hours -= 24
-  }
-  
-  return { hours, minutes: utcMinutes }
 }
 
 export const ScheduleCellModal = ({
@@ -109,7 +92,7 @@ export const ScheduleCellModal = ({
 
   // Filter lessons by hour range (e.g., 9:00-9:59 for hour 9)
   const filteredLessons = lessons.filter((lesson: Lesson) => {
-    const { hours: lessonHours } = getUTC3TimeString(lesson.date)
+    const { hours: lessonHours } = getUTC3DateParts(lesson.date)
     return lessonHours === hour
   })
 
@@ -310,17 +293,8 @@ export const ScheduleCellModal = ({
 														</SelectTrigger>
 														<SelectContent>
 															{lessonsForReschedule.map((lesson: Lesson) => {
-																const { hours: lessonHours, minutes: lessonMinutes } = getUTC3TimeString(lesson.date)
-																const date = new Date(lesson.date)
-																const utcYear = date.getUTCFullYear()
-																const utcMonth = date.getUTCMonth()
-																const utcDay = date.getUTCDate()
-																let utcHours = date.getUTCHours() + 3
-																if (utcHours >= 24) {
-																	utcHours -= 24
-																}
-																const dateStr = `${utcDay.toString().padStart(2, '0')}.${(utcMonth + 1).toString().padStart(2, '0')}.${utcYear}`
-																const timeStr = `${lessonHours.toString().padStart(2, '0')}:${lessonMinutes.toString().padStart(2, '0')}`
+																const dateStr = formatUTC3DateNumeric(lesson.date)
+																const timeStr = formatUTC3Time(lesson.date)
 																return (
 																	<SelectItem key={lesson.id} value={lesson.id.toString()}>
 																		{lesson.student.name} - {dateStr} {timeStr}
@@ -363,17 +337,8 @@ export const ScheduleCellModal = ({
 															</SelectTrigger>
 															<SelectContent>
 																{lessonsForReschedule.map((lesson: Lesson) => {
-																	const { hours: lessonHours, minutes: lessonMinutes } = getUTC3TimeString(lesson.date)
-																	const date = new Date(lesson.date)
-																	const utcYear = date.getUTCFullYear()
-																	const utcMonth = date.getUTCMonth()
-																	const utcDay = date.getUTCDate()
-																	let utcHours = date.getUTCHours() + 3
-																	if (utcHours >= 24) {
-																		utcHours -= 24
-																	}
-																	const dateStr = `${utcDay.toString().padStart(2, '0')}.${(utcMonth + 1).toString().padStart(2, '0')}.${utcYear}`
-																	const timeStr = `${lessonHours.toString().padStart(2, '0')}:${lessonMinutes.toString().padStart(2, '0')}`
+																	const dateStr = formatUTC3DateNumeric(lesson.date)
+																	const timeStr = formatUTC3Time(lesson.date)
 																	return (
 																		<SelectItem key={lesson.id} value={lesson.id.toString()}>
 																			{lesson.student.name} - {dateStr} {timeStr}

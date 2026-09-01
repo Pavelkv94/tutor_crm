@@ -9,32 +9,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatStudentClassShort } from '@/constants/student-class'
+import { formatUTC3Time, formatUTC3Date } from '@/utils/utc3'
 import type { Lesson } from '@/types'
 
 interface RescheduleLessonsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   teacherId?: string
-}
-
-// Convert UTC+0 date to UTC+3 and get time string
-const getUTC3TimeString = (utcDate: string): string => {
-  const date = new Date(utcDate)
-  let utcHours = date.getUTCHours()
-  const utcMinutes = date.getUTCMinutes()
-  
-  // Add 3 hours for UTC+3
-  utcHours += 3
-  
-  // Handle day overflow
-  let hours = utcHours
-  if (hours >= 24) {
-    hours -= 24
-  }
-  
-  const hoursStr = hours.toString().padStart(2, '0')
-  const minutesStr = utcMinutes.toString().padStart(2, '0')
-  return `${hoursStr}:${minutesStr}`
 }
 
 // Get status label and color
@@ -57,29 +38,6 @@ const getStatusInfo = (status: string): { label: string; color: string; bgColor:
     default:
       return { label: status, color: 'text-gray-600', bgColor: 'bg-gray-50' }
   }
-}
-
-// Format date to readable format
-const formatDate = (utcDate: string): string => {
-  const date = new Date(utcDate)
-  const utcYear = date.getUTCFullYear()
-  const utcMonth = date.getUTCMonth()
-  const utcDay = date.getUTCDate()
-  
-  // Add 3 hours for UTC+3
-  let utcHours = date.getUTCHours() + 3
-  let day = utcDay
-  if (utcHours >= 24) {
-    utcHours -= 24
-    day += 1
-  }
-  
-  const months = [
-    'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-    'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
-  ]
-  
-  return `${day} ${months[utcMonth]} ${utcYear}`
 }
 
 export const RescheduleLessonsModal = ({
@@ -120,9 +78,9 @@ export const RescheduleLessonsModal = ({
           ) : (
             <div className="space-y-4">
               {lessons.map((lesson: Lesson) => {
-                const timeString = getUTC3TimeString(lesson.date)
+                const timeString = formatUTC3Time(lesson.date)
                 const statusInfo = getStatusInfo(lesson.status)
-                const dateString = formatDate(lesson.date)
+                const dateString = formatUTC3Date(lesson.date)
                 
                 return (
                   <Card key={lesson.id}>

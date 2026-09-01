@@ -17,6 +17,7 @@ import { teachersApi } from '@/api/teachers'
 import { lessonsApi } from '@/api/lessons'
 import { useAuth } from '@/contexts/AuthContext'
 import { getDaysInWeeks } from '@/utils/getDaysInWeeks'
+import { getUTC3DateParts, formatUTC3Time } from '@/utils/utc3'
 import { ScheduleCellModal } from '@/components/schedule/ScheduleCellModal'
 import { RescheduleCard } from '@/components/schedule/RescheduleCard'
 import { RescheduleLessonsModal } from '@/components/schedule/RescheduleLessonsModal'
@@ -122,20 +123,6 @@ export const Schedule = () => {
     )
   }
 
-  // Convert UTC+0 date to UTC+3 and get day/hour/minutes
-  const getUTC3DateParts = (utcDate: string) => {
-    // Shift the timestamp by 3 hours so that day/month/year overflow is handled by Date itself
-    const date = new Date(new Date(utcDate).getTime() + 3 * 60 * 60 * 1000)
-
-    return {
-      year: date.getUTCFullYear(),
-      month: date.getUTCMonth(),
-      day: date.getUTCDate(),
-      hours: date.getUTCHours(),
-      minutes: date.getUTCMinutes(),
-    }
-  }
-
   // Map lessons to cells: { day-hour: lesson[] }
   const lessonsMap = useMemo(() => {
     if (!lessons || lessons.length === 0) return new Map<string, Lesson[]>()
@@ -166,10 +153,7 @@ export const Schedule = () => {
   }
 
   const formatLessonTime = (lesson: Lesson): string => {
-    const { hours, minutes } = getUTC3DateParts(lesson.date)
-    const hoursStr = hours.toString().padStart(2, '0')
-    const minutesStr = minutes.toString().padStart(2, '0')
-    return `${hoursStr}:${minutesStr}`
+    return formatUTC3Time(lesson.date)
   }
 
   const getLessonTypeLabel = (lesson: Lesson): string => {

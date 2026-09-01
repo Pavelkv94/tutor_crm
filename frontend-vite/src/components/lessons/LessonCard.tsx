@@ -26,62 +26,12 @@ import { formatStudentClassShort } from '@/constants/student-class'
 import type { Lesson, Teacher, CancelLessonInput } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { invalidateMoneyQueries } from '@/lib/invalidate-money'
+import { formatUTC3Time, formatUTC3DateTime } from '@/utils/utc3'
 
 interface LessonCardProps {
   lesson: Lesson
   teachers: Teacher[]
   onCancel: () => void
-}
-
-// Convert UTC+0 date to UTC+3 and get time string
-const getUTC3TimeString = (utcDate: string): string => {
-  const date = new Date(utcDate)
-  let utcHours = date.getUTCHours()
-  const utcMinutes = date.getUTCMinutes()
-  
-  // Add 3 hours for UTC+3
-  utcHours += 3
-  
-  // Handle day overflow
-  let hours = utcHours
-  if (hours >= 24) {
-    hours -= 24
-  }
-  
-  const hoursStr = hours.toString().padStart(2, '0')
-  const minutesStr = utcMinutes.toString().padStart(2, '0')
-  return `${hoursStr}:${minutesStr}`
-}
-
-// Format UTC+0 date to UTC+3 date and time string
-const formatUTC3DateTime = (utcDate: string): string => {
-	const date = new Date(utcDate)
-	const utcYear = date.getUTCFullYear()
-	const utcMonth = date.getUTCMonth()
-	const utcDay = date.getUTCDate()
-	let utcHours = date.getUTCHours()
-	const utcMinutes = date.getUTCMinutes()
-
-	// Add 3 hours for UTC+3
-	utcHours += 3
-
-	// Handle day overflow
-	let day = utcDay
-	let hours = utcHours
-	if (hours >= 24) {
-		hours -= 24
-		day += 1
-	}
-
-	const months = [
-		'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-		'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
-	]
-
-	const hoursStr = hours.toString().padStart(2, '0')
-	const minutesStr = utcMinutes.toString().padStart(2, '0')
-
-	return `${day} ${months[utcMonth]} ${utcYear}, ${hoursStr}:${minutesStr}`
 }
 
 // Get status label and color
@@ -321,7 +271,7 @@ export const LessonCard = ({ lesson, teachers, onCancel }: LessonCardProps) => {
 
   const isDeleteConfirmationValid = deleteConfirmationText.trim().toLowerCase() === 'delete lesson'
 
-  const timeString = getUTC3TimeString(lesson.date)
+  const timeString = formatUTC3Time(lesson.date)
   const statusInfo = getStatusInfo(lesson.status)
   
   // Check if lesson is already cancelled or has inactive status
