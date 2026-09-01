@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Trash2, ArrowUpDown } from 'lucide-react'
-import { format } from 'date-fns'
 import {
   Table,
   TableBody,
@@ -22,11 +21,6 @@ interface PlansTableProps {
 
 type SortField = 'plan_currency'
 type SortDirection = 'asc' | 'desc'
-
-const formatPlanDate = (date: string | null): string => {
-  if (!date) return '—'
-  return format(new Date(date), 'dd.MM.yyyy')
-}
 
 const PlanTypeBadge = ({ planType }: { planType: string }) => {
   if (planType === 'INDIVIDUAL') {
@@ -100,16 +94,13 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
             <TableHead className="h-auto px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Тип
             </TableHead>
-            <TableHead className="h-auto px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Архивация
-            </TableHead>
             <TableHead className="h-auto w-16 px-5 py-3.5" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedPlans.length === 0 ? (
             <TableRow className="border-b-0 hover:bg-card">
-              <TableCell colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
                 Тарифы не найдены
               </TableCell>
             </TableRow>
@@ -144,9 +135,6 @@ export const PlansTable = ({ plans, onDelete, isDeleting }: PlansTableProps) => 
                   <TableCell className="px-5 py-4 font-medium">{plan.duration}</TableCell>
                   <TableCell className="px-5 py-4">
                     <PlanTypeBadge planType={plan.plan_type} />
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-muted-foreground">
-                    {formatPlanDate(plan.deleted_at)}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-right">
                     {!isDeleted && (

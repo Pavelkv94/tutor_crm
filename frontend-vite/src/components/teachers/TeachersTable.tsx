@@ -1,5 +1,4 @@
 import { Edit, Trash2, Link, BarChart } from 'lucide-react'
-import { format } from 'date-fns'
 import {
   Table,
   TableBody,
@@ -27,11 +26,6 @@ const headerCellClass =
 
 const bodyCellClass = 'px-5 py-4'
 
-const formatTeacherDate = (date: string | null | undefined): string => {
-  if (!date) return '—'
-  return format(new Date(date), 'dd.MM.yyyy')
-}
-
 const getRoleLabel = (role: string): string => {
   if (role === 'ADMIN') return 'Администратор'
   if (role === 'TEACHER') return 'Преподаватель'
@@ -58,14 +52,13 @@ export const TeachersTable = ({
               <TableHead className={headerCellClass}>Ссылка Telegram</TableHead>
               <TableHead className={headerCellClass}>Регион</TableHead>
               <TableHead className={headerCellClass}>Роль</TableHead>
-              <TableHead className={headerCellClass}>Архивация</TableHead>
               <TableHead className={cn(headerCellClass, 'text-right')}>Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {teachers.length === 0 ? (
               <TableRow className="border-b-0 hover:bg-card">
-                <TableCell colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
                   Преподаватели не найдены
                 </TableCell>
               </TableRow>
@@ -110,9 +103,6 @@ export const TeachersTable = ({
                     </TableCell>
                     <TableCell className={cn(bodyCellClass, 'font-medium')}>
                       {getRoleLabel(teacher.role)}
-                    </TableCell>
-                    <TableCell className={cn(bodyCellClass, 'text-muted-foreground')}>
-                      {formatTeacherDate(teacher.deleted_at)}
                     </TableCell>
                     <TableCell className={cn(bodyCellClass, 'text-right')}>
                       {!isDeleted && (
