@@ -1,6 +1,7 @@
 import { Currency } from "@/shared/enums/currency.enum";
 import { BillableLesson } from "@/modules/payments/application/ports/payments.repository.port";
 import { formatEurMinor, formatEurRate } from "@/shared/utils/exchange-rate.util";
+import { formatMoneyMinor } from "@/shared/utils/money.util";
 
 const MONTHS_UPPER = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"];
 
@@ -30,7 +31,7 @@ export type InvoiceMessageParams = {
 	periodStart: Date;
 	lessons: BillableLesson[];
 	currency: Currency;
-	/** Сумма к оплате: уже со скидкой, если она есть. */
+	/** Сумма к оплате в минорных единицах: уже со скидкой, если она есть. */
 	total: number;
 	/** Персональная скидка ученика в процентах. 0 — строки про скидку в отчёте не будет. */
 	discountPercent: number;
@@ -88,11 +89,11 @@ export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 	const planLines = [...byPlan.values()].map((lessons) => {
 		const plan = lessons[0];
 		const planLabel = plan.plan_type === "INDIVIDUAL" ? "индивидуально" : "в паре";
-		return `🔸${lessons.length} урок(ов) ${planLabel} × ${plan.plan_price}${symbol} = ${lessons.length * plan.plan_price}${symbol}`;
+		return `🔸${lessons.length} урок(ов) ${planLabel} × ${formatMoneyMinor(plan.plan_price)}${symbol} = ${formatMoneyMinor(lessons.length * plan.plan_price)}${symbol}`;
 	});
 
 	const fullTotal = paidLessons.reduce((sum, lesson) => sum + lesson.plan_price, 0);
-	const discountLine = params.discountPercent > 0 ? `\n💰 Скидка ${params.discountPercent}%: −${fullTotal - params.total}${symbol}` : "";
+	const discountLine = params.discountPercent > 0 ? `\n💰 Скидка ${params.discountPercent}%: −${formatMoneyMinor(fullTotal - params.total)}${symbol}` : "";
 
 	const monthLabel = MONTHS_UPPER[params.periodStart.getMonth()];
 
@@ -119,7 +120,7 @@ export const buildInvoiceMessage = (params: InvoiceMessageParams): string => {
 ${scheduleLines.join("\n")}
 
 ${planLines.join("\n")}${discountLine}
-📌 Итого: ${params.total}${symbol}
+📌 Итого: ${formatMoneyMinor(params.total)}${symbol}
 
 ${paymentNote}
 `;

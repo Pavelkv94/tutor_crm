@@ -33,7 +33,7 @@ export class StudentDto {
 	marketing_consent_at: Date | null;
 	@ApiProperty({ description: 'Валюта остатка на балансе. null, когда баланс равен нулю.', example: 'BYN', enum: Currency, nullable: true })
 	balance_currency: Currency | null;
-	@ApiProperty({ description: 'The balance of the student', example: 0 })
+	@ApiProperty({ description: 'Остаток на балансе в минорных единицах валюты (3400 — это 34,00)', example: 0 })
 	balance: number;
 	@ApiProperty({ description: 'Персональная скидка в процентах, применяемая к цене каждого занятия', example: 0 })
 	discount: number;

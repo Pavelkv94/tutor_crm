@@ -24,7 +24,7 @@ describe("StripeWebhookService", () => {
 		student_id: 1,
 		type: PaymentTypeEnum.STRIPE_PAYMENT,
 		status: PaymentStatusEnum.PENDING,
-		amount: 120,
+		amount: 12000,
 		currency: Currency.PLN,
 		discount_percent: 0,
 		period_start: new Date(Date.UTC(2026, 7, 1)),
@@ -37,9 +37,9 @@ describe("StripeWebhookService", () => {
 
 	const appliedResult = {
 		outcome: "APPLIED" as const,
-		balance: 30,
+		balance: 3000,
 		balance_currency: Currency.PLN,
-		allocated: [{ lesson_id: 1, amount: 40, new_status: "PENDING_PAID" as any }],
+		allocated: [{ lesson_id: 1, amount: 4000, new_status: "PENDING_PAID" as any }],
 		reverted: [],
 		payment_id: 7,
 	};
@@ -73,7 +73,7 @@ describe("StripeWebhookService", () => {
 						findById: jest.fn(),
 						findByCheckoutSessionId: jest.fn().mockResolvedValue(null),
 						findByRefundId: jest.fn().mockResolvedValue(null),
-						findSucceededByPaymentIntentId: jest.fn().mockResolvedValue({ ...invoice, status: PaymentStatusEnum.SUCCEEDED, amount: 150 }),
+						findSucceededByPaymentIntentId: jest.fn().mockResolvedValue({ ...invoice, status: PaymentStatusEnum.SUCCEEDED, amount: 15000 }),
 						setStatus: jest.fn(),
 					},
 				},
@@ -186,15 +186,15 @@ describe("StripeWebhookService", () => {
 			expect(balanceService.reconcile).toHaveBeenCalledWith(
 				expect.objectContaining({
 					studentId: 1,
-					delta: 150,
+					delta: 15000,
 					currency: Currency.PLN,
-					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 150 }),
+					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 15000 }),
 				}),
 			);
 		});
 
-		// Счёт в BYN, предъявленный картой в евро: 1600 евроцентов — это 80 BYN, а не 16.
-		const convertedInvoice = { ...invoice, amount: 80, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
+		// Счёт в BYN, предъявленный картой в евро: 1600 евроцентов — это 8000 копеек BYN, а не 1600.
+		const convertedInvoice = { ...invoice, amount: 8000, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
 
 		it("credits the invoice currency, not the amount charged by Stripe", async () => {
 			paymentsRepository.findByPaymentLinkId.mockResolvedValue(convertedInvoice as any);
@@ -202,9 +202,9 @@ describe("StripeWebhookService", () => {
 			expect(await service.handleEvent(event("checkout.session.completed", session({ currency: "eur", amount_total: 1600 })))).toBe("handled");
 			expect(balanceService.reconcile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					delta: 80,
+					delta: 8000,
 					currency: Currency.BYN,
-					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 80 }),
+					payment: expect.objectContaining({ kind: "settle", paymentId: 7, amount: 8000 }),
 				}),
 			);
 		});
@@ -222,7 +222,7 @@ describe("StripeWebhookService", () => {
 
 			// Останавливаться нельзя: деньги получены, а счёт в PENDING потом нечем применить.
 			expect(await service.handleEvent(event("checkout.session.completed", session({ currency: "eur", amount_total: 1500 })))).toBe("handled");
-			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: 80 }));
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: 8000 }));
 			expect(telegramService.sendMessageToAdmin).toHaveBeenCalledWith(expect.stringContaining("проверьте разницу"));
 		});
 
@@ -287,12 +287,12 @@ describe("StripeWebhookService", () => {
 		it("parks a payment that conflicts with the balance currency", async () => {
 			balanceService.reconcile.mockResolvedValue({
 				outcome: "CURRENCY_CONFLICT",
-				balance: 40,
+				balance: 4000,
 				balance_currency: Currency.EUR,
 				allocated: [],
 				reverted: [],
 				payment_id: 7,
-				conflict: { balance: 40, balance_currency: Currency.EUR, payment_currency: Currency.PLN },
+				conflict: { balance: 4000, balance_currency: Currency.EUR, payment_currency: Currency.PLN },
 			});
 
 			expect(await service.handleEvent(event("checkout.session.completed", session()))).toBe("business_error");
@@ -306,20 +306,20 @@ describe("StripeWebhookService", () => {
 
 		// Пропорция к сумме списания, а не пересчёт по курсу: полный возврат обязан дать
 		// ровно сумму счёта, иначе на балансе навсегда останется хвост в копейки.
-		const convertedOriginal = { ...invoice, amount: 80, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
+		const convertedOriginal = { ...invoice, amount: 8000, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 1600, charge_rate: 500 };
 
 		it("converts a partial refund proportionally to the invoice amount", async () => {
 			paymentsRepository.findSucceededByPaymentIntentId.mockResolvedValue(convertedOriginal as any);
 
 			await service.handleEvent(event("refund.created", refund({ amount: 800 })));
 
-			// Половина списания 8.00 € от 16.00 € → половина счёта, 40 BYN.
+			// Половина списания 8.00 € от 16.00 € → половина счёта, 40,00 BYN.
 			expect(balanceService.reconcile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					delta: -40,
+					delta: -4000,
 					currency: Currency.BYN,
 					payment: expect.objectContaining({
-						data: expect.objectContaining({ amount: -40, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 800 }),
+						data: expect.objectContaining({ amount: -4000, currency: Currency.BYN, charge_currency: Currency.EUR, charge_amount_minor: 800 }),
 					}),
 				}),
 			);
@@ -330,7 +330,7 @@ describe("StripeWebhookService", () => {
 
 			await service.handleEvent(event("refund.created", refund({ amount: 1600 })));
 
-			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: -80 }));
+			expect(balanceService.reconcile).toHaveBeenCalledWith(expect.objectContaining({ delta: -8000 }));
 		});
 
 		it("books a negative payment and allows the balance to go negative", async () => {
@@ -338,11 +338,11 @@ describe("StripeWebhookService", () => {
 
 			expect(balanceService.reconcile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					delta: -40,
+					delta: -4000,
 					allowNegativeBalance: true,
 					payment: expect.objectContaining({
 						kind: "create",
-						data: expect.objectContaining({ type: PaymentTypeEnum.STRIPE_REFUND, amount: -40, stripe_refund_id: "re_1" }),
+						data: expect.objectContaining({ type: PaymentTypeEnum.STRIPE_REFUND, amount: -4000, stripe_refund_id: "re_1" }),
 					}),
 				}),
 			);
@@ -354,8 +354,8 @@ describe("StripeWebhookService", () => {
 			await service.handleEvent(event("refund.created", refund({ id: "re_1", amount: 4000 }), "evt_1"));
 			await service.handleEvent(event("refund.created", refund({ id: "re_2", amount: 2000 }), "evt_2"));
 
-			expect(balanceService.reconcile).toHaveBeenNthCalledWith(1, expect.objectContaining({ delta: -40 }));
-			expect(balanceService.reconcile).toHaveBeenNthCalledWith(2, expect.objectContaining({ delta: -20 }));
+			expect(balanceService.reconcile).toHaveBeenNthCalledWith(1, expect.objectContaining({ delta: -4000 }));
+			expect(balanceService.reconcile).toHaveBeenNthCalledWith(2, expect.objectContaining({ delta: -2000 }));
 		});
 
 		it("ignores a refund that was already booked", async () => {

@@ -121,7 +121,7 @@ export const StudentsTable = ({
     return 0
   })
 
-	const columnCount = showAdminColumns ? 9 : 6
+	const columnCount = showAdminColumns ? 8 : 5
 
   return (
 		<div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -168,7 +168,6 @@ export const StudentsTable = ({
 							{showAdminColumns && <TableHead className={headerCellClass}>Баланс</TableHead>}
 							{showAdminColumns && <TableHead className={headerCellClass}>Способ оплаты</TableHead>}
 							<TableHead className={headerCellClass}>Маркетинг</TableHead>
-							<TableHead className={headerCellClass}>Архивация</TableHead>
 							<TableHead className={cn(headerCellClass, 'text-right')}>Действия</TableHead>
 						</TableRow>
 					</TableHeader>
@@ -237,9 +236,6 @@ export const StudentsTable = ({
 													? 'Да'
 													: 'Нет'
 												: '—'}
-										</TableCell>
-										<TableCell className={cn(bodyCellClass, 'text-muted-foreground')}>
-											{formatStudentDate(student.deleted_at)}
 										</TableCell>
 										<TableCell className={cn(bodyCellClass, 'text-right')}>
 											<div className="flex items-center justify-end gap-2">

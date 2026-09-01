@@ -69,6 +69,9 @@ model Student {
   name       String
   class      Int
   birth_date DateTime?
+	/// Остаток на балансе в минорных единицах валюты: 3400 — это 34,00. В минорных единицах
+	/// хранятся все деньги проекта — скидка и пересчёт по курсу дают копейки, а плавающая
+	/// точка в денежных расчётах не используется нигде.
 	balance    Int @default(0)
 	/// Персональная скидка ученика в процентах, 0 — скидки нет. Применяется к цене каждого
 	/// занятия, а не к итогу счёта: баланс закрывает занятия поштучно, и скидка на итог
@@ -175,6 +178,7 @@ model Plan {
   plan_currency Currency
 	plan_name     String
   duration      Int
+	/// Цена одного занятия в минорных единицах plan_currency: 3400 — это 34,00.
 	plan_price    Int
   created_at    DateTime    @default(now())
 	deleted_at    DateTime?
@@ -193,6 +197,7 @@ model Payment {
 	student_id    Int
 	type          PaymentType
 	status        PaymentStatus @default(PENDING)
+	/// Знаковая сумма операции в минорных единицах `currency`.
 	amount        Int
 	currency      Currency
 	/// Скидка ученика на момент выставления счёта. Снимок нужен, чтобы пришедшая оплата
@@ -220,8 +225,7 @@ model Payment {
 	/// для сверки и для пропорции возврата. Тройка живёт целиком или не живёт вовсе —
 	/// закреплено CHECK-констрейнтом payment_charge_conversion_check.
 	charge_currency     Currency?
-	/// Сумма ссылки в минорных единицах charge_currency (евроцентах). Единственное место
-	/// в проекте, где деньги хранятся не в целых единицах валюты: 16.06 € целым не выразить.
+	/// Сумма ссылки в минорных единицах charge_currency (евроцентах).
 	charge_amount_minor Int?
 	/// Курс, по которому посчитана сумма ссылки: сотые доли `currency` за единицу
 	/// charge_currency (500 = 1 € = 5.00 BYN). Снимок на момент выставления — правка курса
@@ -246,6 +250,7 @@ model LessonPayment {
 	student_id Int
 	lesson_id  Int
 	payment_id Int?
+	/// Сумма списания за занятие в минорных единицах `currency`.
 	amount     Int
 	currency   Currency
 	created_at DateTime  @default(now())

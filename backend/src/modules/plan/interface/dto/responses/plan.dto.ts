@@ -6,7 +6,7 @@ export class PlanDto {
 	id: number;
 	@ApiProperty({ description: 'The name of the plan', example: '10 minutes' })
 	plan_name: string;
-	@ApiProperty({ description: 'The price of the plan', example: 1000000 })
+	@ApiProperty({ description: 'Цена занятия по плану в минорных единицах валюты (3400 — это 34,00)', example: 3400 })
 	plan_price: number;
 	@ApiProperty({ description: 'The currency of the plan', example: 'PLN', enum: Currency })
 	plan_currency: Currency;

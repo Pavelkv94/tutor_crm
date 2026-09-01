@@ -3,7 +3,7 @@ import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, 
 import { Currency } from "@/shared/enums/currency.enum";
 
 export class AdjustBalanceDto {
-	@ApiProperty({ description: "Знаковая дельта баланса в целых единицах валюты. Отрицательная — списание.", example: 100 })
+	@ApiProperty({ description: "Знаковая дельта баланса в минорных единицах валюты (10000 — это 100,00). Отрицательная — списание.", example: 10000 })
 	@IsInt()
 	@NotEquals(0)
 	amount: number;

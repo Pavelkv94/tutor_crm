@@ -19,7 +19,7 @@ export class PaymentDto {
 	@ApiProperty({ enum: PaymentStatusEnum })
 	status: PaymentStatusEnum;
 
-	@ApiProperty({ description: "Знаковая сумма в целых единицах валюты", example: 160 })
+	@ApiProperty({ description: "Знаковая сумма в минорных единицах валюты (16000 — это 160,00)", example: 16000 })
 	amount: number;
 
 	@ApiProperty({ enum: Currency })

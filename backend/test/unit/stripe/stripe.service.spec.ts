@@ -58,7 +58,7 @@ describe("StripeService", () => {
 
 		it("builds an ad-hoc price for an item without a ready price id", async () => {
 			await service.createPaymentLink({
-				items: [{ productId: "prod_1", unitAmountMajor: 36, currency: Currency.PLN, quantity: 2 }],
+				items: [{ productId: "prod_1", unitAmountMinor: 3600, currency: Currency.PLN, quantity: 2 }],
 			});
 			const [params] = stripe.paymentLinks.create.mock.calls[0];
 
@@ -168,7 +168,7 @@ describe("StripeService", () => {
 
 	describe("createProductWithPrice", () => {
 		it("sends the price in minor units and a lowercase currency", async () => {
-			await service.createProductWithPrice({ planId: 7, name: "Индивидуально 45 мин", priceMajor: 50, currency: Currency.EUR });
+			await service.createProductWithPrice({ planId: 7, name: "Индивидуально 45 мин", priceMinor: 5000, currency: Currency.EUR });
 
 			expect(stripe.prices.create).toHaveBeenCalledWith({ product: "prod_1", unit_amount: 5000, currency: "eur" }, { idempotencyKey: "plan-7-price" });
 			expect(stripe.products.create).toHaveBeenCalledWith({ name: "Индивидуально 45 мин", metadata: { plan_id: "7" } }, { idempotencyKey: "plan-7-product" });

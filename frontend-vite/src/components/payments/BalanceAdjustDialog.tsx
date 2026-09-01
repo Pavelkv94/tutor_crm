@@ -22,7 +22,7 @@ import {
 import { MoneyAmount } from '@/components/shared/MoneyAmount'
 import { PaymentStatusBadge, PaymentTypeBadge } from '@/components/payments/PaymentBadges'
 import { paymentsApi } from '@/api/payments'
-import { CURRENCIES, formatMoney, type Currency } from '@/constants/currency'
+import { CURRENCIES, formatMoney, parseMoney, type Currency } from '@/constants/currency'
 import { invalidateMoneyQueries } from '@/lib/invalidate-money'
 import { showSuccessToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -115,9 +115,10 @@ export const BalanceAdjustDialog = ({
   // корректировку исключительно в валюте остатка.
   const isCurrencyEditable = currentBalance === 0
 
-  const absAmount = Number.parseInt(amountInput, 10)
+  // Сумма вводится в единицах валюты («40» или «40,50»), а на бэкенд уходит в минорных.
+  const absAmount = parseMoney(amountInput)
   const trimmedComment = comment.trim()
-  const isAmountValid = Number.isInteger(absAmount) && absAmount > 0
+  const isAmountValid = absAmount !== null && absAmount > 0
   const isCommentValid =
     trimmedComment.length >= COMMENT_MIN_LENGTH && trimmedComment.length <= COMMENT_MAX_LENGTH
   const isCurrencyValid = !isCurrencyEditable || currency !== ''
@@ -125,7 +126,7 @@ export const BalanceAdjustDialog = ({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!isFormValid) return
+    if (!isFormValid || absAmount === null) return
 
     const payload: AdjustBalanceInput = {
       amount: direction === 'out' ? -absAmount : absAmount,
@@ -239,13 +240,10 @@ export const BalanceAdjustDialog = ({
                   <Label htmlFor="balance-amount">Сумма</Label>
                   <Input
                     id="balance-amount"
-                    type="number"
-                    min="1"
-                    step="1"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={amountInput}
                     onChange={(e) => setAmountInput(e.target.value)}
-                    placeholder="Например, 40"
+                    placeholder="Например, 40 или 40,50"
                   />
                 </div>
 

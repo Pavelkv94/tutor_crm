@@ -8,7 +8,7 @@ export class InvoiceDto {
 	@ApiProperty({ example: 1 })
 	student_id: number;
 
-	@ApiProperty({ description: "Сумма к оплате в целых единицах валюты", example: 160 })
+	@ApiProperty({ description: "Сумма к оплате в минорных единицах валюты (16000 — это 160,00)", example: 16000 })
 	amount: number;
 
 	@ApiProperty({ enum: Currency })

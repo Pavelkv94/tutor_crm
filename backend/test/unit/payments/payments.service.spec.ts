@@ -96,8 +96,8 @@ describe("PaymentsService", () => {
 				{
 					provide: PlanService,
 					useValue: {
-						ensureStripeIds: jest.fn(async (id: number) => ({ id, plan_price: 40 * id, stripe_price_id: `price_${id}`, stripe_product_id: `prod_${id}` })),
-						ensureStripeProduct: jest.fn(async (id: number) => ({ id, plan_price: 40 * id, stripe_price_id: null, stripe_product_id: `prod_${id}` })),
+						ensureStripeIds: jest.fn(async (id: number) => ({ id, plan_price: 4000 * id, stripe_price_id: `price_${id}`, stripe_product_id: `prod_${id}` })),
+						ensureStripeProduct: jest.fn(async (id: number) => ({ id, plan_price: 4000 * id, stripe_price_id: null, stripe_product_id: `prod_${id}` })),
 					},
 				},
 				{ provide: SettingsService, useValue: { getEurRate: jest.fn().mockResolvedValue(0) } },
@@ -119,7 +119,7 @@ describe("PaymentsService", () => {
 
 	describe("createInvoice", () => {
 		it("spends the balance before calculating the invoice", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			await createInvoice();
 
@@ -129,14 +129,14 @@ describe("PaymentsService", () => {
 		});
 
 		it("creates a payment link for PLN lessons", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40), billableLesson(2, 12, 40), billableLesson(3, 19, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000), billableLesson(2, 12, 4000), billableLesson(3, 19, 4000)]);
 
 			const result = await createInvoice();
 
 			expect(result).toEqual({
 				payment_id: 7,
 				student_id: 1,
-				amount: 120,
+				amount: 12000,
 				currency: Currency.PLN,
 				lessons_count: 3,
 				link: "https://buy.stripe.com/test_1",
@@ -150,9 +150,9 @@ describe("PaymentsService", () => {
 
 		it("groups line items by plan", async () => {
 			paymentsRepository.getBillableLessons.mockResolvedValue([
-				billableLesson(1, 5, 40, Currency.PLN, 1),
-				billableLesson(2, 12, 40, Currency.PLN, 1),
-				billableLesson(3, 19, 60, Currency.PLN, 2),
+				billableLesson(1, 5, 4000, Currency.PLN, 1),
+				billableLesson(2, 12, 4000, Currency.PLN, 1),
+				billableLesson(3, 19, 6000, Currency.PLN, 2),
 			]);
 
 			await createInvoice();
@@ -170,30 +170,30 @@ describe("PaymentsService", () => {
 
 		it("discounts every lesson and stores the discount on the invoice", async () => {
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 100), billableLesson(2, 12, 100)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 10000), billableLesson(2, 12, 10000)]);
 
 			const result = await createInvoice();
 
-			// 2 × round(100 × 0.9), а не round(200 × 0.9) — иначе итог разошёлся бы со списаниями.
-			expect(result?.amount).toBe(180);
-			expect(paymentsRepository.createInvoice).toHaveBeenCalledWith(expect.objectContaining({ amount: 180, discount_percent: 10 }));
+			// 2 × round(10000 × 0.9), а не round(20000 × 0.9) — иначе итог разошёлся бы со списаниями.
+			expect(result?.amount).toBe(18000);
+			expect(paymentsRepository.createInvoice).toHaveBeenCalledWith(expect.objectContaining({ amount: 18000, discount_percent: 10 }));
 		});
 
 		it("sends an ad-hoc price instead of the plan price when the student has a discount", async () => {
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40, Currency.PLN, 1), billableLesson(2, 12, 40, Currency.PLN, 1)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000, Currency.PLN, 1), billableLesson(2, 12, 4000, Currency.PLN, 1)]);
 
 			await createInvoice();
 
 			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
 				expect.objectContaining({
-					items: [{ productId: "prod_1", unitAmountMajor: 36, currency: Currency.PLN, quantity: 2 }],
+					items: [{ productId: "prod_1", unitAmountMinor: 3600, currency: Currency.PLN, quantity: 2 }],
 				}),
 			);
 		});
 
 		it("asks a first-time payer for both consents", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			await createInvoice();
 
@@ -205,7 +205,7 @@ describe("PaymentsService", () => {
 		it("asks a returning payer to accept the terms again, but not about the photos", async () => {
 			// Условия принимаются к каждому счёту, поэтому прошлый ответ ссылку не сокращает.
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, marketing_answered: true });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			await createInvoice();
 
@@ -215,7 +215,7 @@ describe("PaymentsService", () => {
 		});
 
 		it("creates Stripe prices lazily for legacy plans", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			await createInvoice();
 
@@ -225,7 +225,7 @@ describe("PaymentsService", () => {
 		// Ссылку решает способ оплаты ученика, а не валюта занятий.
 		it("issues no link for a student who pays outside the system", async () => {
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, payment_method: PaymentMethod.BYN_ACCOUNT });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			const result = await createInvoice();
 
@@ -238,7 +238,7 @@ describe("PaymentsService", () => {
 
 		it("issues no link when the payment method is not set", async () => {
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, payment_method: null });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			const result = await createInvoice();
 
@@ -248,21 +248,21 @@ describe("PaymentsService", () => {
 
 		it("converts a BYN invoice into a euro payment link", async () => {
 			settingsService.getEurRate.mockResolvedValue(500);
-			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 2000, stripe_product_id: "prod_1", stripe_price_id: null } as any);
 			paymentsRepository.getBillableLessons.mockResolvedValue([
-				billableLesson(1, 5, 20, Currency.BYN),
-				billableLesson(2, 12, 20, Currency.BYN),
-				billableLesson(3, 19, 20, Currency.BYN),
-				billableLesson(4, 26, 20, Currency.BYN),
+				billableLesson(1, 5, 2000, Currency.BYN),
+				billableLesson(2, 12, 2000, Currency.BYN),
+				billableLesson(3, 19, 2000, Currency.BYN),
+				billableLesson(4, 26, 2000, Currency.BYN),
 			]);
 
 			const result = await createInvoice();
 
 			// Счёт и учёт остаются в BYN, евро — только способ предъявления.
-			expect(result).toMatchObject({ amount: 80, currency: Currency.BYN, charge_amount_minor: 1600, charge_currency: Currency.EUR });
+			expect(result).toMatchObject({ amount: 8000, currency: Currency.BYN, charge_amount_minor: 1600, charge_currency: Currency.EUR });
 			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
 				expect.objectContaining({
-					items: [{ productId: "prod_1", unitAmountMajor: 4, currency: Currency.EUR, quantity: 4 }],
+					items: [{ productId: "prod_1", unitAmountMinor: 400, currency: Currency.EUR, quantity: 4 }],
 				}),
 			);
 			expect(paymentsRepository.setPaymentLink).toHaveBeenCalledWith(7, "plink_1", { amount_minor: 1600, currency: Currency.EUR, rate: 500 });
@@ -273,22 +273,22 @@ describe("PaymentsService", () => {
 		it("converts the discounted price, not the full one", async () => {
 			settingsService.getEurRate.mockResolvedValue(500);
 			paymentsRepository.getStudentById.mockResolvedValue({ ...student, discount: 10 });
-			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN), billableLesson(2, 12, 20, Currency.BYN)]);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 2000, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 2000, Currency.BYN), billableLesson(2, 12, 2000, Currency.BYN)]);
 
 			const result = await createInvoice();
 
-			// 20 → round(20 × 0.9) = 18 BYN → 360 центов за занятие.
-			expect(result).toMatchObject({ amount: 36, charge_amount_minor: 720 });
+			// 2000 → round(2000 × 0.9) = 1800 (18,00 BYN) → 360 центов за занятие.
+			expect(result).toMatchObject({ amount: 3600, charge_amount_minor: 720 });
 			expect(stripeService.createPaymentLink).toHaveBeenCalledWith(
-				expect.objectContaining({ items: [{ productId: "prod_1", unitAmountMajor: 3.6, currency: Currency.EUR, quantity: 2 }] }),
+				expect.objectContaining({ items: [{ productId: "prod_1", unitAmountMinor: 360, currency: Currency.EUR, quantity: 2 }] }),
 			);
 		});
 
 		it("rounds each lesson to the cent so the link matches the sum of its items", async () => {
 			settingsService.getEurRate.mockResolvedValue(330);
-			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN), billableLesson(2, 12, 20, Currency.BYN)]);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 2000, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 2000, Currency.BYN), billableLesson(2, 12, 2000, Currency.BYN)]);
 
 			const result = await createInvoice();
 
@@ -298,7 +298,7 @@ describe("PaymentsService", () => {
 
 		it("refuses to build a link for BYN lessons when the rate is not set", async () => {
 			settingsService.getEurRate.mockResolvedValue(0);
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 25, Currency.BYN)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 2500, Currency.BYN)]);
 
 			const result = await createInvoice();
 
@@ -310,8 +310,8 @@ describe("PaymentsService", () => {
 
 		it("refuses a link below the Stripe minimum charge", async () => {
 			settingsService.getEurRate.mockResolvedValue(50000);
-			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 20, stripe_product_id: "prod_1", stripe_price_id: null } as any);
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 20, Currency.BYN)]);
+			planService.ensureStripeProduct.mockResolvedValue({ id: 1, plan_price: 2000, stripe_product_id: "prod_1", stripe_price_id: null } as any);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 2000, Currency.BYN)]);
 
 			const result = await createInvoice();
 
@@ -322,7 +322,7 @@ describe("PaymentsService", () => {
 		});
 
 		it("still sends the report when Stripe is down", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 			stripeService.createPaymentLink.mockRejectedValue(new Error("stripe down"));
 
 			const result = await createInvoice();
@@ -333,11 +333,11 @@ describe("PaymentsService", () => {
 		});
 
 		it("excludes free lessons from the total", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40), billableLesson(2, 12, 40, Currency.PLN, 1, true)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000), billableLesson(2, 12, 4000, Currency.PLN, 1, true)]);
 
 			const result = await createInvoice();
 
-			expect(result?.amount).toBe(40);
+			expect(result?.amount).toBe(4000);
 			expect(result?.lessons_count).toBe(1);
 		});
 
@@ -355,7 +355,7 @@ describe("PaymentsService", () => {
 		});
 
 		it("refuses to invoice lessons in mixed currencies", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40, Currency.PLN), billableLesson(2, 12, 40, Currency.EUR)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000, Currency.PLN), billableLesson(2, 12, 4000, Currency.EUR)]);
 
 			expect(await createInvoice()).toBeNull();
 			expect(paymentsRepository.createInvoice).not.toHaveBeenCalled();
@@ -363,8 +363,8 @@ describe("PaymentsService", () => {
 		});
 
 		it("refuses to invoice when the balance is in another currency", async () => {
-			paymentsRepository.getStudentById.mockResolvedValue({ ...student, balance: 40, balance_currency: Currency.EUR });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40, Currency.PLN)]);
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, balance: 4000, balance_currency: Currency.EUR });
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000, Currency.PLN)]);
 
 			expect(await createInvoice()).toBeNull();
 			expect(stripeService.createPaymentLink).not.toHaveBeenCalled();
@@ -372,7 +372,7 @@ describe("PaymentsService", () => {
 		});
 
 		it("cancels the previous invoice for the same period", async () => {
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 			paymentsRepository.findPendingInvoice.mockResolvedValue({ ...invoiceRow, id: 5, stripe_payment_link_id: "plink_old" } as any);
 
 			await createInvoice();
@@ -412,7 +412,7 @@ describe("PaymentsService", () => {
 				.mockResolvedValueOnce({ ...student })
 				.mockRejectedValueOnce(new Error("db hiccup"))
 				.mockResolvedValueOnce({ ...student, id: 3 });
-			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 40)]);
+			paymentsRepository.getBillableLessons.mockResolvedValue([billableLesson(1, 5, 4000)]);
 
 			await service.issueMonthlyInvoices(new Date(Date.UTC(2026, 7, 1, 10, 0, 0)));
 
@@ -423,35 +423,35 @@ describe("PaymentsService", () => {
 
 	describe("adjustBalance", () => {
 		it("requires a currency when the balance is empty", async () => {
-			await expect(service.adjustBalance(1, { amount: 100, comment: "оплата наличными" }, 1)).rejects.toThrow(BadRequestException);
+			await expect(service.adjustBalance(1, { amount: 10000, comment: "оплата наличными" }, 1)).rejects.toThrow(BadRequestException);
 		});
 
 		it("rejects a currency that differs from a non-empty balance", async () => {
-			paymentsRepository.getStudentById.mockResolvedValue({ ...student, balance: 40, balance_currency: Currency.EUR });
+			paymentsRepository.getStudentById.mockResolvedValue({ ...student, balance: 4000, balance_currency: Currency.EUR });
 
-			await expect(service.adjustBalance(1, { amount: 100, currency: Currency.PLN, comment: "оплата" }, 1)).rejects.toThrow(BadRequestException);
+			await expect(service.adjustBalance(1, { amount: 10000, currency: Currency.PLN, comment: "оплата" }, 1)).rejects.toThrow(BadRequestException);
 		});
 
 		it("records a manual adjustment", async () => {
 			balanceService.reconcile.mockResolvedValue({
 				outcome: "APPLIED",
-				balance: 70,
+				balance: 7000,
 				balance_currency: Currency.PLN,
-				allocated: [{ lesson_id: 1, amount: 30, new_status: "PENDING_PAID" as any }],
+				allocated: [{ lesson_id: 1, amount: 3000, new_status: "PENDING_PAID" as any }],
 				reverted: [],
 				payment_id: 3,
 			});
 
-			const result = await service.adjustBalance(1, { amount: 100, currency: Currency.PLN, comment: "оплата наличными" }, 1);
+			const result = await service.adjustBalance(1, { amount: 10000, currency: Currency.PLN, comment: "оплата наличными" }, 1);
 
 			expect(balanceService.reconcile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					delta: 100,
+					delta: 10000,
 					currency: Currency.PLN,
 					payment: expect.objectContaining({ kind: "create", data: expect.objectContaining({ type: PaymentTypeEnum.MANUAL_ADJUSTMENT }) }),
 				}),
 			);
-			expect(result).toEqual({ balance: 70, balance_currency: Currency.PLN, affected_lessons: [{ lesson_id: 1, amount: 30, new_status: "PENDING_PAID" }] });
+			expect(result).toEqual({ balance: 7000, balance_currency: Currency.PLN, affected_lessons: [{ lesson_id: 1, amount: 3000, new_status: "PENDING_PAID" }] });
 		});
 	});
 
@@ -466,17 +466,17 @@ describe("PaymentsService", () => {
 			paymentsRepository.findById.mockResolvedValue({
 				...invoiceRow,
 				status: PaymentStatusEnum.REQUIRES_ATTENTION,
-				amount: 30,
+				amount: 3000,
 				currency: Currency.PLN,
 			} as any);
 			balanceService.reconcile.mockResolvedValue({
 				outcome: "CURRENCY_CONFLICT",
-				balance: 40,
+				balance: 4000,
 				balance_currency: Currency.EUR,
 				allocated: [],
 				reverted: [],
 				payment_id: 7,
-				conflict: { balance: 40, balance_currency: Currency.EUR, payment_currency: Currency.PLN },
+				conflict: { balance: 4000, balance_currency: Currency.EUR, payment_currency: Currency.PLN },
 			});
 
 			await expect(service.applyParkedPayment(7)).rejects.toThrow(BadRequestException);

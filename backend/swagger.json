@@ -3364,7 +3364,8 @@
           },
           "plan_price": {
             "type": "number",
-            "example": 1000000
+            "description": "Цена занятия в минорных единицах валюты: 3400 — это 34,00",
+            "example": 3400
           },
           "duration": {
             "type": "number",
@@ -3393,8 +3394,8 @@
           },
           "plan_price": {
             "type": "number",
-            "description": "The price of the plan",
-            "example": 1000000
+            "description": "Цена занятия по плану в минорных единицах валюты (3400 — это 34,00)",
+            "example": 3400
           },
           "plan_currency": {
             "type": "string",
@@ -3575,7 +3576,7 @@
           },
           "balance": {
             "type": "number",
-            "description": "The balance of the student",
+            "description": "Остаток на балансе в минорных единицах валюты (3400 — это 34,00)",
             "example": 0
           },
           "discount": {
@@ -3686,7 +3687,7 @@
           },
           "balance": {
             "type": "number",
-            "description": "The balance of the student",
+            "description": "Остаток на балансе в минорных единицах валюты (3400 — это 34,00)",
             "example": 0
           },
           "discount": {
@@ -3812,7 +3813,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date with time",
-            "example": "2026-08-29T11:26:05.606Z"
+            "example": "2026-09-01T13:10:47.600Z"
           },
           "status": {
             "type": "string",
@@ -3849,7 +3850,7 @@
           "rescheduled_lesson_date": {
             "type": "object",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-29T11:26:05.606Z",
+            "example": "2026-09-01T13:10:47.600Z",
             "nullable": true
           },
           "rescheduled_to_lesson_id": {
@@ -3861,14 +3862,14 @@
           "rescheduled_to_lesson_date": {
             "type": "object",
             "description": "Rescheduled to lesson date",
-            "example": "2026-08-29T11:26:05.606Z",
+            "example": "2026-09-01T13:10:47.600Z",
             "nullable": true
           },
           "created_at": {
             "format": "date-time",
             "type": "string",
             "description": "Created at",
-            "example": "2026-08-29T11:26:05.606Z"
+            "example": "2026-09-01T13:10:47.600Z"
           },
           "teacher": {
             "description": "Teacher information",
@@ -3956,7 +3957,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-29T11:26:05.600Z"
+            "example": "2026-09-01T13:10:47.592Z"
           },
           "isFree": {
             "type": "boolean",
@@ -3990,7 +3991,7 @@
             "format": "date-time",
             "type": "string",
             "description": "Rescheduled lesson date",
-            "example": "2026-08-29T11:26:05.612Z"
+            "example": "2026-09-01T13:10:47.612Z"
           }
         },
         "required": [
@@ -4034,13 +4035,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start period date",
-            "example": "2026-08-29T11:26:05.621Z"
+            "example": "2026-09-01T13:10:47.624Z"
           },
           "end_period_date": {
             "format": "date-time",
             "type": "string",
             "description": "End period date",
-            "example": "2026-08-29T11:26:05.621Z"
+            "example": "2026-09-01T13:10:47.624Z"
           },
           "plan": {
             "description": "Plan",
@@ -4052,7 +4053,7 @@
               "duration": 10,
               "plan_type": "INDIVIDUAL",
               "deleted_at": null,
-              "created_at": "2026-08-29T11:26:05.621Z"
+              "created_at": "2026-09-01T13:10:47.624Z"
             },
             "allOf": [
               {
@@ -4109,13 +4110,13 @@
             "format": "date-time",
             "type": "string",
             "description": "Start date",
-            "example": "2026-08-29T11:26:05.622Z"
+            "example": "2026-09-01T13:10:47.626Z"
           },
           "end_date": {
             "format": "date-time",
             "type": "string",
             "description": "End date",
-            "example": "2026-08-29T11:26:05.623Z"
+            "example": "2026-09-01T13:10:47.626Z"
           },
           "new_plan_id": {
             "type": "number",
@@ -4896,8 +4897,8 @@
           },
           "amount": {
             "type": "number",
-            "description": "Сумма к оплате в целых единицах валюты",
-            "example": 160
+            "description": "Сумма к оплате в минорных единицах валюты (16000 — это 160,00)",
+            "example": 16000
           },
           "currency": {
             "type": "string",
@@ -4989,8 +4990,8 @@
           },
           "amount": {
             "type": "number",
-            "description": "Знаковая сумма в целых единицах валюты",
-            "example": 160
+            "description": "Знаковая сумма в минорных единицах валюты (16000 — это 160,00)",
+            "example": 16000
           },
           "currency": {
             "type": "string",
@@ -5088,8 +5089,8 @@
         "properties": {
           "amount": {
             "type": "number",
-            "description": "Знаковая дельта баланса в целых единицах валюты. Отрицательная — списание.",
-            "example": 100
+            "description": "Знаковая дельта баланса в минорных единицах валюты (10000 — это 100,00). Отрицательная — списание.",
+            "example": 10000
           },
           "currency": {
             "type": "string",

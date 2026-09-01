@@ -41,6 +41,7 @@ export interface Student {
    * (POST /payments/students/:id/balance/adjust).
    */
   balance_currency: Currency | null
+  /** Остаток в минорных единицах balance_currency: 3400 — это 34,00. Как и все суммы API. */
   balance: number
   /**
    * Персональная скидка в процентах, 0 — скидки нет. Применяется к цене каждого занятия,
@@ -101,6 +102,7 @@ export interface UpdateStudentInput {
 export interface Plan {
   id: number
   plan_name: string
+  /** Цена занятия в минорных единицах plan_currency: 3400 — это 34,00. */
   plan_price: number
   plan_currency: Currency
   duration: number
@@ -110,6 +112,7 @@ export interface Plan {
 }
 
 export interface CreatePlanInput {
+  /** Цена занятия в минорных единицах plan_currency: 3400 — это 34,00. */
   plan_price: number
   plan_currency: Currency
   duration: number

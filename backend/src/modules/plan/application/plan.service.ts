@@ -105,7 +105,7 @@ export class PlanService {
 			const created = await this.stripeService.createProductWithPrice({
 				planId: plan.id,
 				name: plan.plan_name,
-				priceMajor: plan.plan_price,
+				priceMinor: plan.plan_price,
 				currency: plan.plan_currency,
 			});
 			productId = created.productId;

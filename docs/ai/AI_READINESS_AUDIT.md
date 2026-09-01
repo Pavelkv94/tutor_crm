@@ -120,7 +120,7 @@ either side without the other produces refresh loops or lost sessions.
 Now written down in this doc set; listed here because they are invisible from file names:
 
 - `Course` (Prisma model) → table **`file_category`**.
-- All money is in **whole currency units**; only the Stripe boundary divides by 100.
+- All money is in **minor units** (4000 = 40,00); the Stripe boundary needs no conversion.
 - **BYN is never charged through Stripe** — invoices exist without a payment link.
 - Personal `FileAccess` always overrides `CourseAccess`; granting course access **deletes**
   per-file rows.

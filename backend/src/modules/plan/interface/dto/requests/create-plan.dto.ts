@@ -18,10 +18,10 @@ export class CreatePlanDto {
 	@IsNotEmpty()
 	plan_currency: Currency;
 
-	@ApiProperty({ example: 1000000 })
+	@ApiProperty({ description: 'Цена занятия в минорных единицах валюты: 3400 — это 34,00', example: 3400 })
 	@IsInt()
 	@IsNotEmpty()
-	@Max(1000000)
+	@Max(100000000)
 	plan_price: number;
 
 	@ApiProperty({ example: 10 })

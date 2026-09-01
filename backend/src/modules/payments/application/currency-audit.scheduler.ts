@@ -4,6 +4,7 @@ import { endOfMonth, startOfMonth } from "date-fns";
 import { BalanceRepositoryPort } from "@/modules/balance/application/ports/balance.repository.port";
 import { PaymentsRepositoryPort } from "@/modules/payments/application/ports/payments.repository.port";
 import { TelegramService } from "@/modules/telegram/application/telegram.service";
+import { formatMoneyMinor } from "@/shared/utils/money.util";
 
 /**
  * Проверки при создании занятия ловят конфликт валют на входе, но не покрывают правки
@@ -51,7 +52,9 @@ export class CurrencyAuditScheduler {
 				continue;
 			}
 			if (student.balance !== 0 && student.balance_currency && currencies.length === 1 && currencies[0] !== student.balance_currency) {
-				problems.push(`• ${student.name} (id ${student.id}): на балансе ${student.balance} ${student.balance_currency}, а занятия месяца в ${currencies[0]}`);
+				problems.push(
+					`• ${student.name} (id ${student.id}): на балансе ${formatMoneyMinor(student.balance)} ${student.balance_currency}, а занятия месяца в ${currencies[0]}`,
+				);
 			}
 		}
 
